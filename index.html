@@ -167,8 +167,9 @@ const CW=400,CH=420;cvs.width=CW;cvs.height=CH;
 const GRAVITY=0.09,WD=0.92,BO=0.28,WL=28,PC=3,FY=CH-18;
 const JP=5.0,JR=200,JWd=85,RSink=0.07,RPC=5,TR=20,BP=100;
 
-// Desalojo
-const TILT_DISLODGE=0.025,TILT_DISLODGE_Y=0.02;
+// Desalojo - tilt lateral al 30%
+const TILT_DISLODGE=0.0075;
+const TILT_DISLODGE_Y=0.02;
 const JET_DISLODGE=0.033,JET_HOLD_MULT=0.2,JET_HOLD_MAX=1.5;
 const DIS_TH_BASE=0.8,DIS_TH_STEP=0.6;
 
@@ -191,11 +192,8 @@ function initGame(){
   for(let c=0;c<4;c++)for(let n=0;n<RPC;n++){
     rings.push({x:30+Math.random()*(CW-60),y:FY-12-Math.random()*80,vx:0,vy:0,
       oR:12+Math.random()*2.5,iR:5+Math.random()*1.5,
-      // DOS EJES DE ROTACIÓN
-      spinA:Math.random()*Math.PI*2,   // Eje A: "moneda girando" (horizontal spin)
-      spinB:Math.random()*Math.PI*2,   // Eje B: "voltereta" (tumble vertical)
-      spinAS:0,                         // Velocidad spin A
-      spinBS:0,                         // Velocidad spin B
+      spinA:Math.random()*Math.PI*2,spinB:Math.random()*Math.PI*2,
+      spinAS:0,spinBS:0,
       ci:c,col:pal[c].c,colL:pal[c].cl,shape:pal[c].shape,
       sc:false,sp:-1,tY:0,pF:0,si:-1,id:id++,onFloor:false});
   }
@@ -205,7 +203,6 @@ function initGame(){
   parts=[];updUI();
 }
 
-// Menú
 function showPanel(id){document.querySelectorAll('.menu-panel').forEach(p=>p.classList.remove('show'));document.getElementById(id).classList.add('show')}
 function openMenu(){paused=true;showPanel('panelMain');document.getElementById('menuOverlay').classList.add('show')}
 function closeMenu(){document.getElementById('menuOverlay').classList.remove('show');if(!gOver){paused=false;lastFrameTime=performance.now()}}
@@ -234,7 +231,6 @@ function setupGyro(){
 function onGyro(e){if(gOver||paused)return;if(e.gamma!==null)tX=Math.max(-1,Math.min(1,e.gamma/18));if(e.beta!==null)tY=Math.max(-1,Math.min(1,(e.beta-60)/20))}
 function activateGyroLayout(){document.getElementById('gyroInd').style.display='flex';document.getElementById('gyroDot').classList.add('on');document.getElementById('tRow').style.display='none';document.getElementById('jRow').classList.add('expanded');document.getElementById('waterScreen').style.height='60%';document.getElementById('topPanel').style.top='61%';document.getElementById('indicators').style.top='68%';document.getElementById('buttonPanel').style.height='26%'}
 
-// ===== FÍSICA =====
 function update(dt){
   if(gOver||paused)return;
   playTime+=dt;document.getElementById('tV').textContent=fmtTime(playTime);
@@ -246,214 +242,109 @@ function update(dt){
   const hw=Math.abs(tX)*bw;hf.style.width=hw+'px';hf.style.left=tX>=0?(bw+1)+'px':(bw+1-hw)+'px';
   const vw=Math.abs(tY)*bw;vf.style.width=vw+'px';vf.style.left=tY>=0?(bw+1)+'px':(bw+1-vw)+'px';
   for(let j=0;j<3;j++){if(aJ[j])jHold[j]+=dt;else jHold[j]=Math.max(0,jHold[j]-dt*6)}
-
   for(let i=1;i<wPts.length-1;i++){const p=wPts[i];p.v+=(WL-p.y)*.12+((wPts[i-1].y-p.y)+(wPts[i+1].y-p.y))*.1;p.v*=.82;p.y+=p.v;if(Math.abs(p.y-WL)<.08&&Math.abs(p.v)<.04){p.y=WL;p.v=0}}
   for(let j=0;j<3;j++){if(!aJ[j])continue;for(let p of wPts){const d=Math.abs(p.x-jPos[j].x);if(d<50)p.v-=(1-d/50)*.35}}
-
   for(let r of rings){if(r.sc)updateScored(r);else updateFree(r)}
-
   for(let j=0;j<3;j++){
     if(!aJ[j])continue;const jet=jPos[j];
     for(let i=0;i<5;i++)parts.push({x:jet.x+(Math.random()-.5)*JWd*.4,y:jet.y-3,vx:(Math.random()-.5)*3,vy:-7-Math.random()*6,l:1,r:1.5+Math.random()*2.5,t:'w'});
-    for(let r of rings){if(r.sc)continue;const dx=r.x-jet.x,dy=r.y-jet.y,dist=Math.sqrt(dx*dx+dy*dy),hd=Math.abs(dx);if(hd<JWd&&dist<JR&&dist>4){const f=Math.pow(1-dist/JR,1.2)*(1-hd/JWd);r.vy-=f*JP;r.vx+=(dx/Math.max(dist,10))*f*1.2;r.spinAS+=(Math.random()-.5)*.08*f;r.spinBS+=(Math.random()-.5)*.06*f}}
+    for(let r of rings){if(r.sc)continue;const dx=r.x-jet.x,dy=r.y-jet.y,dist=Math.sqrt(dx*dx+dy*dy),hd=Math.abs(dx);if(hd<JWd&&dist<JR&&dist>4){const f=Math.pow(1-dist/JR,1.2)*(1-hd/JWd);r.vy-=f*JP;r.vx+=(dx/Math.max(dist,10))*f*1.2;
+      // Spin más lento por jets
+      r.spinAS+=(Math.random()-.5)*.03*f;
+      r.spinBS+=(Math.random()-.5)*.02*f;
+    }}
   }
-
   for(let r of rings){if(r.sc)continue;for(let pi=0;pi<poles.length;pi++){const pole=poles[pi],pt=pole.bY-pole.h;if(Math.abs(r.x-pole.x)<r.iR*.9&&r.y>pt-r.oR*.6&&r.y<pt+22&&r.vy>.1){doScore(r,pi);break}}}
-
   for(let i=parts.length-1;i>=0;i--){const p=parts[i];p.vy+=.12;p.x+=p.vx;p.y+=p.vy;p.l-=.02;if(p.l<=0||p.y>CH+10)parts.splice(i,1)}
   for(let b of bubs){b.y-=b.s;b.w+=b.ws;b.x+=Math.sin(b.w)*.2;for(let j=0;j<3;j++){if(!aJ[j])continue;const d=Math.sqrt((b.x-jPos[j].x)**2+(b.y-jPos[j].y)**2);if(d<60)b.y-=(1-d/60)*1.2}if(b.y<WL){b.y=CH-25+Math.random()*12;b.x=Math.random()*CW}}
   gt+=dt;
 }
 
 function updateScored(r){
-  const pole=poles[r.sp];
-  let df=0;
-
-  // TILT: SOLO cuando inclina HACIA ARRIBA (tiltY negativo = arriba)
-  // Inclinación lateral siempre afecta algo
+  const pole=poles[r.sp];let df=0;
   df+=Math.abs(tX)*TILT_DISLODGE;
-  // Vertical: solo hacia arriba desaloja
-  if(tY<-0.1) df+=Math.abs(tY)*TILT_DISLODGE_Y;
-
-  // Jets
-  for(let j=0;j<3;j++){
-    if(!aJ[j])continue;
-    const dx=pole.x-jPos[j].x,dy=r.tY-jPos[j].y;
-    const dist=Math.sqrt(dx*dx+dy*dy),zone=JR*.75;
-    if(dist<zone){const prox=1-dist/zone;df+=prox*JET_DISLODGE*(1+Math.min(jHold[j]*JET_HOLD_MULT,JET_HOLD_MAX))}
-  }
-
+  if(tY<-0.1)df+=Math.abs(tY)*TILT_DISLODGE_Y;
+  for(let j=0;j<3;j++){if(!aJ[j])continue;const dx=pole.x-jPos[j].x,dy=r.tY-jPos[j].y;const dist=Math.sqrt(dx*dx+dy*dy),zone=JR*.75;if(dist<zone){const prox=1-dist/zone;df+=prox*JET_DISLODGE*(1+Math.min(jHold[j]*JET_HOLD_MULT,JET_HOLD_MAX))}}
   r.pF+=df;r.pF*=.96;
-  const posFromTop=pole.sr.length-1-r.si;
-  const th=DIS_TH_BASE+posFromTop*DIS_TH_STEP;
+  const posFromTop=pole.sr.length-1-r.si;const th=DIS_TH_BASE+posFromTop*DIS_TH_STEP;
   if(r.pF>th){const topRing=pole.sr[pole.sr.length-1];if(r===topRing||r.pF>th*1.5){unsc(r);return}}
-
   r.y+=(r.tY-r.y)*.12;r.x+=(pole.x-r.x)*.12;
-
-  // Scored: spins tienden a 0 (horizontal plano)
   r.spinA+=r.spinAS;r.spinB+=r.spinBS;
   r.spinAS*=.85;r.spinBS*=.85;
-  // Llevar ángulos a posición plana
-  r.spinA+=(0-r.spinA)*.06;
-  r.spinB+=(0-r.spinB)*.06;
-
+  r.spinA+=(0-r.spinA)*.06;r.spinB+=(0-r.spinB)*.06;
   if(r.pF>th*.35){const i=r.pF/th;r.x+=(Math.random()-.5)*i*2.5;r.y+=(Math.random()-.5)*i}
 }
 
 function updateFree(r){
   const inW=r.y>WL;
-  if(inW){r.vy+=RSink;r.vx*=WD;r.vy*=WD;r.spinAS*=.98;r.spinBS*=.98}
-  else{r.vy+=GRAVITY;r.vx*=.995}
+  if(inW){r.vy+=RSink;r.vx*=WD;r.vy*=WD;
+    // Agua frena spin más fuerte
+    r.spinAS*=.95;r.spinBS*=.95;
+  }else{r.vy+=GRAVITY;r.vx*=.995}
   r.vx+=tX*.16;r.vy+=tY*.12;
   r.x+=r.vx;r.y+=r.vy;
   const speed=Math.sqrt(r.vx*r.vx+r.vy*r.vy);
   r.onFloor=false;
-
-  if(r.x-r.oR<0){r.x=r.oR;r.vx=Math.abs(r.vx)*BO;r.spinAS+=.03}
-  if(r.x+r.oR>CW){r.x=CW-r.oR;r.vx=-Math.abs(r.vx)*BO;r.spinAS-=.03}
-  if(r.y-r.oR<4){r.y=r.oR+4;r.vy=Math.abs(r.vy)*BO;r.spinBS+=.02}
-  if(r.y+r.oR>FY){
-    r.y=FY-r.oR;r.vy=-Math.abs(r.vy)*BO*.25;r.vx*=.8;
-    if(Math.abs(r.vy)<.25)r.vy=0;
-    r.onFloor=true;
-    r.spinAS*=.8;r.spinBS*=.8;
-  }
-
-  // Actualizar rotación dual
+  // Rebotes con spin más suave
+  if(r.x-r.oR<0){r.x=r.oR;r.vx=Math.abs(r.vx)*BO;r.spinAS+=.012}
+  if(r.x+r.oR>CW){r.x=CW-r.oR;r.vx=-Math.abs(r.vx)*BO;r.spinAS-=.012}
+  if(r.y-r.oR<4){r.y=r.oR+4;r.vy=Math.abs(r.vy)*BO;r.spinBS+=.008}
+  if(r.y+r.oR>FY){r.y=FY-r.oR;r.vy=-Math.abs(r.vy)*BO*.25;r.vx*=.8;if(Math.abs(r.vy)<.25)r.vy=0;r.onFloor=true;r.spinAS*=.8;r.spinBS*=.8}
   if(r.onFloor&&speed<0.5){
-    // En suelo quieto: frenar y aplanar
     r.spinAS*=.92;r.spinBS*=.92;
-    r.spinA+=(0-r.spinA)*.04;
-    r.spinB+=(0-r.spinB)*.04;
+    r.spinA+=(0-r.spinA)*.04;r.spinB+=(0-r.spinB)*.04;
   }else{
-    // En movimiento: spin proporcional a velocidad
-    r.spinAS+=r.vx*0.003;
-    r.spinBS-=r.vy*0.002;
+    // Velocidad alimenta spin más lento
+    r.spinAS+=r.vx*0.0012;
+    r.spinBS-=r.vy*0.0008;
   }
-  r.spinA+=r.spinAS;
-  r.spinB+=r.spinBS;
-
-  for(let pole of poles){const pt=pole.bY-pole.h,hw=pole.w/2+r.oR+1,dx=r.x-pole.x;if(Math.abs(dx)<hw&&r.y>pt+8&&r.y<pole.bY){if(dx>0){r.x=pole.x+hw;r.vx=Math.abs(r.vx)*BO;r.spinAS+=.02}else{r.x=pole.x-hw;r.vx=-Math.abs(r.vx)*BO;r.spinAS-=.02}}}
-  for(let o of rings){if(o===r||o.sc)continue;const dx=o.x-r.x,dy=o.y-r.y,dist=Math.sqrt(dx*dx+dy*dy),mD=r.oR+o.oR;if(dist<mD&&dist>.1){const nx=dx/dist,ny=dy/dist,ov=(mD-dist)*.5;r.x-=nx*ov;r.y-=ny*ov;o.x+=nx*ov;o.y+=ny*ov;const rv=(r.vx-o.vx)*nx+(r.vy-o.vy)*ny;r.vx-=rv*nx*.3;r.vy-=rv*ny*.3;o.vx+=rv*nx*.3;o.vy+=rv*ny*.3;r.spinAS+=(Math.random()-.5)*.02;o.spinBS+=(Math.random()-.5)*.02}}
+  r.spinA+=r.spinAS;r.spinB+=r.spinBS;
+  for(let pole of poles){const pt=pole.bY-pole.h,hw=pole.w/2+r.oR+1,dx=r.x-pole.x;if(Math.abs(dx)<hw&&r.y>pt+8&&r.y<pole.bY){if(dx>0){r.x=pole.x+hw;r.vx=Math.abs(r.vx)*BO;r.spinAS+=.008}else{r.x=pole.x-hw;r.vx=-Math.abs(r.vx)*BO;r.spinAS-=.008}}}
+  for(let o of rings){if(o===r||o.sc)continue;const dx=o.x-r.x,dy=o.y-r.y,dist=Math.sqrt(dx*dx+dy*dy),mD=r.oR+o.oR;if(dist<mD&&dist>.1){const nx=dx/dist,ny=dy/dist,ov=(mD-dist)*.5;r.x-=nx*ov;r.y-=ny*ov;o.x+=nx*ov;o.y+=ny*ov;const rv=(r.vx-o.vx)*nx+(r.vy-o.vy)*ny;r.vx-=rv*nx*.3;r.vy-=rv*ny*.3;o.vx+=rv*nx*.3;o.vy+=rv*ny*.3;r.spinAS+=(Math.random()-.5)*.01;o.spinBS+=(Math.random()-.5)*.01}}
 }
 
-function unsc(r){const pole=poles[r.sp],idx=pole.sr.indexOf(r);if(idx>-1)pole.sr.splice(idx,1);recalc(pole);const li=sLog.findIndex(l=>l.ri===r.id);if(li>-1){score-=sLog[li].pts;if(score<0)score=0;sLog.splice(li,1)}r.sc=false;r.sp=-1;r.pF=0;r.si=-1;r.vx=(Math.random()-.5)*4;r.vy=-3-Math.random()*2;r.spinAS=(Math.random()-.5)*.12;r.spinBS=(Math.random()-.5)*.08;for(let i=0;i<8;i++)parts.push({x:r.x+(Math.random()-.5)*15,y:r.y,vx:(Math.random()-.5)*3,vy:-1-Math.random()*2,l:1,r:2+Math.random()*2,t:'u'});updUI()}
+function unsc(r){const pole=poles[r.sp],idx=pole.sr.indexOf(r);if(idx>-1)pole.sr.splice(idx,1);recalc(pole);const li=sLog.findIndex(l=>l.ri===r.id);if(li>-1){score-=sLog[li].pts;if(score<0)score=0;sLog.splice(li,1)}r.sc=false;r.sp=-1;r.pF=0;r.si=-1;r.vx=(Math.random()-.5)*4;r.vy=-3-Math.random()*2;r.spinAS=(Math.random()-.5)*.08;r.spinBS=(Math.random()-.5)*.05;for(let i=0;i<8;i++)parts.push({x:r.x+(Math.random()-.5)*15,y:r.y,vx:(Math.random()-.5)*3,vy:-1-Math.random()*2,l:1,r:2+Math.random()*2,t:'u'});updUI()}
 function recalc(pole){for(let i=0;i<pole.sr.length;i++){pole.sr[i].si=i;pole.sr[i].tY=pole.bY-12-i*12}if(!pole.sr.length){pole.lc=-1;pole.cc=0}else{const last=pole.sr[pole.sr.length-1];pole.lc=last.ci;let c=0;for(let i=pole.sr.length-1;i>=0;i--){if(pole.sr[i].ci===pole.lc)c++;else break}pole.cc=c}}
 function doScore(r,pi){const pole=poles[pi];r.sc=true;r.sp=pi;r.vx=0;r.vy=0;r.spinAS=0;r.spinBS=0;r.pF=0;r.si=pole.sr.length;r.tY=pole.bY-12-r.si*12;pole.sr.push(r);let cm=1;if(pole.lc===r.ci){pole.cc++;cm=pole.cc}else pole.cc=1;pole.lc=r.ci;const pts=BP*cm;score+=pts;const pal=getPal();sLog.push({ri:r.id,ci:r.ci,cn:pal[r.ci].n,co:cm,pts});updUI();spawnFx(pole.x,r.tY,pts,cm,r.col);if(rings.filter(r=>r.sc).length>=TR)setTimeout(showEnd,800)}
 function spawnFx(x,y,pts,combo,color){const el=document.createElement('div');el.className='cpop';el.innerHTML=`<span class="cp">+${pts}</span>`;if(combo>1)el.innerHTML+=`<span class="cm">COMBO x${combo}!</span>`;const ws=document.getElementById('waterScreen'),wr=ws.getBoundingClientRect(),cr=GC.getBoundingClientRect();el.style.left=((wr.left-cr.left)+x*wr.width/CW-30)+'px';el.style.top=((wr.top-cr.top)+y*wr.height/CH-10)+'px';el.style.color=combo>=4?'#ff00ff':combo>=3?'#ff6b6b':combo>1?'#feca57':'#00ff88';el.style.textShadow=`0 0 10px ${el.style.color}`;document.querySelector('.toyCase').appendChild(el);setTimeout(()=>el.remove(),2000);for(let i=0;i<8+combo*4;i++)parts.push({x:x+(Math.random()-.5)*20,y,vx:(Math.random()-.5)*(2+combo),vy:-2-Math.random()*(2+combo),l:1,r:2+Math.random()*3,t:'s',c:color})}
 function showEnd(){gOver=true;paused=true;const tb=calcTimeBonus(playTime);const ts=score+tb;saveScore(ts,playTime);const t=document.getElementById('eTable');let bt=0,ct=0,mc=0,cc={};const pal=getPal();for(let l of sLog){bt+=BP;ct+=l.pts-BP;if(l.co>mc)mc=l.co;if(!cc[l.cn])cc[l.cn]={c:0,p:0};cc[l.cn].c++;cc[l.cn].p+=l.pts}let h=`<tr><th colspan="2">📊 RESUMEN</th></tr><tr><td>Aros</td><td>${sLog.length}/${TR}</td></tr><tr><td>Tiempo</td><td>${fmtTime(playTime)}</td></tr><tr><td>Base</td><td>${bt}</td></tr><tr class="cr"><td>Combos</td><td>+${ct}</td></tr><tr><td>Combo máx</td><td>x${mc}</td></tr><tr class="tmr"><td>⏱️ Bonus</td><td>+${tb}</td></tr><tr><th colspan="2">🎨 COLOR</th></tr>`;for(let cn in cc)h+=`<tr><td>${cn} (${cc[cn].c})</td><td>${cc[cn].p}</td></tr>`;h+=`<tr class="tr"><td>TOTAL</td><td>${ts}</td></tr>`;t.innerHTML=h;document.getElementById('endScreen').classList.add('show')}
 function updUI(){document.getElementById('sV').textContent=score;document.getElementById('rV').textContent=`${rings.filter(r=>r.sc).length}/${TR}`;let mc=Math.max(...poles.map(p=>p.cc),1);const cv=document.getElementById('cV');cv.textContent=`x${mc}`;cv.style.color=mc>=4?'#ff00ff':mc>=3?'#ff6b6b':mc>=2?'#feca57':'#888'}
 
-// ===== RENDER =====
 function render(){
   ctx.clearRect(0,0,CW,CH);
-  // Water
   const g=ctx.createLinearGradient(0,WL,0,CH);g.addColorStop(0,'rgba(55,140,195,.18)');g.addColorStop(.5,'rgba(30,95,155,.32)');g.addColorStop(1,'rgba(12,45,85,.48)');ctx.fillStyle=g;ctx.fillRect(0,WL,CW,CH-WL);
-  // Surface
   const to=tX*5;ctx.beginPath();ctx.moveTo(0,wPts[0].y-to*.5);for(let i=1;i<wPts.length;i++){const p=wPts[i-1],c=wPts[i],tl=to*((i/wPts.length)-.5);ctx.quadraticCurveTo(p.x,p.y+tl,(p.x+c.x)/2,(p.y+c.y)/2+tl)}ctx.lineTo(CW,0);ctx.lineTo(0,0);ctx.closePath();ctx.fillStyle='rgba(120,200,235,.08)';ctx.fill();
   ctx.beginPath();ctx.moveTo(0,wPts[0].y-to*.5);for(let i=1;i<wPts.length;i++){const p=wPts[i-1],c=wPts[i],tl=to*((i/wPts.length)-.5);ctx.quadraticCurveTo(p.x,p.y+tl,(p.x+c.x)/2,(p.y+c.y)/2+tl)}ctx.strokeStyle='rgba(255,255,255,.3)';ctx.lineWidth=1.8;ctx.stroke();
   for(let b of bubs){ctx.globalAlpha=.18+Math.sin(b.w)*.05;ctx.beginPath();ctx.arc(b.x,b.y,b.r,0,Math.PI*2);ctx.fillStyle='#fff';ctx.fill();ctx.globalAlpha=1}
   ctx.globalAlpha=.03;for(let i=0;i<5;i++){const x=((gt*11+i*80)%(CW+50))-25,s=Math.sin(gt*.5+i)*10;ctx.fillStyle='#fff';ctx.beginPath();ctx.moveTo(x,WL+12);ctx.lineTo(x+10,WL+12);ctx.lineTo(x+20+s,CH-20);ctx.lineTo(x-8+s,CH-20);ctx.closePath();ctx.fill()}ctx.globalAlpha=1;
-  // Poles
   for(let pole of poles){const pt=pole.bY-pole.h;ctx.fillStyle='rgba(0,0,0,.08)';ctx.fillRect(pole.x-pole.w/2+2,pt+3,pole.w,pole.h);const pg=ctx.createLinearGradient(pole.x-pole.w/2,0,pole.x+pole.w/2,0);pg.addColorStop(0,'#a07548');pg.addColorStop(.3,'#cca070');pg.addColorStop(.7,'#b89058');pg.addColorStop(1,'#886038');ctx.fillStyle=pg;ctx.fillRect(pole.x-pole.w/2,pt,pole.w,pole.h);ctx.beginPath();ctx.arc(pole.x,pt,pole.tR,0,Math.PI*2);const tg=ctx.createRadialGradient(pole.x-1,pt-1,0,pole.x,pt,pole.tR);tg.addColorStop(0,'#fde0b0');tg.addColorStop(1,'#906838');ctx.fillStyle=tg;ctx.fill();ctx.fillStyle='#584028';ctx.beginPath();ctx.moveTo(pole.x-11,pole.bY);ctx.lineTo(pole.x+11,pole.bY);ctx.lineTo(pole.x+8,pole.bY-5);ctx.lineTo(pole.x-8,pole.bY-5);ctx.closePath();ctx.fill()}
   const fg=ctx.createLinearGradient(0,FY,0,CH);fg.addColorStop(0,'#5a4838');fg.addColorStop(1,'#382820');ctx.fillStyle=fg;ctx.fillRect(0,FY,CW,CH-FY);ctx.fillStyle='#786858';ctx.fillRect(0,FY,CW,1.5);
-  // Jets
   for(let j=0;j<3;j++){if(!aJ[j])continue;const jet=jPos[j];const jg=ctx.createLinearGradient(jet.x,jet.y,jet.x,jet.y-180);jg.addColorStop(0,'rgba(130,195,240,.5)');jg.addColorStop(.35,'rgba(130,195,240,.25)');jg.addColorStop(1,'rgba(130,195,240,0)');const w1=Math.sin(gt*14+j)*4,w2=Math.sin(gt*18+j+1)*4,hw=JWd*.35;ctx.beginPath();ctx.moveTo(jet.x-hw*.4,jet.y);ctx.bezierCurveTo(jet.x-hw,jet.y-60,jet.x-hw*.6+w1,jet.y-120,jet.x+w2,jet.y-180);ctx.lineTo(jet.x+5+w2,jet.y-180);ctx.bezierCurveTo(jet.x+hw*.6+w1,jet.y-120,jet.x+hw,jet.y-60,jet.x+hw*.4,jet.y);ctx.closePath();ctx.fillStyle=jg;ctx.fill()}
-  // Particles
   for(let p of parts){ctx.globalAlpha=p.l*.55;ctx.beginPath();ctx.arc(p.x,p.y,p.r*p.l,0,Math.PI*2);ctx.fillStyle=p.t==='s'?(p.c||'#0f8'):p.t==='u'?'#f55':'rgba(160,215,255,.65)';ctx.fill();ctx.globalAlpha=1}
 
-  // ===== RINGS - Rotación 3D dual =====
+  // RINGS
   const sorted=[...rings].sort((a,b)=>{if(a.sc&&!b.sc)return -1;if(!a.sc&&b.sc)return 1;return a.y-b.y});
   for(let r of sorted){
     ctx.save();ctx.translate(r.x,r.y);
-
-    // SpinA = rotación tipo moneda (alrededor del eje vertical de la pantalla)
-    // SpinB = voltereta (alrededor del eje horizontal)
-    // Combinamos para crear efecto toroidal 3D
-
-    const cosA=Math.cos(r.spinA), sinA=Math.sin(r.spinA);
-    const cosB=Math.cos(r.spinB), sinB=Math.sin(r.spinB);
-
-    // La "escala Y" del aro depende de ambos ejes
-    // cosB controla el volteo vertical (visto de frente vs de canto)
-    // cosA controla el giro horizontal (visto de lado vs de frente)
-    const scaleY=0.15+Math.abs(cosB)*0.85;  // Min 0.15 para que nunca desaparezca
-    const skewX=sinA*0.35;                    // Inclinación lateral
-    const thicknessVar=0.5+Math.abs(cosA)*0.5; // Grosor aparente del toro
-
-    // Shadow
-    ctx.beginPath();
-    ctx.ellipse(1+skewX*4, 2, r.oR*thicknessVar, r.oR*scaleY, skewX*0.15, 0, Math.PI*2);
-    ctx.fillStyle='rgba(0,0,0,.1)';ctx.fill();
-
-    // Ring body - aro exterior
-    ctx.beginPath();
-    ctx.ellipse(0, 0, r.oR*thicknessVar, r.oR*scaleY, skewX*0.15, 0, Math.PI*2);
-    ctx.fillStyle=r.col;ctx.fill();
-    ctx.strokeStyle='rgba(0,0,0,.25)';ctx.lineWidth=1;ctx.stroke();
-
-    // Grosor del tubo del toro - simulado con un segundo óvalo interior desplazado
+    const cosA=Math.cos(r.spinA),sinA=Math.sin(r.spinA);
+    const cosB=Math.cos(r.spinB),sinB=Math.sin(r.spinB);
+    const scaleY=0.15+Math.abs(cosB)*0.85;
+    const skewX=sinA*0.35;
+    const thicknessVar=0.5+Math.abs(cosA)*0.5;
+    ctx.beginPath();ctx.ellipse(1+skewX*4,2,r.oR*thicknessVar,r.oR*scaleY,skewX*.15,0,Math.PI*2);ctx.fillStyle='rgba(0,0,0,.1)';ctx.fill();
+    ctx.beginPath();ctx.ellipse(0,0,r.oR*thicknessVar,r.oR*scaleY,skewX*.15,0,Math.PI*2);ctx.fillStyle=r.col;ctx.fill();ctx.strokeStyle='rgba(0,0,0,.25)';ctx.lineWidth=1;ctx.stroke();
     if(scaleY>0.2){
-      // Parte interna visible cuando no está de canto
-      const innerScale=r.iR/r.oR;
-      ctx.beginPath();
-      ctx.ellipse(0, 0, r.iR*thicknessVar, r.iR*scaleY, skewX*0.15, 0, Math.PI*2);
-      ctx.fillStyle=r.sc?'rgba(55,115,155,.3)':'rgba(40,100,140,.4)';
-      ctx.fill();
-
-      // Efecto 3D del tubo: borde interior con gradiente
-      if(scaleY>0.35){
-        // Tubo superior (brillo)
-        const tubeW=(r.oR-r.iR)*thicknessVar*0.5;
-        ctx.beginPath();
-        ctx.ellipse(skewX*2, -r.oR*scaleY*0.12, r.oR*thicknessVar*0.7, tubeW*scaleY, skewX*0.15, 0, Math.PI);
-        ctx.fillStyle=`rgba(255,255,255,${0.15+Math.abs(cosB)*0.15})`;
-        ctx.fill();
-
-        // Tubo inferior (sombra)
-        ctx.beginPath();
-        ctx.ellipse(skewX, r.oR*scaleY*0.12, r.oR*thicknessVar*0.7, tubeW*scaleY*0.7, skewX*0.15, Math.PI, Math.PI*2);
-        ctx.fillStyle='rgba(0,0,0,.08)';
-        ctx.fill();
-      }
+      ctx.beginPath();ctx.ellipse(0,0,r.iR*thicknessVar,r.iR*scaleY,skewX*.15,0,Math.PI*2);ctx.fillStyle=r.sc?'rgba(55,115,155,.3)':'rgba(40,100,140,.4)';ctx.fill();
+      if(scaleY>0.35){const tubeW=(r.oR-r.iR)*thicknessVar*0.5;ctx.beginPath();ctx.ellipse(skewX*2,-r.oR*scaleY*0.12,r.oR*thicknessVar*0.7,tubeW*scaleY,skewX*.15,0,Math.PI);ctx.fillStyle=`rgba(255,255,255,${0.15+Math.abs(cosB)*0.15})`;ctx.fill();ctx.beginPath();ctx.ellipse(skewX,r.oR*scaleY*0.12,r.oR*thicknessVar*0.7,tubeW*scaleY*0.7,skewX*.15,Math.PI,Math.PI*2);ctx.fillStyle='rgba(0,0,0,.08)';ctx.fill()}
     }
-
-    // Highlight superior
-    ctx.beginPath();
-    ctx.ellipse(-r.oR*0.15+skewX*3, -r.oR*scaleY*0.3, r.oR*thicknessVar*0.3, r.oR*scaleY*0.1, skewX*0.15, 0, Math.PI);
-    ctx.fillStyle='rgba(255,255,255,.25)';ctx.fill();
-
-    // Shape symbol
-    if(r.shape&&scaleY>0.22){
-      ctx.save();
-      ctx.scale(thicknessVar,scaleY);
-      ctx.rotate(skewX*0.15);
-      const fs=r.oR*0.45;
-      ctx.font=`bold ${fs}px sans-serif`;
-      ctx.textAlign='center';ctx.textBaseline='middle';
-      const isL=['#FFFFFF','#F0E442','#FFFF00','#E69F00','#FFC840'].includes(r.col);
-      ctx.fillStyle=isL?'rgba(0,0,0,0.4)':'rgba(255,255,255,0.5)';
-      ctx.fillText(r.shape,0,0);
-      ctx.restore();
-    }
-
-    // Danger glow
-    if(r.sc&&r.pF>.25){
-      const pole=poles[r.sp],posTop=pole.sr.length-1-r.si;
-      const th=DIS_TH_BASE+posTop*DIS_TH_STEP;
-      const d=Math.min(r.pF/th,1);
-      ctx.beginPath();ctx.ellipse(0,0,r.oR*thicknessVar+2,(r.oR+2)*scaleY,skewX*.15,0,Math.PI*2);
-      ctx.strokeStyle=`rgba(255,${Math.floor(80-d*80)},${Math.floor(80-d*80)},${d*.75})`;
-      ctx.lineWidth=1+d*1.5;ctx.stroke();
-    }
+    ctx.beginPath();ctx.ellipse(-r.oR*0.15+skewX*3,-r.oR*scaleY*0.3,r.oR*thicknessVar*0.3,r.oR*scaleY*0.1,skewX*.15,0,Math.PI);ctx.fillStyle='rgba(255,255,255,.25)';ctx.fill();
+    if(r.shape&&scaleY>0.22){ctx.save();ctx.scale(thicknessVar,scaleY);ctx.rotate(skewX*.15);const fs=r.oR*0.45;ctx.font=`bold ${fs}px sans-serif`;ctx.textAlign='center';ctx.textBaseline='middle';const isL=['#FFFFFF','#F0E442','#FFFF00','#E69F00','#FFC840'].includes(r.col);ctx.fillStyle=isL?'rgba(0,0,0,0.4)':'rgba(255,255,255,0.5)';ctx.fillText(r.shape,0,0);ctx.restore()}
+    if(r.sc&&r.pF>.25){const pole=poles[r.sp],posTop=pole.sr.length-1-r.si;const th=DIS_TH_BASE+posTop*DIS_TH_STEP;const d=Math.min(r.pF/th,1);ctx.beginPath();ctx.ellipse(0,0,r.oR*thicknessVar+2,(r.oR+2)*scaleY,skewX*.15,0,Math.PI*2);ctx.strokeStyle=`rgba(255,${Math.floor(80-d*80)},${Math.floor(80-d*80)},${d*.75})`;ctx.lineWidth=1+d*1.5;ctx.stroke()}
     ctx.restore();
   }
-
-  // Nozzles
   for(let j=0;j<3;j++){const jet=jPos[j],on=aJ[j];ctx.beginPath();ctx.arc(jet.x,jet.y+2,6,0,Math.PI*2);ctx.fillStyle=on?'#48b8d8':'#484c55';ctx.fill();ctx.strokeStyle='#2a2e35';ctx.lineWidth=1.5;ctx.stroke();ctx.beginPath();ctx.arc(jet.x,jet.y+1,3.5,0,Math.PI*2);ctx.fillStyle=on?'#88ddff':'#383c45';ctx.fill();if(on){ctx.beginPath();ctx.arc(jet.x,jet.y,10,0,Math.PI*2);ctx.fillStyle='rgba(80,190,255,.15)';ctx.fill()}}
 }
 
-// Controles
 const JK={'a':0,'s':1,'d':2};
 document.addEventListener('keydown',e=>{if(paused||gOver)return;const k=e.key.toLowerCase();if(JK[k]!==undefined){aJ[JK[k]]=true;document.querySelector(`[data-jet="${JK[k]}"]`)?.classList.add('pressed')}if(['ArrowLeft','ArrowRight','ArrowUp','ArrowDown'].includes(e.key)){kys[e.key]=true;e.preventDefault();const m={ArrowLeft:'left',ArrowRight:'right',ArrowUp:'up',ArrowDown:'down'};document.querySelector(`[data-tilt="${m[e.key]}"]`)?.classList.add('pressed')}if(k==='r'&&!paused)initGame()});
 document.addEventListener('keyup',e=>{const k=e.key.toLowerCase();if(JK[k]!==undefined){aJ[JK[k]]=false;document.querySelector(`[data-jet="${JK[k]}"]`)?.classList.remove('pressed')}if(['ArrowLeft','ArrowRight','ArrowUp','ArrowDown'].includes(e.key)){kys[e.key]=false;const m={ArrowLeft:'left',ArrowRight:'right',ArrowUp:'up',ArrowDown:'down'};document.querySelector(`[data-tilt="${m[e.key]}"]`)?.classList.remove('pressed')}});
