@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, maximum-scale=1.0">
 <meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="mobile-web-app-capable" content="yes">
 <title>Water Ring Toss</title>
 <style>
@@ -22,7 +23,7 @@ body{display:flex;justify-content:center;align-items:center;font-family:'Segoe U
 }
 
 #waterScreen{
-  position:absolute;top:2.5%;left:3.5%;width:93%;
+  position:absolute;top:2.5%;left:3.5%;width:93%;height:55%;
   background:linear-gradient(180deg,#7ec8e3 0%,#4a9cc5 25%,#3080aa 55%,#205a80 85%,#183e5a 100%);
   border-radius:3.5%;border:3px solid #4a4a4a;overflow:hidden;
   box-shadow:inset 0 0 20px rgba(0,0,0,0.3)
@@ -31,7 +32,7 @@ body{display:flex;justify-content:center;align-items:center;font-family:'Segoe U
 .waterReflection{position:absolute;top:0;left:0;width:100%;height:100%;background:linear-gradient(135deg,rgba(255,255,255,0.1) 0%,transparent 30%,transparent 70%,rgba(255,255,255,0.03) 100%);pointer-events:none;z-index:10}
 
 #topPanel{
-  position:absolute;left:3.5%;width:93%;height:6%;
+  position:absolute;top:58%;left:3.5%;width:93%;height:6%;
   background:linear-gradient(180deg,#151520,#0a0a12);
   border-radius:8px;border:2px solid #333;
   display:flex;align-items:center;justify-content:space-between;padding:0 3%;
@@ -43,7 +44,7 @@ body{display:flex;justify-content:center;align-items:center;font-family:'Segoe U
 .pv.sc{color:#00ff88}.pv.ri{color:#48dbfb}.pv.co{color:#888}
 
 #indicators{
-  position:absolute;left:3.5%;width:93%;height:3%;
+  position:absolute;top:65%;left:3.5%;width:93%;height:3%;
   display:flex;align-items:center;justify-content:space-between;padding:0 3%
 }
 .ind{display:flex;align-items:center;gap:4px;font-family:'Courier New',monospace;font-size:clamp(7px,1.2vw,9px);color:#777}
@@ -52,7 +53,7 @@ body{display:flex;justify-content:center;align-items:center;font-family:'Segoe U
 .ind-fill.hz{background:#48dbfb}.ind-fill.vt{background:#feca57}
 
 .buttonPanel{
-  position:absolute;bottom:1.5%;left:2%;right:2%;
+  position:absolute;bottom:1.5%;left:2%;right:2%;height:30%;
   display:flex;flex-direction:column;gap:2%;align-items:center;justify-content:center
 }
 .jets-row{display:flex;gap:4%;align-items:center;justify-content:center;width:100%}
@@ -72,9 +73,8 @@ body{display:flex;justify-content:center;align-items:center;font-family:'Segoe U
 .jetBtn.j2{background:linear-gradient(145deg,#3498db,#1a6fa8);box-shadow:0 4px 12px rgba(26,111,168,.5)}
 .jetBtn.pressed{box-shadow:inset 0 4px 10px rgba(0,0,0,.5),0 0 15px rgba(255,255,255,.12)!important}
 
-/* Jets grandes cuando no hay tilt buttons */
 .jets-row.expanded{gap:6%}
-.jets-row.expanded .jetBtn{width:30%;max-width:85px;max-height:85px}
+.jets-row.expanded .jetBtn{width:30%;max-width:90px;max-height:90px}
 
 .tiltBtn{
   width:18%;aspect-ratio:1;max-width:52px;max-height:52px;
@@ -89,7 +89,6 @@ body{display:flex;justify-content:center;align-items:center;font-family:'Segoe U
 .tiltBtn.vert{background:linear-gradient(145deg,#d4a843,#b08520);box-shadow:0 3px 8px rgba(180,135,30,.4)}
 .tilt-label{font-size:clamp(7px,1.4vw,9px);color:#555;font-family:'Courier New',monospace;padding:0 2px}
 
-/* Botones utilidad */
 .util-btns{position:absolute;top:2.8%;right:4.2%;display:flex;gap:5px;z-index:30}
 .ubtn{
   width:clamp(24px,4.5vw,32px);height:clamp(24px,4.5vw,32px);
@@ -100,7 +99,6 @@ body{display:flex;justify-content:center;align-items:center;font-family:'Segoe U
 }
 .ubtn:active{transform:scale(.9)}
 
-/* COMBO POPUP */
 .comboPopup{
   position:absolute;font-family:'Courier New',monospace;font-weight:bold;
   pointer-events:none;z-index:50;animation:comboPop 2s ease-out forwards;
@@ -114,47 +112,40 @@ body{display:flex;justify-content:center;align-items:center;font-family:'Segoe U
   100%{transform:scale(.7) translateY(-70px);opacity:0}
 }
 
-/* ========== PANTALLA INICIO ========== */
+/* PANTALLA INICIO */
 #startScreen{
   position:absolute;top:0;left:0;width:100%;height:100%;
   background:linear-gradient(180deg,#0a0a18 0%,#0f1528 50%,#0a1020 100%);
   z-index:200;border-radius:4%;
   display:flex;flex-direction:column;align-items:center;justify-content:center;
-  padding:5%;gap:3%
+  padding:5%;gap:2.5%
 }
-#startScreen.hidden{display:none}
+#startScreen.hidden{display:none!important}
 
 .title-ring{
-  width:clamp(80px,22vw,110px);height:clamp(80px,22vw,110px);
-  border:clamp(8px,2.5vw,12px) solid #e74c3c;
+  width:clamp(70px,20vw,100px);height:clamp(70px,20vw,100px);
+  border:clamp(7px,2.2vw,11px) solid #e74c3c;
   border-radius:50%;position:relative;
   box-shadow:0 0 20px rgba(231,76,60,.4),inset 0 0 15px rgba(231,76,60,.2);
-  animation:titleFloat 3s ease-in-out infinite;
-  margin-bottom:2%
-}
-.title-ring::before{
-  content:'';position:absolute;top:-clamp(8px,2.5vw,12px);left:50%;
-  transform:translateX(-50%);
-  width:clamp(28px,8vw,40px);height:clamp(8px,2.5vw,12px);
-  background:#e74c3c;border-radius:50%;opacity:.3
+  animation:titleFloat 3s ease-in-out infinite
 }
 @keyframes titleFloat{0%,100%{transform:translateY(0) rotate(0deg)}50%{transform:translateY(-8px) rotate(5deg)}}
 
 #startScreen h1{
-  color:#fff;font-size:clamp(22px,6vw,32px);
+  color:#fff;font-size:clamp(20px,5.5vw,30px);
   font-family:'Courier New',monospace;text-align:center;
   text-shadow:0 0 15px rgba(0,150,255,.4);margin:0
 }
 #startScreen .subtitle{
-  color:#5ba4cf;font-size:clamp(10px,2.5vw,14px);
+  color:#5ba4cf;font-size:clamp(9px,2.3vw,13px);
   font-family:'Courier New',monospace;margin-top:-1%
 }
 
 .menu-btn{
-  width:80%;max-width:260px;padding:clamp(10px,2.5vw,14px) 20px;
+  width:85%;max-width:280px;padding:clamp(10px,2.5vw,14px) 20px;
   border:none;border-radius:12px;cursor:pointer;
   font-family:'Courier New',monospace;font-weight:bold;
-  font-size:clamp(13px,3vw,16px);color:white;
+  font-size:clamp(12px,2.8vw,15px);color:white;
   transition:transform .1s;display:flex;align-items:center;
   justify-content:center;gap:8px
 }
@@ -164,91 +155,95 @@ body{display:flex;justify-content:center;align-items:center;font-family:'Segoe U
 .menu-btn.scores{background:linear-gradient(145deg,#f39c12,#d68910);box-shadow:0 4px 15px rgba(243,156,18,.4)}
 .menu-btn.fs{background:linear-gradient(145deg,#8e44ad,#6c3483);box-shadow:0 4px 15px rgba(142,68,173,.4)}
 .menu-btn.gyro{background:linear-gradient(145deg,#e74c3c,#c0392b);box-shadow:0 4px 15px rgba(192,57,43,.4)}
+.menu-btn.gyro.active{background:linear-gradient(145deg,#27ae60,#1e8a4c)}
 
-/* ========== PANTALLA AYUDA ========== */
-#helpScreen{
+/* PANTALLA AYUDA */
+#helpScreen,#scoresScreen,#fsHelpScreen{
   position:absolute;top:0;left:0;width:100%;height:100%;
-  background:rgba(5,5,18,.96);z-index:210;border-radius:4%;
+  background:rgba(5,5,18,.97);z-index:210;border-radius:4%;
   display:none;flex-direction:column;align-items:center;
-  padding:5% 4%;overflow-y:auto
+  padding:4% 4%;overflow-y:auto
 }
-#helpScreen.show{display:flex}
-#helpScreen h2{color:#48dbfb;font-size:clamp(18px,4.5vw,24px);font-family:'Courier New',monospace;margin-bottom:3%}
-.help-section{width:100%;margin-bottom:3%}
-.help-section h3{color:#feca57;font-size:clamp(12px,2.8vw,15px);font-family:'Courier New',monospace;margin-bottom:1.5%}
-.help-section p{color:#aab;font-size:clamp(10px,2.3vw,13px);line-height:1.5;font-family:'Courier New',monospace}
+#helpScreen.show,#scoresScreen.show,#fsHelpScreen.show{display:flex}
+
+#helpScreen h2,#scoresScreen h2,#fsHelpScreen h2{
+  color:#48dbfb;font-size:clamp(16px,4vw,22px);
+  font-family:'Courier New',monospace;margin-bottom:3%
+}
+.help-section{width:100%;margin-bottom:2.5%}
+.help-section h3{color:#feca57;font-size:clamp(11px,2.5vw,14px);font-family:'Courier New',monospace;margin-bottom:1%}
+.help-section p{color:#aab;font-size:clamp(9px,2.1vw,12px);line-height:1.4;font-family:'Courier New',monospace}
 .help-section .key{
   display:inline-block;background:#2a2a3a;color:#48dbfb;
-  padding:2px 8px;border-radius:4px;border:1px solid #444;
-  font-size:clamp(9px,2vw,11px);margin:1px
+  padding:2px 6px;border-radius:4px;border:1px solid #444;
+  font-size:clamp(8px,1.8vw,10px);margin:1px
 }
 .help-ios{
   background:rgba(231,76,60,.1);border:1px solid rgba(231,76,60,.3);
-  border-radius:8px;padding:3%;margin-top:2%
+  border-radius:8px;padding:3%;margin-top:1%
 }
 .help-ios h3{color:#e74c3c!important}
 .back-btn{
   margin-top:auto;padding:10px 30px;background:linear-gradient(145deg,#555,#333);
   color:#ccc;border:2px solid #555;border-radius:10px;cursor:pointer;
-  font-family:'Courier New',monospace;font-size:clamp(12px,2.8vw,14px)
+  font-family:'Courier New',monospace;font-size:clamp(11px,2.5vw,13px)
 }
 .back-btn:active{transform:scale(.95)}
 
-/* ========== PANTALLA SCORES ========== */
-#scoresScreen{
-  position:absolute;top:0;left:0;width:100%;height:100%;
-  background:rgba(5,5,18,.96);z-index:210;border-radius:4%;
-  display:none;flex-direction:column;align-items:center;
-  padding:5% 4%;overflow-y:auto
-}
-#scoresScreen.show{display:flex}
-#scoresScreen h2{color:#feca57;font-size:clamp(18px,4.5vw,24px);font-family:'Courier New',monospace;margin-bottom:3%}
-.scores-list{width:100%;font-family:'Courier New',monospace}
+/* SCORES */
+.scores-list{width:100%;font-family:'Courier New',monospace;flex:1;overflow-y:auto}
 .score-entry{
   display:flex;justify-content:space-between;align-items:center;
-  padding:clamp(6px,1.5vw,10px) 3%;
+  padding:clamp(5px,1.3vw,8px) 3%;
   border-bottom:1px solid #1a1a28;
-  font-size:clamp(11px,2.5vw,14px)
+  font-size:clamp(10px,2.3vw,13px)
 }
 .score-entry .rank{color:#feca57;min-width:25px}
 .score-entry .spts{color:#00ff88;font-weight:bold}
-.score-entry .sdate{color:#556;font-size:clamp(8px,1.8vw,10px)}
-.no-scores{color:#556;font-size:clamp(11px,2.5vw,13px);text-align:center;padding:10%}
+.score-entry .sdate{color:#556;font-size:clamp(7px,1.6vw,9px)}
+.no-scores{color:#556;font-size:clamp(10px,2.3vw,12px);text-align:center;padding:10%}
 
-/* ========== PANTALLA FIN ========== */
+/* PANTALLA FIN */
 #endScreen{
   display:none;position:absolute;top:0;left:0;width:100%;height:100%;
-  background:rgba(5,5,15,.93);z-index:100;border-radius:4%;
+  background:rgba(5,5,15,.95);z-index:100;border-radius:4%;
   flex-direction:column;align-items:center;justify-content:center;padding:5%
 }
 #endScreen.show{display:flex}
-#endScreen h2{color:#00ff88;font-size:clamp(20px,5vw,28px);margin-bottom:10px;text-shadow:0 0 12px rgba(0,255,136,.5);font-family:'Courier New',monospace}
+#endScreen h2{color:#00ff88;font-size:clamp(18px,4.5vw,26px);margin-bottom:8px;text-shadow:0 0 12px rgba(0,255,136,.5);font-family:'Courier New',monospace}
 
-.end-table{width:95%;border-collapse:collapse;font-family:'Courier New',monospace;font-size:clamp(10px,2.2vw,12px);margin-bottom:12px}
-.end-table th{color:#48dbfb;padding:5px 3px;border-bottom:1px solid #335;text-align:left;font-size:clamp(9px,2vw,11px)}
-.end-table td{color:#ccc;padding:4px 3px;border-bottom:1px solid #1a1a25}
+.end-table{width:95%;border-collapse:collapse;font-family:'Courier New',monospace;font-size:clamp(9px,2vw,11px);margin-bottom:10px}
+.end-table th{color:#48dbfb;padding:4px 3px;border-bottom:1px solid #335;text-align:left;font-size:clamp(8px,1.8vw,10px)}
+.end-table td{color:#ccc;padding:3px 3px;border-bottom:1px solid #1a1a25}
 .end-table td:last-child{text-align:right;color:#00ff88;font-weight:bold}
-.end-table .total-row td{color:#feca57;font-size:clamp(13px,3vw,16px);font-weight:bold;border-top:2px solid #feca57;padding-top:8px}
+.end-table .total-row td{color:#feca57;font-size:clamp(12px,2.8vw,15px);font-weight:bold;border-top:2px solid #feca57;padding-top:6px}
 .end-table .combo-row td{color:#f39c12}
 
-.end-btns{display:flex;gap:10px;margin-top:8px;flex-wrap:wrap;justify-content:center}
+.end-btns{display:flex;gap:8px;margin-top:6px;flex-wrap:wrap;justify-content:center}
 .end-btn{
-  padding:10px 25px;border:none;border-radius:10px;cursor:pointer;
+  padding:9px 22px;border:none;border-radius:10px;cursor:pointer;
   font-family:'Courier New',monospace;font-weight:bold;
-  font-size:clamp(12px,2.8vw,15px);color:white
+  font-size:clamp(11px,2.5vw,14px);color:white
 }
-.end-btn.again{background:linear-gradient(145deg,#27ae60,#1e8a4c);box-shadow:0 4px 12px rgba(39,174,96,.4)}
-.end-btn.menu{background:linear-gradient(145deg,#555,#333);box-shadow:0 4px 12px rgba(0,0,0,.3)}
+.end-btn.again{background:linear-gradient(145deg,#27ae60,#1e8a4c)}
+.end-btn.menu{background:linear-gradient(145deg,#555,#333)}
 .end-btn:active{transform:scale(.95)}
 
-/* Gyro status */
 .gyro-status{
   position:absolute;top:2.8%;left:4.2%;z-index:30;
-  font-family:'Courier New',monospace;font-size:clamp(7px,1.5vw,9px);
-  color:#555;display:flex;align-items:center;gap:3px
+  font-family:'Courier New',monospace;font-size:clamp(7px,1.4vw,9px);
+  color:#555;display:none;align-items:center;gap:3px
 }
 .gyro-dot{width:6px;height:6px;border-radius:50%;background:#444}
 .gyro-dot.active{background:#2ecc71;box-shadow:0 0 5px rgba(46,204,113,.5)}
+
+/* iOS fullscreen help */
+.fs-instructions{
+  background:rgba(142,68,173,.15);border:1px solid rgba(142,68,173,.3);
+  border-radius:10px;padding:4%;margin:3% 0;text-align:center
+}
+.fs-instructions p{color:#bba;font-size:clamp(10px,2.2vw,12px);margin:8px 0;line-height:1.5}
+.fs-instructions .icon{font-size:clamp(20px,5vw,28px);margin:5px 0}
 </style>
 </head>
 <body>
@@ -272,36 +267,39 @@ body{display:flex;justify-content:center;align-items:center;font-family:'Segoe U
   <h2>❓ CÓMO JUGAR</h2>
   <div class="help-section">
     <h3>🎯 Objetivo</h3>
-    <p>Ensarta los 20 aros (4 colores × 5) en los 3 palos usando los chorros de agua y la inclinación.</p>
+    <p>Ensarta los 20 aros en los 3 palos. ¡Haz combos con aros del mismo color!</p>
   </div>
   <div class="help-section">
     <h3>💨 Chorros (3 botones)</h3>
-    <p>Pulsa los botones de chorro para impulsar los aros hacia arriba. Cada chorro cubre una zona amplia.<br>
+    <p>Pulsa los botones para impulsar los aros hacia arriba.<br>
     Teclado: <span class="key">A</span> <span class="key">S</span> <span class="key">D</span></p>
   </div>
   <div class="help-section">
     <h3>📐 Inclinación</h3>
-    <p>Inclina el dispositivo o usa los botones de dirección para mover los aros lateralmente y guiarlos sobre los palos.<br>
+    <p>Inclina el dispositivo o usa los botones para guiar los aros.<br>
     Teclado: <span class="key">←</span> <span class="key">→</span> <span class="key">↑</span> <span class="key">↓</span></p>
   </div>
   <div class="help-section">
     <h3>🔥 Combos</h3>
-    <p>¡Ensarta aros del mismo color consecutivamente en un palo para multiplicar los puntos!<br>
-    x1 = 100pts → x2 = 200pts → x3 = 300pts → x4 = 400pts → x5 = 500pts</p>
+    <p>Mismo color consecutivo en un palo = multiplicador:<br>
+    x1=100 → x2=200 → x3=300 → x4=400 → x5=500 pts</p>
   </div>
   <div class="help-section">
     <h3>⚠️ Cuidado</h3>
-    <p>Si mantienes pulsado un chorro mucho tiempo cerca de un palo, ¡los aros ensartados pueden salirse! Los de arriba se sueltan más fácil.</p>
+    <p>¡Los chorros pueden desensartar los aros! Los de arriba salen más fácil.</p>
   </div>
   <div class="help-section help-ios">
-    <h3>🍎 Giroscopio en iOS</h3>
-    <p>En iPhone/iPad, Safari requiere permiso especial para el giroscopio.<br><br>
-    1. Pulsa el botón <strong>"📐 ACTIVAR GIROSCOPIO"</strong> en el menú principal.<br>
-    2. Safari te pedirá permiso → pulsa <strong>"Permitir"</strong>.<br>
-    3. ¡Listo! Inclina tu dispositivo para controlar.<br><br>
-    Si no aparece el botón, tu navegador ya tiene acceso automático.</p>
+    <h3>🍎 iOS - Giroscopio</h3>
+    <p>Pulsa "📐 ACTIVAR GIROSCOPIO" en el menú y acepta el permiso de Safari.</p>
   </div>
   <button class="back-btn" id="btnHelpBack">← VOLVER</button>
+</div>
+
+<!-- PANTALLA FULLSCREEN HELP -->
+<div id="fsHelpScreen">
+  <h2>📱 PANTALLA COMPLETA</h2>
+  <div class="fs-instructions" id="fsInstructions"></div>
+  <button class="back-btn" id="btnFSBack">← VOLVER</button>
 </div>
 
 <!-- PANTALLA PUNTUACIONES -->
@@ -317,29 +315,29 @@ body{display:flex;justify-content:center;align-items:center;font-family:'Segoe U
   <div class="waterReflection"></div>
 </div>
 
-<div class="gyro-status" id="gyroStatus" style="display:none">
+<div class="gyro-status" id="gyroStatus">
   <div class="gyro-dot" id="gyroDot"></div>
-  <span id="gyroLabel">GYRO</span>
+  <span>GYRO</span>
 </div>
 
-<div class="util-btns">
+<div class="util-btns" id="utilBtns" style="display:none">
   <button class="ubtn" id="btnFSGame" title="Pantalla completa">⛶</button>
   <button class="ubtn" id="btnReset" title="Reiniciar (R)">↺</button>
   <button class="ubtn" id="btnMenu" title="Menú">☰</button>
 </div>
 
-<div id="topPanel">
+<div id="topPanel" style="display:none">
   <div class="ps"><div><div class="pl">Puntos</div><div class="pv sc" id="scoreVal">0</div></div></div>
   <div class="ps"><div><div class="pl">Combo</div><div class="pv co" id="comboVal">x1</div></div></div>
   <div class="ps"><div><div class="pl">Aros</div><div class="pv ri" id="ringsVal">0/20</div></div></div>
 </div>
 
-<div id="indicators">
+<div id="indicators" style="display:none">
   <div class="ind">↔<div class="ind-bar"><div class="ind-fill hz" id="horizFill"></div></div></div>
   <div class="ind">↕<div class="ind-bar"><div class="ind-fill vt" id="vertFill"></div></div></div>
 </div>
 
-<div class="buttonPanel" id="buttonPanel">
+<div class="buttonPanel" id="buttonPanel" style="display:none">
   <div class="jets-row" id="jetsRow">
     <button class="jetBtn j0" data-jet="0">💨<span class="kh">A</span></button>
     <button class="jetBtn j1" data-jet="1">💨<span class="kh">S</span></button>
@@ -368,12 +366,17 @@ body{display:flex;justify-content:center;align-items:center;font-family:'Segoe U
 </div>
 
 <script>
+// ====== DETECCIÓN ======
+const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+const isAndroid = /Android/.test(navigator.userAgent);
+const isMobile = isIOS || isAndroid || 'ontouchstart' in window;
+const canFullscreen = !isIOS && (document.documentElement.requestFullscreen || document.documentElement.webkitRequestFullscreen);
+
 // ====== RESPONSIVE ======
 const container = document.getElementById('gameContainer');
 const ASPECT = 0.54;
 let hasGyro = false;
 let gyroPermission = false;
-let isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
 
 function resize() {
   const vw = window.innerWidth, vh = window.innerHeight;
@@ -382,54 +385,93 @@ function resize() {
   else { w = vw * 0.98; h = w / ASPECT; }
   container.style.width = w + 'px';
   container.style.height = h + 'px';
-  layoutGame();
 }
 window.addEventListener('resize', resize);
+resize();
 
-function layoutGame() {
+function updateLayout() {
   const ws = document.getElementById('waterScreen');
   const tp = document.getElementById('topPanel');
   const ind = document.getElementById('indicators');
+  const bp = document.getElementById('buttonPanel');
+  const tr = document.getElementById('tiltRow');
+  const jr = document.getElementById('jetsRow');
 
   if (hasGyro && gyroPermission) {
     ws.style.height = '60%';
-    tp.style.top = '63.5%';
-    ind.style.top = '70.5%';
-    document.getElementById('buttonPanel').style.height = '24%';
-    document.getElementById('tiltRow').style.display = 'none';
-    document.getElementById('jetsRow').classList.add('expanded');
+    tp.style.top = '61%';
+    ind.style.top = '68%';
+    bp.style.height = '26%';
+    tr.style.display = 'none';
+    jr.classList.add('expanded');
   } else {
     ws.style.height = '55%';
     tp.style.top = '56%';
     ind.style.top = '63%';
-    document.getElementById('buttonPanel').style.height = '33%';
-    document.getElementById('tiltRow').style.display = 'flex';
-    document.getElementById('jetsRow').classList.remove('expanded');
+    bp.style.height = '33%';
+    tr.style.display = 'flex';
+    jr.classList.remove('expanded');
   }
 }
 
 // ====== FULLSCREEN ======
 function toggleFullscreen() {
-  if (!document.fullscreenElement && !document.webkitFullscreenElement) {
-    const el = document.documentElement;
-    if (el.requestFullscreen) el.requestFullscreen();
-    else if (el.webkitRequestFullscreen) el.webkitRequestFullscreen();
-  } else {
-    if (document.exitFullscreen) document.exitFullscreen();
-    else if (document.webkitExitFullscreen) document.webkitExitFullscreen();
+  if (!canFullscreen) {
+    showFSHelp();
+    return;
+  }
+  try {
+    if (!document.fullscreenElement && !document.webkitFullscreenElement) {
+      const el = document.documentElement;
+      if (el.requestFullscreen) el.requestFullscreen();
+      else if (el.webkitRequestFullscreen) el.webkitRequestFullscreen();
+    } else {
+      if (document.exitFullscreen) document.exitFullscreen();
+      else if (document.webkitExitFullscreen) document.webkitExitFullscreen();
+    }
+  } catch(e) {
+    showFSHelp();
   }
 }
 
-// ====== SCORES (localStorage) ======
+function showFSHelp() {
+  const inst = document.getElementById('fsInstructions');
+  if (isIOS) {
+    inst.innerHTML = `
+      <p class="icon">📤</p>
+      <p><strong>En Safari (iOS):</strong></p>
+      <p>1. Pulsa el botón <strong>Compartir</strong> 📤</p>
+      <p>2. Selecciona <strong>"Añadir a pantalla de inicio"</strong></p>
+      <p>3. Abre la app desde el icono del inicio</p>
+      <p style="color:#feca57;margin-top:10px">¡Se abrirá a pantalla completa!</p>
+    `;
+  } else if (isAndroid) {
+    inst.innerHTML = `
+      <p class="icon">⋮</p>
+      <p><strong>En Chrome (Android):</strong></p>
+      <p>1. Pulsa el menú <strong>⋮</strong> (tres puntos)</p>
+      <p>2. Selecciona <strong>"Añadir a pantalla de inicio"</strong></p>
+      <p>3. Abre la app desde el icono</p>
+      <p style="color:#feca57;margin-top:10px">¡Se abrirá a pantalla completa!</p>
+    `;
+  } else {
+    inst.innerHTML = `
+      <p class="icon">⛶</p>
+      <p>Pulsa <strong>F11</strong> para pantalla completa</p>
+    `;
+  }
+  document.getElementById('fsHelpScreen').classList.add('show');
+}
+
+// ====== SCORES ======
 function getScores() {
   try { return JSON.parse(localStorage.getItem('wrt_scores') || '[]'); }
   catch { return []; }
 }
 function saveScore(pts) {
   const scores = getScores();
-  const now = new Date();
-  const dateStr = `${now.getDate()}/${now.getMonth()+1}/${now.getFullYear()}`;
-  scores.push({ points: pts, date: dateStr, ts: Date.now() });
+  const d = new Date();
+  scores.push({ points: pts, date: `${d.getDate()}/${d.getMonth()+1}/${d.getFullYear()}`, ts: Date.now() });
   scores.sort((a, b) => b.points - a.points);
   if (scores.length > 20) scores.length = 20;
   try { localStorage.setItem('wrt_scores', JSON.stringify(scores)); } catch {}
@@ -437,505 +479,611 @@ function saveScore(pts) {
 function renderScores() {
   const scores = getScores();
   const list = document.getElementById('scoresList');
-  if (scores.length === 0) {
-    list.innerHTML = '<div class="no-scores">No hay puntuaciones todavía.<br>¡Juega para registrar tu primera!</div>';
+  if (!scores.length) {
+    list.innerHTML = '<div class="no-scores">No hay puntuaciones.<br>¡Juega para registrar!</div>';
     return;
   }
   list.innerHTML = scores.map((s, i) =>
-    `<div class="score-entry">
-      <span class="rank">#${i+1}</span>
-      <span class="spts">${s.points}</span>
-      <span class="sdate">${s.date}</span>
-    </div>`
+    `<div class="score-entry"><span class="rank">#${i+1}</span><span class="spts">${s.points}</span><span class="sdate">${s.date}</span></div>`
   ).join('');
 }
 
 // ====== GYROSCOPE ======
-function initGyro() {
-  if (typeof DeviceOrientationEvent !== 'undefined') {
-    if (typeof DeviceOrientationEvent.requestPermission === 'function') {
-      // iOS - necesita permiso
-      document.getElementById('btnGyro').style.display = 'flex';
-      document.getElementById('btnGyro').onclick = () => {
-        DeviceOrientationEvent.requestPermission().then(r => {
-          if (r === 'granted') {
-            gyroPermission = true;
-            hasGyro = true;
-            window.addEventListener('deviceorientation', handleGyro);
-            document.getElementById('btnGyro').textContent = '✅ GIROSCOPIO ACTIVADO';
-            document.getElementById('btnGyro').style.background = 'linear-gradient(145deg,#27ae60,#1e8a4c)';
-            document.getElementById('gyroDot').classList.add('active');
-            document.getElementById('gyroStatus').style.display = 'flex';
-            layoutGame();
-          }
-        }).catch(console.error);
-      };
-    } else {
-      // Android / otros - probar directamente
-      window.addEventListener('deviceorientation', function test(e) {
-        if (e.gamma !== null || e.beta !== null) {
-          hasGyro = true;
-          gyroPermission = true;
-          document.getElementById('gyroStatus').style.display = 'flex';
-          document.getElementById('gyroDot').classList.add('active');
-          window.removeEventListener('deviceorientation', test);
-          window.addEventListener('deviceorientation', handleGyro);
-          layoutGame();
-        }
-      });
-    }
+function setupGyro() {
+  if (typeof DeviceOrientationEvent === 'undefined') return;
+  
+  if (typeof DeviceOrientationEvent.requestPermission === 'function') {
+    // iOS - mostrar botón
+    document.getElementById('btnGyro').style.display = 'flex';
+  } else {
+    // Android/otros - probar directamente
+    window.addEventListener('deviceorientation', function test(e) {
+      if (e.gamma !== null || e.beta !== null) {
+        hasGyro = true;
+        gyroPermission = true;
+        document.getElementById('gyroStatus').style.display = 'flex';
+        document.getElementById('gyroDot').classList.add('active');
+        window.removeEventListener('deviceorientation', test);
+        window.addEventListener('deviceorientation', handleGyro);
+        updateLayout();
+      }
+    }, { once: false });
+    
+    // Timeout para detectar si no hay gyro
+    setTimeout(() => {
+      if (!hasGyro) {
+        window.removeEventListener('deviceorientation', () => {});
+      }
+    }, 1000);
+  }
+}
+
+function requestGyroPermission() {
+  if (typeof DeviceOrientationEvent.requestPermission === 'function') {
+    DeviceOrientationEvent.requestPermission().then(r => {
+      if (r === 'granted') {
+        hasGyro = true;
+        gyroPermission = true;
+        window.addEventListener('deviceorientation', handleGyro);
+        document.getElementById('btnGyro').textContent = '✅ GIROSCOPIO ACTIVO';
+        document.getElementById('btnGyro').classList.add('active');
+        document.getElementById('gyroStatus').style.display = 'flex';
+        document.getElementById('gyroDot').classList.add('active');
+        updateLayout();
+      }
+    }).catch(e => {
+      console.log('Gyro permission error:', e);
+    });
   }
 }
 
 function handleGyro(e) {
   if (gameOver || !gameStarted) return;
   if (e.gamma !== null) tiltX = Math.max(-1, Math.min(1, e.gamma / 18));
-  if (e.beta !== null) {
-    tiltY = Math.max(-1, Math.min(1, (e.beta - 60) / 20));
-  }
+  if (e.beta !== null) tiltY = Math.max(-1, Math.min(1, (e.beta - 60) / 20));
 }
 
-// ====== MENÚ ======
+// ====== MENU ======
 let gameStarted = false;
 
-document.getElementById('btnPlay').onclick = () => {
+function showGame() {
   document.getElementById('startScreen').classList.add('hidden');
+  document.getElementById('waterScreen').style.display = 'block';
+  document.getElementById('topPanel').style.display = 'flex';
+  document.getElementById('indicators').style.display = 'flex';
+  document.getElementById('buttonPanel').style.display = 'flex';
+  document.getElementById('utilBtns').style.display = 'flex';
+  if (hasGyro && gyroPermission) {
+    document.getElementById('gyroStatus').style.display = 'flex';
+  }
+  updateLayout();
   gameStarted = true;
-  init();
-};
-document.getElementById('btnHelp').onclick = () => {
-  document.getElementById('helpScreen').classList.add('show');
-};
-document.getElementById('btnHelpBack').onclick = () => {
-  document.getElementById('helpScreen').classList.remove('show');
-};
-document.getElementById('btnScores').onclick = () => {
-  renderScores();
-  document.getElementById('scoresScreen').classList.add('show');
-};
-document.getElementById('btnScoresBack').onclick = () => {
-  document.getElementById('scoresScreen').classList.remove('show');
-};
-document.getElementById('btnFS').onclick = toggleFullscreen;
-document.getElementById('btnFSGame').onclick = toggleFullscreen;
-document.getElementById('btnReset').onclick = () => { if (gameStarted) init(); };
-document.getElementById('btnMenu').onclick = () => {
+  initGame();
+}
+
+function showMenu() {
   gameStarted = false;
   gameOver = true;
   document.getElementById('startScreen').classList.remove('hidden');
   document.getElementById('endScreen').classList.remove('show');
-};
-document.getElementById('btnAgain').onclick = () => {
-  document.getElementById('endScreen').classList.remove('show');
-  init();
-};
-document.getElementById('btnEndMenu').onclick = () => {
-  document.getElementById('endScreen').classList.remove('show');
-  gameStarted = false;
-  document.getElementById('startScreen').classList.remove('hidden');
-};
+}
 
-// ====== CANVAS ======
+document.getElementById('btnPlay').onclick = showGame;
+document.getElementById('btnHelp').onclick = () => document.getElementById('helpScreen').classList.add('show');
+document.getElementById('btnHelpBack').onclick = () => document.getElementById('helpScreen').classList.remove('show');
+document.getElementById('btnScores').onclick = () => { renderScores(); document.getElementById('scoresScreen').classList.add('show'); };
+document.getElementById('btnScoresBack').onclick = () => document.getElementById('scoresScreen').classList.remove('show');
+document.getElementById('btnFS').onclick = () => { if (canFullscreen) toggleFullscreen(); else showFSHelp(); };
+document.getElementById('btnFSBack').onclick = () => document.getElementById('fsHelpScreen').classList.remove('show');
+document.getElementById('btnFSGame').onclick = () => { if (canFullscreen) toggleFullscreen(); else showFSHelp(); };
+document.getElementById('btnReset').onclick = () => { if (gameStarted) initGame(); };
+document.getElementById('btnMenu').onclick = showMenu;
+document.getElementById('btnAgain').onclick = () => { document.getElementById('endScreen').classList.remove('show'); initGame(); };
+document.getElementById('btnEndMenu').onclick = showMenu;
+document.getElementById('btnGyro').onclick = requestGyroPermission;
+
+// ====== GAME ======
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
 const CW = 400, CH = 420;
 canvas.width = CW; canvas.height = CH;
 
-const GRAVITY = 0.09;
-const WATER_DRAG = 0.92;
-const BOUNCE = 0.28;
-const WATER_LINE = 28;
-const POLE_COUNT = 3;
-const FLOOR_Y = CH - 18;
-const JET_POWER = 5.0;
-const JET_RANGE = 200;
-const JET_WIDTH = 85;
-const RING_SINK = 0.07;
+const GRAVITY = 0.09, WATER_DRAG = 0.92, BOUNCE = 0.28, WATER_LINE = 28;
+const POLE_COUNT = 3, FLOOR_Y = CH - 18;
+const JET_POWER = 5.0, JET_RANGE = 200, JET_WIDTH = 85, RING_SINK = 0.07;
 const RING_COLORS = [
-  { name:'Rojo', color:'#e74c3c', light:'#f1948a' },
-  { name:'Azul', color:'#3498db', light:'#85c1e9' },
-  { name:'Verde', color:'#2ecc71', light:'#82e0aa' },
-  { name:'Amarillo', color:'#f1c40f', light:'#f9e154' }
+  { name:'Rojo', color:'#e74c3c' },
+  { name:'Azul', color:'#3498db' },
+  { name:'Verde', color:'#2ecc71' },
+  { name:'Amarillo', color:'#f1c40f' }
 ];
-const RINGS_PER_COLOR = 5;
-const TOTAL_RINGS = 20;
-const BASE_POINTS = 100;
+const RINGS_PER_COLOR = 5, TOTAL_RINGS = 20, BASE_POINTS = 100;
 
-let tiltX=0, tiltY=0, score=0, gameTime=0;
-let activeJets=[false,false,false];
-let jetPositions=[], poles=[], rings=[], particles=[], ambientBubbles=[];
-let keysPressed={}, wavePoints=[];
-let gameOver=false, scoringLog=[], jetHoldTime=[0,0,0];
+let tiltX = 0, tiltY = 0, score = 0, gameTime = 0, gameOver = false;
+let activeJets = [false, false, false], jetHoldTime = [0, 0, 0];
+let jetPositions = [], poles = [], rings = [], particles = [], bubbles = [];
+let keysPressed = {}, wavePoints = [], scoringLog = [];
 
-function init() {
-  score=0; gameOver=false; scoringLog=[];
-  tiltX=0; tiltY=0; jetHoldTime=[0,0,0];
+function initGame() {
+  score = 0; gameOver = false; scoringLog = [];
+  tiltX = 0; tiltY = 0; jetHoldTime = [0, 0, 0];
   document.getElementById('endScreen').classList.remove('show');
 
-  jetPositions=[
-    {x:CW*0.2,y:CH-6},{x:CW*0.5,y:CH-6},{x:CW*0.8,y:CH-6}
-  ];
+  jetPositions = [{x:CW*0.2,y:CH-6}, {x:CW*0.5,y:CH-6}, {x:CW*0.8,y:CH-6}];
 
-  poles=[];
-  const ps=CW/(POLE_COUNT+1);
-  for(let i=0;i<POLE_COUNT;i++){
-    poles.push({x:ps*(i+1),baseY:FLOOR_Y,height:95+i*20,width:7,tipR:5,scoredRings:[],lastColor:-1,currentCombo:0});
+  poles = [];
+  const ps = CW / (POLE_COUNT + 1);
+  for (let i = 0; i < POLE_COUNT; i++) {
+    poles.push({x:ps*(i+1), baseY:FLOOR_Y, height:95+i*20, width:7, tipR:5, scoredRings:[], lastColor:-1, currentCombo:0});
   }
 
-  rings=[];
-  let id=0;
-  for(let c=0;c<4;c++) for(let n=0;n<RINGS_PER_COLOR;n++){
-    rings.push({
-      x:25+Math.random()*(CW-50), y:FLOOR_Y-10-Math.random()*80,
-      vx:0,vy:0, outerR:12+Math.random()*2.5, innerR:5+Math.random()*1.5,
-      rotation:Math.random()*Math.PI*2, rotSpeed:0,
-      colorIdx:c, color:RING_COLORS[c].color, colorLight:RING_COLORS[c].light,
-      scored:false, scoredPole:-1, targetY:0, onPoleForce:0, slotIndex:-1, id:id++
-    });
+  rings = [];
+  let id = 0;
+  for (let c = 0; c < 4; c++) {
+    for (let n = 0; n < RINGS_PER_COLOR; n++) {
+      rings.push({
+        x: 30 + Math.random() * (CW - 60),
+        y: FLOOR_Y - 12 - Math.random() * 80,
+        vx: 0, vy: 0,
+        outerR: 12 + Math.random() * 2.5,
+        innerR: 5 + Math.random() * 1.5,
+        rotation: Math.random() * Math.PI * 2,
+        rotSpeed: 0,
+        colorIdx: c,
+        color: RING_COLORS[c].color,
+        scored: false, scoredPole: -1, targetY: 0,
+        onPoleForce: 0, slotIndex: -1, id: id++
+      });
+    }
   }
-  for(let i=rings.length-1;i>0;i--){
-    const j=Math.floor(Math.random()*(i+1));
-    [rings[i].x,rings[j].x]=[rings[j].x,rings[i].x];
-    [rings[i].y,rings[j].y]=[rings[j].y,rings[i].y];
+  
+  // Shuffle
+  for (let i = rings.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [rings[i].x, rings[j].x] = [rings[j].x, rings[i].x];
+    [rings[i].y, rings[j].y] = [rings[j].y, rings[i].y];
   }
 
-  wavePoints=[];
-  for(let i=0;i<=50;i++) wavePoints.push({x:(CW/50)*i,y:WATER_LINE,vy:0});
+  wavePoints = [];
+  for (let i = 0; i <= 50; i++) wavePoints.push({x:(CW/50)*i, y:WATER_LINE, vy:0});
 
-  ambientBubbles=[];
-  for(let i=0;i<20;i++) ambientBubbles.push({
-    x:Math.random()*CW, y:WATER_LINE+50+Math.random()*(CH-WATER_LINE-90),
-    r:1+Math.random()*2.5, spd:0.08+Math.random()*0.2,
-    w:Math.random()*Math.PI*2, ws:0.01+Math.random()*0.018
-  });
-  particles=[];
+  bubbles = [];
+  for (let i = 0; i < 20; i++) {
+    bubbles.push({x:Math.random()*CW, y:WATER_LINE+50+Math.random()*(CH-WATER_LINE-90), r:1+Math.random()*2.5, spd:0.08+Math.random()*0.2, w:Math.random()*Math.PI*2, ws:0.01+Math.random()*0.018});
+  }
+
+  particles = [];
   updateUI();
 }
 
 function update() {
-  if(gameOver||!gameStarted) return;
-  gameTime+=1/60;
-  updateTilt(); updateWaves(); updateJetHold();
-  for(let r of rings){ if(r.scored) updateScoredRing(r); else updateFreeRing(r); }
-  updateJets(); checkScoring(); updateParticles(); updateBubbles();
-}
+  if (gameOver || !gameStarted) return;
+  gameTime += 1/60;
 
-function updateTilt(){
-  if(!keysPressed['ArrowLeft']&&!keysPressed['ArrowRight']){tiltX*=.90;if(Math.abs(tiltX)<.008)tiltX=0}
-  if(!keysPressed['ArrowUp']&&!keysPressed['ArrowDown']){tiltY*=.90;if(Math.abs(tiltY)<.008)tiltY=0}
-  if(keysPressed['ArrowLeft'])tiltX=Math.max(-1,tiltX-.05);
-  if(keysPressed['ArrowRight'])tiltX=Math.min(1,tiltX+.05);
-  if(keysPressed['ArrowUp'])tiltY=Math.max(-1,tiltY-.05);
-  if(keysPressed['ArrowDown'])tiltY=Math.min(1,tiltY+.05);
-  const bw=33;
-  const hF=document.getElementById('horizFill'),vF=document.getElementById('vertFill');
-  const hw=Math.abs(tiltX)*bw;
-  hF.style.width=hw+'px'; hF.style.left=tiltX>=0?(bw+1)+'px':(bw+1-hw)+'px';
-  const vw=Math.abs(tiltY)*bw;
-  vF.style.width=vw+'px'; vF.style.left=tiltY>=0?(bw+1)+'px':(bw+1-vw)+'px';
-}
+  // Tilt keys
+  if (!keysPressed['ArrowLeft'] && !keysPressed['ArrowRight']) { tiltX *= 0.90; if (Math.abs(tiltX) < 0.008) tiltX = 0; }
+  if (!keysPressed['ArrowUp'] && !keysPressed['ArrowDown']) { tiltY *= 0.90; if (Math.abs(tiltY) < 0.008) tiltY = 0; }
+  if (keysPressed['ArrowLeft']) tiltX = Math.max(-1, tiltX - 0.05);
+  if (keysPressed['ArrowRight']) tiltX = Math.min(1, tiltX + 0.05);
+  if (keysPressed['ArrowUp']) tiltY = Math.max(-1, tiltY - 0.05);
+  if (keysPressed['ArrowDown']) tiltY = Math.min(1, tiltY + 0.05);
 
-function updateJetHold(){
-  for(let j=0;j<3;j++){
-    if(activeJets[j]) jetHoldTime[j]+=1/60;
-    else jetHoldTime[j]=Math.max(0,jetHoldTime[j]-.1);
+  // Indicators
+  const bw = 33;
+  const hF = document.getElementById('horizFill'), vF = document.getElementById('vertFill');
+  const hw = Math.abs(tiltX) * bw;
+  hF.style.width = hw + 'px';
+  hF.style.left = tiltX >= 0 ? (bw+1)+'px' : (bw+1-hw)+'px';
+  const vw = Math.abs(tiltY) * bw;
+  vF.style.width = vw + 'px';
+  vF.style.left = tiltY >= 0 ? (bw+1)+'px' : (bw+1-vw)+'px';
+
+  // Jet hold
+  for (let j = 0; j < 3; j++) {
+    if (activeJets[j]) jetHoldTime[j] += 1/60;
+    else jetHoldTime[j] = Math.max(0, jetHoldTime[j] - 0.1);
   }
-}
 
-function updateWaves(){
-  for(let i=1;i<wavePoints.length-1;i++){
-    const p=wavePoints[i];
-    p.vy+=((WATER_LINE-p.y)*.12+((wavePoints[i-1].y-p.y)+(wavePoints[i+1].y-p.y))*.1);
-    p.vy*=.82; p.y+=p.vy;
-    if(Math.abs(p.y-WATER_LINE)<.08&&Math.abs(p.vy)<.04){p.y=WATER_LINE;p.vy=0}
+  // Waves
+  for (let i = 1; i < wavePoints.length - 1; i++) {
+    const p = wavePoints[i];
+    p.vy += (WATER_LINE - p.y) * 0.12 + ((wavePoints[i-1].y - p.y) + (wavePoints[i+1].y - p.y)) * 0.1;
+    p.vy *= 0.82;
+    p.y += p.vy;
+    if (Math.abs(p.y - WATER_LINE) < 0.08 && Math.abs(p.vy) < 0.04) { p.y = WATER_LINE; p.vy = 0; }
   }
-  for(let j=0;j<3;j++){
-    if(!activeJets[j])continue;
-    for(let p of wavePoints){const d=Math.abs(p.x-jetPositions[j].x);if(d<50)p.vy-=(1-d/50)*.35}
-  }
-}
-
-function updateScoredRing(ring){
-  const pole=poles[ring.scoredPole];
-  let df=Math.abs(tiltX)*.02+Math.abs(tiltY)*.015;
-  for(let j=0;j<3;j++){
-    if(!activeJets[j])continue;
-    const dx=pole.x-jetPositions[j].x,dy=ring.targetY-jetPositions[j].y;
-    const dist=Math.sqrt(dx*dx+dy*dy),zone=JET_RANGE*.7;
-    if(dist<zone){
-      const prox=1-dist/zone;
-      const tf=Math.min(jetHoldTime[j]*.4,3);
-      df+=prox*.06*(1+tf);
+  for (let j = 0; j < 3; j++) {
+    if (!activeJets[j]) continue;
+    for (let p of wavePoints) {
+      const d = Math.abs(p.x - jetPositions[j].x);
+      if (d < 50) p.vy -= (1 - d/50) * 0.35;
     }
   }
-  ring.onPoleForce+=df; ring.onPoleForce*=.94;
-  const total=pole.scoredRings.length;
-  const threshold=1.0+(total-1-ring.slotIndex)*.7;
-  if(ring.onPoleForce>threshold){unscoredRing(ring);return}
-  ring.y+=(ring.targetY-ring.y)*.12;
-  ring.x+=(pole.x-ring.x)*.12;
-  ring.rotation*=.9;
-  if(ring.onPoleForce>threshold*.4){
-    const i=ring.onPoleForce/threshold;
-    ring.x+=(Math.random()-.5)*i*2;
-    ring.y+=(Math.random()-.5)*i*.8;
+
+  // Rings
+  for (let ring of rings) {
+    if (ring.scored) {
+      const pole = poles[ring.scoredPole];
+      let df = Math.abs(tiltX) * 0.02 + Math.abs(tiltY) * 0.015;
+      for (let j = 0; j < 3; j++) {
+        if (!activeJets[j]) continue;
+        const dx = pole.x - jetPositions[j].x, dy = ring.targetY - jetPositions[j].y;
+        const dist = Math.sqrt(dx*dx + dy*dy), zone = JET_RANGE * 0.7;
+        if (dist < zone) {
+          const prox = 1 - dist/zone, tf = Math.min(jetHoldTime[j] * 0.4, 3);
+          df += prox * 0.06 * (1 + tf);
+        }
+      }
+      ring.onPoleForce += df;
+      ring.onPoleForce *= 0.94;
+      const th = 1.0 + (pole.scoredRings.length - 1 - ring.slotIndex) * 0.7;
+      if (ring.onPoleForce > th) { unscore(ring); continue; }
+      ring.y += (ring.targetY - ring.y) * 0.12;
+      ring.x += (pole.x - ring.x) * 0.12;
+      ring.rotation *= 0.9;
+      if (ring.onPoleForce > th * 0.4) {
+        ring.x += (Math.random() - 0.5) * ring.onPoleForce / th * 2;
+        ring.y += (Math.random() - 0.5) * ring.onPoleForce / th * 0.8;
+      }
+    } else {
+      const inW = ring.y > WATER_LINE;
+      if (inW) { ring.vy += RING_SINK; ring.vx *= WATER_DRAG; ring.vy *= WATER_DRAG; ring.rotSpeed *= 0.93; }
+      else { ring.vy += GRAVITY; ring.vx *= 0.995; }
+      ring.vx += tiltX * 0.16;
+      ring.vy += tiltY * 0.12;
+      ring.x += ring.vx; ring.y += ring.vy; ring.rotation += ring.rotSpeed;
+      if (ring.x - ring.outerR < 0) { ring.x = ring.outerR; ring.vx = Math.abs(ring.vx) * BOUNCE; }
+      if (ring.x + ring.outerR > CW) { ring.x = CW - ring.outerR; ring.vx = -Math.abs(ring.vx) * BOUNCE; }
+      if (ring.y - ring.outerR < 4) { ring.y = ring.outerR + 4; ring.vy = Math.abs(ring.vy) * BOUNCE; }
+      if (ring.y + ring.outerR > FLOOR_Y) { ring.y = FLOOR_Y - ring.outerR; ring.vy = -Math.abs(ring.vy) * BOUNCE * 0.25; ring.vx *= 0.8; if (Math.abs(ring.vy) < 0.25) ring.vy = 0; }
+      for (let pole of poles) {
+        const pt = pole.baseY - pole.height, hw = pole.width/2 + ring.outerR + 1;
+        const dx = ring.x - pole.x;
+        if (Math.abs(dx) < hw && ring.y > pt + 8 && ring.y < pole.baseY) {
+          if (dx > 0) { ring.x = pole.x + hw; ring.vx = Math.abs(ring.vx) * BOUNCE; }
+          else { ring.x = pole.x - hw; ring.vx = -Math.abs(ring.vx) * BOUNCE; }
+        }
+      }
+      for (let o of rings) {
+        if (o === ring || o.scored) continue;
+        const dx = o.x - ring.x, dy = o.y - ring.y;
+        const dist = Math.sqrt(dx*dx + dy*dy), minD = ring.outerR + o.outerR;
+        if (dist < minD && dist > 0.1) {
+          const nx = dx/dist, ny = dy/dist, ov = (minD - dist) * 0.5;
+          ring.x -= nx * ov; ring.y -= ny * ov;
+          o.x += nx * ov; o.y += ny * ov;
+          const rv = (ring.vx - o.vx) * nx + (ring.vy - o.vy) * ny;
+          ring.vx -= rv * nx * 0.3; ring.vy -= rv * ny * 0.3;
+          o.vx += rv * nx * 0.3; o.vy += rv * ny * 0.3;
+        }
+      }
+    }
+  }
+
+  // Jets force
+  for (let j = 0; j < 3; j++) {
+    if (!activeJets[j]) continue;
+    const jet = jetPositions[j];
+    for (let i = 0; i < 5; i++) {
+      particles.push({x:jet.x+(Math.random()-0.5)*JET_WIDTH*0.4, y:jet.y-3, vx:(Math.random()-0.5)*3, vy:-7-Math.random()*6, life:1, r:1.5+Math.random()*2.5, type:'water'});
+    }
+    for (let ring of rings) {
+      if (ring.scored) continue;
+      const dx = ring.x - jet.x, dy = ring.y - jet.y;
+      const dist = Math.sqrt(dx*dx + dy*dy), hd = Math.abs(dx);
+      if (hd < JET_WIDTH && dist < JET_RANGE && dist > 4) {
+        const df = Math.pow(1 - dist/JET_RANGE, 1.2), wf = 1 - hd/JET_WIDTH, f = df * wf;
+        ring.vy -= f * JET_POWER;
+        ring.vx += (dx / Math.max(dist, 10)) * f * 1.2;
+        ring.rotSpeed += (Math.random() - 0.5) * 0.12 * f;
+      }
+    }
+  }
+
+  // Scoring
+  for (let ring of rings) {
+    if (ring.scored) continue;
+    for (let pi = 0; pi < poles.length; pi++) {
+      const pole = poles[pi], pt = pole.baseY - pole.height;
+      if (Math.abs(ring.x - pole.x) < ring.innerR * 0.9 && ring.y > pt - ring.outerR * 0.6 && ring.y < pt + 22 && ring.vy > 0.1) {
+        scoreRing(ring, pi);
+        break;
+      }
+    }
+  }
+
+  // Particles
+  for (let i = particles.length - 1; i >= 0; i--) {
+    const p = particles[i];
+    p.vy += 0.12; p.x += p.vx; p.y += p.vy; p.life -= 0.02;
+    if (p.life <= 0 || p.y > CH + 10) particles.splice(i, 1);
+  }
+
+  // Bubbles
+  for (let b of bubbles) {
+    b.y -= b.spd; b.w += b.ws; b.x += Math.sin(b.w) * 0.2;
+    for (let j = 0; j < 3; j++) {
+      if (!activeJets[j]) continue;
+      const d = Math.sqrt((b.x-jetPositions[j].x)**2 + (b.y-jetPositions[j].y)**2);
+      if (d < 60) b.y -= (1 - d/60) * 1.2;
+    }
+    if (b.y < WATER_LINE) { b.y = CH - 25 + Math.random() * 12; b.x = Math.random() * CW; }
   }
 }
 
-function unscoredRing(ring){
-  const pole=poles[ring.scoredPole];
-  const idx=pole.scoredRings.indexOf(ring);
-  if(idx>-1)pole.scoredRings.splice(idx,1);
+function unscore(ring) {
+  const pole = poles[ring.scoredPole];
+  const idx = pole.scoredRings.indexOf(ring);
+  if (idx > -1) pole.scoredRings.splice(idx, 1);
   recalcPole(pole);
-  const li=scoringLog.findIndex(l=>l.ringId===ring.id);
-  if(li>-1){score-=scoringLog[li].points;if(score<0)score=0;scoringLog.splice(li,1)}
-  ring.scored=false;ring.scoredPole=-1;ring.onPoleForce=0;ring.slotIndex=-1;
-  ring.vx=(Math.random()-.5)*5;ring.vy=-4-Math.random()*2;ring.rotSpeed=(Math.random()-.5)*.2;
-  for(let i=0;i<10;i++) particles.push({x:ring.x+(Math.random()-.5)*15,y:ring.y,vx:(Math.random()-.5)*3,vy:-1-Math.random()*2,life:1,r:2+Math.random()*2,type:'unscore'});
+  const li = scoringLog.findIndex(l => l.ringId === ring.id);
+  if (li > -1) { score -= scoringLog[li].points; if (score < 0) score = 0; scoringLog.splice(li, 1); }
+  ring.scored = false; ring.scoredPole = -1; ring.onPoleForce = 0; ring.slotIndex = -1;
+  ring.vx = (Math.random() - 0.5) * 5; ring.vy = -4 - Math.random() * 2; ring.rotSpeed = (Math.random() - 0.5) * 0.2;
+  for (let i = 0; i < 10; i++) particles.push({x:ring.x+(Math.random()-0.5)*15, y:ring.y, vx:(Math.random()-0.5)*3, vy:-1-Math.random()*2, life:1, r:2+Math.random()*2, type:'unscore'});
   updateUI();
 }
 
-function recalcPole(pole){
-  for(let i=0;i<pole.scoredRings.length;i++){
-    pole.scoredRings[i].slotIndex=i;
-    pole.scoredRings[i].targetY=pole.baseY-12-i*12;
+function recalcPole(pole) {
+  for (let i = 0; i < pole.scoredRings.length; i++) {
+    pole.scoredRings[i].slotIndex = i;
+    pole.scoredRings[i].targetY = pole.baseY - 12 - i * 12;
   }
-  if(!pole.scoredRings.length){pole.lastColor=-1;pole.currentCombo=0}
-  else{
-    const last=pole.scoredRings[pole.scoredRings.length-1];
-    pole.lastColor=last.colorIdx;
-    let c=0;for(let i=pole.scoredRings.length-1;i>=0;i--){if(pole.scoredRings[i].colorIdx===pole.lastColor)c++;else break}
-    pole.currentCombo=c;
+  if (!pole.scoredRings.length) { pole.lastColor = -1; pole.currentCombo = 0; }
+  else {
+    const last = pole.scoredRings[pole.scoredRings.length - 1];
+    pole.lastColor = last.colorIdx;
+    let c = 0;
+    for (let i = pole.scoredRings.length - 1; i >= 0; i--) {
+      if (pole.scoredRings[i].colorIdx === pole.lastColor) c++; else break;
+    }
+    pole.currentCombo = c;
   }
 }
 
-function updateFreeRing(ring){
-  const inW=ring.y>WATER_LINE;
-  if(inW){ring.vy+=RING_SINK;ring.vx*=WATER_DRAG;ring.vy*=WATER_DRAG;ring.rotSpeed*=.93}
-  else{ring.vy+=GRAVITY;ring.vx*=.995}
-  ring.vx+=tiltX*.16; ring.vy+=tiltY*.12;
-  ring.x+=ring.vx; ring.y+=ring.vy; ring.rotation+=ring.rotSpeed;
-  if(ring.x-ring.outerR<0){ring.x=ring.outerR;ring.vx=Math.abs(ring.vx)*BOUNCE}
-  if(ring.x+ring.outerR>CW){ring.x=CW-ring.outerR;ring.vx=-Math.abs(ring.vx)*BOUNCE}
-  if(ring.y-ring.outerR<4){ring.y=ring.outerR+4;ring.vy=Math.abs(ring.vy)*BOUNCE}
-  if(ring.y+ring.outerR>FLOOR_Y){ring.y=FLOOR_Y-ring.outerR;ring.vy=-Math.abs(ring.vy)*BOUNCE*.25;ring.vx*=.8;ring.rotSpeed*=.75;if(Math.abs(ring.vy)<.25)ring.vy=0}
-  for(let pole of poles){
-    const pt=pole.baseY-pole.height,hw=pole.width/2+ring.outerR+1,dx=ring.x-pole.x;
-    if(Math.abs(dx)<hw&&ring.y>pt+8&&ring.y<pole.baseY){
-      if(dx>0){ring.x=pole.x+hw;ring.vx=Math.abs(ring.vx)*BOUNCE}
-      else{ring.x=pole.x-hw;ring.vx=-Math.abs(ring.vx)*BOUNCE}
-    }
-  }
-  for(let o of rings){
-    if(o===ring||o.scored)continue;
-    const dx=o.x-ring.x,dy=o.y-ring.y,dist=Math.sqrt(dx*dx+dy*dy),minD=ring.outerR+o.outerR;
-    if(dist<minD&&dist>.1){
-      const nx=dx/dist,ny=dy/dist,ov=(minD-dist)*.5;
-      ring.x-=nx*ov;ring.y-=ny*ov;o.x+=nx*ov;o.y+=ny*ov;
-      const rv=(ring.vx-o.vx)*nx+(ring.vy-o.vy)*ny;
-      ring.vx-=rv*nx*.3;ring.vy-=rv*ny*.3;o.vx+=rv*nx*.3;o.vy+=rv*ny*.3;
-    }
-  }
-}
-
-function updateJets(){
-  for(let j=0;j<3;j++){
-    if(!activeJets[j])continue;
-    const jet=jetPositions[j];
-    for(let i=0;i<5;i++) particles.push({x:jet.x+(Math.random()-.5)*JET_WIDTH*.4,y:jet.y-3,vx:(Math.random()-.5)*3,vy:-7-Math.random()*6,life:1,r:1.5+Math.random()*2.5,type:'water'});
-    for(let ring of rings){
-      if(ring.scored)continue;
-      const dx=ring.x-jet.x,dy=ring.y-jet.y,dist=Math.sqrt(dx*dx+dy*dy);
-      const hd=Math.abs(dx);
-      if(hd<JET_WIDTH&&dist<JET_RANGE&&dist>4){
-        const df=Math.pow(1-dist/JET_RANGE,1.2),wf=1-hd/JET_WIDTH,f=df*wf;
-        ring.vy-=f*JET_POWER;ring.vx+=(dx/Math.max(dist,10))*f*1.2;
-        ring.rotSpeed+=(Math.random()-.5)*.12*f;
-      }
-    }
-  }
-}
-
-function checkScoring(){
-  for(let ring of rings){
-    if(ring.scored)continue;
-    for(let pi=0;pi<poles.length;pi++){
-      const pole=poles[pi],pt=pole.baseY-pole.height;
-      if(Math.abs(ring.x-pole.x)<ring.innerR*.9&&ring.y>pt-ring.outerR*.6&&ring.y<pt+22&&ring.vy>.1){
-        scoreRing(ring,pi);break;
-      }
-    }
-  }
-}
-
-function scoreRing(ring,pi){
-  const pole=poles[pi];
-  ring.scored=true;ring.scoredPole=pi;ring.vx=0;ring.vy=0;ring.rotSpeed=0;ring.onPoleForce=0;
-  ring.slotIndex=pole.scoredRings.length;
-  ring.targetY=pole.baseY-12-ring.slotIndex*12;
+function scoreRing(ring, pi) {
+  const pole = poles[pi];
+  ring.scored = true; ring.scoredPole = pi;
+  ring.vx = 0; ring.vy = 0; ring.rotSpeed = 0; ring.onPoleForce = 0;
+  ring.slotIndex = pole.scoredRings.length;
+  ring.targetY = pole.baseY - 12 - ring.slotIndex * 12;
   pole.scoredRings.push(ring);
-  let cm=1;
-  if(pole.lastColor===ring.colorIdx){pole.currentCombo++;cm=pole.currentCombo}
-  else pole.currentCombo=1;
-  pole.lastColor=ring.colorIdx;
-  const pts=BASE_POINTS*cm; score+=pts;
-  scoringLog.push({ringId:ring.id,colorIdx:ring.colorIdx,colorName:RING_COLORS[ring.colorIdx].name,combo:cm,points:pts,poleIdx:pi});
-  updateUI(); spawnEffect(pole.x,ring.targetY,pts,cm,ring.color);
-  if(rings.filter(r=>r.scored).length>=TOTAL_RINGS) setTimeout(showEnd,1000);
+  let cm = 1;
+  if (pole.lastColor === ring.colorIdx) { pole.currentCombo++; cm = pole.currentCombo; }
+  else pole.currentCombo = 1;
+  pole.lastColor = ring.colorIdx;
+  const pts = BASE_POINTS * cm;
+  score += pts;
+  scoringLog.push({ringId:ring.id, colorIdx:ring.colorIdx, colorName:RING_COLORS[ring.colorIdx].name, combo:cm, points:pts});
+  updateUI();
+  spawnEffect(pole.x, ring.targetY, pts, cm, ring.color);
+  if (rings.filter(r => r.scored).length >= TOTAL_RINGS) setTimeout(showEnd, 1000);
 }
 
-function spawnEffect(x,y,pts,combo,color){
-  const el=document.createElement('div');el.className='comboPopup';
-  el.innerHTML=`<span class="pts">+${pts}</span>`;
-  if(combo>1)el.innerHTML+=`<span class="mult">COMBO x${combo}!</span>`;
-  const ws=document.getElementById('waterScreen'),wr=ws.getBoundingClientRect(),cr=container.getBoundingClientRect();
-  const sx=wr.width/CW,sy=wr.height/CH;
-  el.style.left=((wr.left-cr.left)+x*sx-30)+'px';
-  el.style.top=((wr.top-cr.top)+y*sy-10)+'px';
-  el.style.color=combo>=4?'#ff00ff':combo>=3?'#ff6b6b':combo>1?'#feca57':'#00ff88';
-  el.style.textShadow=`0 0 10px ${el.style.color}`;
+function spawnEffect(x, y, pts, combo, color) {
+  const el = document.createElement('div');
+  el.className = 'comboPopup';
+  el.innerHTML = `<span class="pts">+${pts}</span>`;
+  if (combo > 1) el.innerHTML += `<span class="mult">COMBO x${combo}!</span>`;
+  const ws = document.getElementById('waterScreen'), wr = ws.getBoundingClientRect(), cr = container.getBoundingClientRect();
+  el.style.left = ((wr.left - cr.left) + x * wr.width / CW - 30) + 'px';
+  el.style.top = ((wr.top - cr.top) + y * wr.height / CH - 10) + 'px';
+  el.style.color = combo >= 4 ? '#ff00ff' : combo >= 3 ? '#ff6b6b' : combo > 1 ? '#feca57' : '#00ff88';
+  el.style.textShadow = `0 0 10px ${el.style.color}`;
   document.querySelector('.toyCase').appendChild(el);
-  setTimeout(()=>el.remove(),2000);
-  for(let i=0;i<8+combo*4;i++) particles.push({x:x+(Math.random()-.5)*20,y,vx:(Math.random()-.5)*(2+combo),vy:-2-Math.random()*(2+combo),life:1,r:2+Math.random()*3,type:'sparkle',color});
+  setTimeout(() => el.remove(), 2000);
+  for (let i = 0; i < 8 + combo * 4; i++) particles.push({x:x+(Math.random()-0.5)*20, y, vx:(Math.random()-0.5)*(2+combo), vy:-2-Math.random()*(2+combo), life:1, r:2+Math.random()*3, type:'sparkle', color});
 }
 
-function showEnd(){
-  gameOver=true;
+function showEnd() {
+  gameOver = true;
   saveScore(score);
-  const t=document.getElementById('endTable');
-  let bt=0,ct=0,mc=0,cc={};
-  for(let l of scoringLog){bt+=BASE_POINTS;ct+=l.points-BASE_POINTS;if(l.combo>mc)mc=l.combo;if(!cc[l.colorName])cc[l.colorName]={c:0,p:0};cc[l.colorName].c++;cc[l.colorName].p+=l.points}
-  let h=`<tr><th colspan="2">📊 RESUMEN</th></tr><tr><td>Aros</td><td>${scoringLog.length}/${TOTAL_RINGS}</td></tr><tr><td>Base</td><td>${bt}</td></tr><tr class="combo-row"><td>Bonus combos</td><td>+${ct}</td></tr><tr><td>Combo máx</td><td>x${mc}</td></tr><tr><th colspan="2">🎨 COLOR</th></tr>`;
-  for(let cn in cc) h+=`<tr><td>${cn} (${cc[cn].c})</td><td>${cc[cn].p}</td></tr>`;
-  h+=`<tr class="total-row"><td>TOTAL</td><td>${score}</td></tr>`;
-  t.innerHTML=h;
+  const t = document.getElementById('endTable');
+  let bt = 0, ct = 0, mc = 0, cc = {};
+  for (let l of scoringLog) {
+    bt += BASE_POINTS; ct += l.points - BASE_POINTS;
+    if (l.combo > mc) mc = l.combo;
+    if (!cc[l.colorName]) cc[l.colorName] = {c:0, p:0};
+    cc[l.colorName].c++; cc[l.colorName].p += l.points;
+  }
+  let h = `<tr><th colspan="2">📊 RESUMEN</th></tr>
+    <tr><td>Aros</td><td>${scoringLog.length}/${TOTAL_RINGS}</td></tr>
+    <tr><td>Base</td><td>${bt}</td></tr>
+    <tr class="combo-row"><td>Bonus combos</td><td>+${ct}</td></tr>
+    <tr><td>Combo máx</td><td>x${mc}</td></tr>
+    <tr><th colspan="2">🎨 COLOR</th></tr>`;
+  for (let cn in cc) h += `<tr><td>${cn} (${cc[cn].c})</td><td>${cc[cn].p}</td></tr>`;
+  h += `<tr class="total-row"><td>TOTAL</td><td>${score}</td></tr>`;
+  t.innerHTML = h;
   document.getElementById('endScreen').classList.add('show');
 }
 
-function updateUI(){
-  document.getElementById('scoreVal').textContent=score;
-  document.getElementById('ringsVal').textContent=`${rings.filter(r=>r.scored).length}/${TOTAL_RINGS}`;
-  let mc=Math.max(...poles.map(p=>p.currentCombo),1);
-  const cv=document.getElementById('comboVal');
-  cv.textContent=`x${mc}`;
-  cv.style.color=mc>=4?'#ff00ff':mc>=3?'#ff6b6b':mc>=2?'#feca57':'#888';
+function updateUI() {
+  document.getElementById('scoreVal').textContent = score;
+  document.getElementById('ringsVal').textContent = `${rings.filter(r=>r.scored).length}/${TOTAL_RINGS}`;
+  let mc = Math.max(...poles.map(p => p.currentCombo), 1);
+  const cv = document.getElementById('comboVal');
+  cv.textContent = `x${mc}`;
+  cv.style.color = mc >= 4 ? '#ff00ff' : mc >= 3 ? '#ff6b6b' : mc >= 2 ? '#feca57' : '#888';
 }
 
-function updateParticles(){for(let i=particles.length-1;i>=0;i--){const p=particles[i];p.vy+=.12;p.x+=p.vx;p.y+=p.vy;p.life-=.02;if(p.life<=0||p.y>CH+10)particles.splice(i,1)}}
-function updateBubbles(){for(let b of ambientBubbles){b.y-=b.spd;b.w+=b.ws;b.x+=Math.sin(b.w)*.2;for(let j=0;j<3;j++){if(!activeJets[j])continue;const d=Math.sqrt((b.x-jetPositions[j].x)**2+(b.y-jetPositions[j].y)**2);if(d<60)b.y-=(1-d/60)*1.2}if(b.y<WATER_LINE){b.y=CH-25+Math.random()*12;b.x=Math.random()*CW}}}
-
 // ====== RENDER ======
-function render(){
-  ctx.clearRect(0,0,CW,CH);
-  // Water bg
-  const g=ctx.createLinearGradient(0,WATER_LINE,0,CH);
-  g.addColorStop(0,'rgba(55,140,195,.18)');g.addColorStop(.5,'rgba(30,95,155,.32)');g.addColorStop(1,'rgba(12,45,85,.48)');
-  ctx.fillStyle=g;ctx.fillRect(0,WATER_LINE,CW,CH-WATER_LINE);
+function render() {
+  ctx.clearRect(0, 0, CW, CH);
+  
+  // Water
+  const g = ctx.createLinearGradient(0, WATER_LINE, 0, CH);
+  g.addColorStop(0, 'rgba(55,140,195,.18)'); g.addColorStop(0.5, 'rgba(30,95,155,.32)'); g.addColorStop(1, 'rgba(12,45,85,.48)');
+  ctx.fillStyle = g; ctx.fillRect(0, WATER_LINE, CW, CH - WATER_LINE);
+  
   // Surface
-  const to=tiltX*5;
-  ctx.beginPath();ctx.moveTo(0,wavePoints[0].y-to*.5);
-  for(let i=1;i<wavePoints.length;i++){const p=wavePoints[i-1],c=wavePoints[i],tl=to*((i/wavePoints.length)-.5);ctx.quadraticCurveTo(p.x,p.y+tl,(p.x+c.x)/2,(p.y+c.y)/2+tl)}
-  ctx.lineTo(CW,0);ctx.lineTo(0,0);ctx.closePath();ctx.fillStyle='rgba(120,200,235,.08)';ctx.fill();
-  ctx.beginPath();ctx.moveTo(0,wavePoints[0].y-to*.5);
-  for(let i=1;i<wavePoints.length;i++){const p=wavePoints[i-1],c=wavePoints[i],tl=to*((i/wavePoints.length)-.5);ctx.quadraticCurveTo(p.x,p.y+tl,(p.x+c.x)/2,(p.y+c.y)/2+tl)}
-  ctx.strokeStyle='rgba(255,255,255,.3)';ctx.lineWidth=1.8;ctx.stroke();
+  const to = tiltX * 5;
+  ctx.beginPath(); ctx.moveTo(0, wavePoints[0].y - to * 0.5);
+  for (let i = 1; i < wavePoints.length; i++) {
+    const p = wavePoints[i-1], c = wavePoints[i], tl = to * ((i/wavePoints.length) - 0.5);
+    ctx.quadraticCurveTo(p.x, p.y + tl, (p.x + c.x)/2, (p.y + c.y)/2 + tl);
+  }
+  ctx.lineTo(CW, 0); ctx.lineTo(0, 0); ctx.closePath();
+  ctx.fillStyle = 'rgba(120,200,235,.08)'; ctx.fill();
+  ctx.beginPath(); ctx.moveTo(0, wavePoints[0].y - to * 0.5);
+  for (let i = 1; i < wavePoints.length; i++) {
+    const p = wavePoints[i-1], c = wavePoints[i], tl = to * ((i/wavePoints.length) - 0.5);
+    ctx.quadraticCurveTo(p.x, p.y + tl, (p.x + c.x)/2, (p.y + c.y)/2 + tl);
+  }
+  ctx.strokeStyle = 'rgba(255,255,255,.3)'; ctx.lineWidth = 1.8; ctx.stroke();
+  
   // Bubbles
-  for(let b of ambientBubbles){ctx.globalAlpha=.18+Math.sin(b.w)*.05;ctx.beginPath();ctx.arc(b.x,b.y,b.r,0,Math.PI*2);ctx.fillStyle='#fff';ctx.fill();ctx.globalAlpha=1}
+  for (let b of bubbles) {
+    ctx.globalAlpha = 0.18 + Math.sin(b.w) * 0.05;
+    ctx.beginPath(); ctx.arc(b.x, b.y, b.r, 0, Math.PI * 2);
+    ctx.fillStyle = '#fff'; ctx.fill(); ctx.globalAlpha = 1;
+  }
+  
   // Caustics
-  ctx.globalAlpha=.03;for(let i=0;i<5;i++){const x=((gameTime*11+i*80)%(CW+50))-25,s=Math.sin(gameTime*.5+i)*10;ctx.fillStyle='#fff';ctx.beginPath();ctx.moveTo(x,WATER_LINE+12);ctx.lineTo(x+10,WATER_LINE+12);ctx.lineTo(x+20+s,CH-20);ctx.lineTo(x-8+s,CH-20);ctx.closePath();ctx.fill()}ctx.globalAlpha=1;
+  ctx.globalAlpha = 0.03;
+  for (let i = 0; i < 5; i++) {
+    const x = ((gameTime * 11 + i * 80) % (CW + 50)) - 25, s = Math.sin(gameTime * 0.5 + i) * 10;
+    ctx.fillStyle = '#fff'; ctx.beginPath();
+    ctx.moveTo(x, WATER_LINE + 12); ctx.lineTo(x + 10, WATER_LINE + 12);
+    ctx.lineTo(x + 20 + s, CH - 20); ctx.lineTo(x - 8 + s, CH - 20);
+    ctx.closePath(); ctx.fill();
+  }
+  ctx.globalAlpha = 1;
+  
   // Poles
-  for(let pole of poles){
-    const pt=pole.baseY-pole.height;
-    ctx.fillStyle='rgba(0,0,0,.08)';ctx.fillRect(pole.x-pole.width/2+2,pt+3,pole.width,pole.height);
-    const pg=ctx.createLinearGradient(pole.x-pole.width/2,0,pole.x+pole.width/2,0);
-    pg.addColorStop(0,'#a07548');pg.addColorStop(.3,'#cca070');pg.addColorStop(.7,'#b89058');pg.addColorStop(1,'#886038');
-    ctx.fillStyle=pg;ctx.fillRect(pole.x-pole.width/2,pt,pole.width,pole.height);
-    ctx.beginPath();ctx.arc(pole.x,pt,pole.tipR,0,Math.PI*2);
-    const tg=ctx.createRadialGradient(pole.x-1,pt-1,0,pole.x,pt,pole.tipR);
-    tg.addColorStop(0,'#fde0b0');tg.addColorStop(1,'#906838');ctx.fillStyle=tg;ctx.fill();
-    ctx.fillStyle='#584028';ctx.beginPath();ctx.moveTo(pole.x-11,pole.baseY);ctx.lineTo(pole.x+11,pole.baseY);ctx.lineTo(pole.x+8,pole.baseY-5);ctx.lineTo(pole.x-8,pole.baseY-5);ctx.closePath();ctx.fill();
+  for (let pole of poles) {
+    const pt = pole.baseY - pole.height;
+    ctx.fillStyle = 'rgba(0,0,0,.08)'; ctx.fillRect(pole.x - pole.width/2 + 2, pt + 3, pole.width, pole.height);
+    const pg = ctx.createLinearGradient(pole.x - pole.width/2, 0, pole.x + pole.width/2, 0);
+    pg.addColorStop(0, '#a07548'); pg.addColorStop(0.3, '#cca070'); pg.addColorStop(0.7, '#b89058'); pg.addColorStop(1, '#886038');
+    ctx.fillStyle = pg; ctx.fillRect(pole.x - pole.width/2, pt, pole.width, pole.height);
+    ctx.beginPath(); ctx.arc(pole.x, pt, pole.tipR, 0, Math.PI * 2);
+    const tg = ctx.createRadialGradient(pole.x - 1, pt - 1, 0, pole.x, pt, pole.tipR);
+    tg.addColorStop(0, '#fde0b0'); tg.addColorStop(1, '#906838');
+    ctx.fillStyle = tg; ctx.fill();
+    ctx.fillStyle = '#584028'; ctx.beginPath();
+    ctx.moveTo(pole.x - 11, pole.baseY); ctx.lineTo(pole.x + 11, pole.baseY);
+    ctx.lineTo(pole.x + 8, pole.baseY - 5); ctx.lineTo(pole.x - 8, pole.baseY - 5);
+    ctx.closePath(); ctx.fill();
   }
-  const fg=ctx.createLinearGradient(0,FLOOR_Y,0,CH);fg.addColorStop(0,'#5a4838');fg.addColorStop(1,'#382820');
-  ctx.fillStyle=fg;ctx.fillRect(0,FLOOR_Y,CW,CH-FLOOR_Y);ctx.fillStyle='#786858';ctx.fillRect(0,FLOOR_Y,CW,1.5);
+  const fg = ctx.createLinearGradient(0, FLOOR_Y, 0, CH);
+  fg.addColorStop(0, '#5a4838'); fg.addColorStop(1, '#382820');
+  ctx.fillStyle = fg; ctx.fillRect(0, FLOOR_Y, CW, CH - FLOOR_Y);
+  ctx.fillStyle = '#786858'; ctx.fillRect(0, FLOOR_Y, CW, 1.5);
+  
   // Jets
-  for(let j=0;j<3;j++){
-    if(!activeJets[j])continue;const jet=jetPositions[j];
-    const jg=ctx.createLinearGradient(jet.x,jet.y,jet.x,jet.y-180);
-    jg.addColorStop(0,'rgba(130,195,240,.5)');jg.addColorStop(.35,'rgba(130,195,240,.25)');jg.addColorStop(1,'rgba(130,195,240,0)');
-    const w1=Math.sin(gameTime*14+j)*4,w2=Math.sin(gameTime*18+j+1)*4,hw=JET_WIDTH*.35;
-    ctx.beginPath();ctx.moveTo(jet.x-hw*.4,jet.y);
-    ctx.bezierCurveTo(jet.x-hw,jet.y-60,jet.x-hw*.6+w1,jet.y-120,jet.x+w2,jet.y-180);
-    ctx.lineTo(jet.x+5+w2,jet.y-180);
-    ctx.bezierCurveTo(jet.x+hw*.6+w1,jet.y-120,jet.x+hw,jet.y-60,jet.x+hw*.4,jet.y);
-    ctx.closePath();ctx.fillStyle=jg;ctx.fill();
+  for (let j = 0; j < 3; j++) {
+    if (!activeJets[j]) continue;
+    const jet = jetPositions[j];
+    const jg = ctx.createLinearGradient(jet.x, jet.y, jet.x, jet.y - 180);
+    jg.addColorStop(0, 'rgba(130,195,240,.5)'); jg.addColorStop(0.35, 'rgba(130,195,240,.25)'); jg.addColorStop(1, 'rgba(130,195,240,0)');
+    const w1 = Math.sin(gameTime * 14 + j) * 4, w2 = Math.sin(gameTime * 18 + j + 1) * 4, hw = JET_WIDTH * 0.35;
+    ctx.beginPath(); ctx.moveTo(jet.x - hw * 0.4, jet.y);
+    ctx.bezierCurveTo(jet.x - hw, jet.y - 60, jet.x - hw * 0.6 + w1, jet.y - 120, jet.x + w2, jet.y - 180);
+    ctx.lineTo(jet.x + 5 + w2, jet.y - 180);
+    ctx.bezierCurveTo(jet.x + hw * 0.6 + w1, jet.y - 120, jet.x + hw, jet.y - 60, jet.x + hw * 0.4, jet.y);
+    ctx.closePath(); ctx.fillStyle = jg; ctx.fill();
   }
+  
   // Particles
-  for(let p of particles){ctx.globalAlpha=p.life*.55;ctx.beginPath();ctx.arc(p.x,p.y,p.r*p.life,0,Math.PI*2);ctx.fillStyle=p.type==='sparkle'?(p.color||'#00ff88'):p.type==='unscore'?'#ff5555':'rgba(160,215,255,.65)';ctx.fill();ctx.globalAlpha=1}
+  for (let p of particles) {
+    ctx.globalAlpha = p.life * 0.55;
+    ctx.beginPath(); ctx.arc(p.x, p.y, p.r * p.life, 0, Math.PI * 2);
+    ctx.fillStyle = p.type === 'sparkle' ? (p.color || '#00ff88') : p.type === 'unscore' ? '#ff5555' : 'rgba(160,215,255,.65)';
+    ctx.fill(); ctx.globalAlpha = 1;
+  }
+  
   // Rings
-  const sorted=[...rings].sort((a,b)=>{if(a.scored&&!b.scored)return -1;if(!a.scored&&b.scored)return 1;return a.y-b.y});
-  for(let ring of sorted){
-    ctx.save();ctx.translate(ring.x,ring.y);
-    const t=ring.scored?.28:(.28+Math.abs(Math.cos(ring.rotation))*.72);
-    ctx.beginPath();ctx.ellipse(1.5,2,ring.outerR,ring.outerR*t,0,0,Math.PI*2);ctx.fillStyle='rgba(0,0,0,.12)';ctx.fill();
-    ctx.beginPath();ctx.ellipse(0,0,ring.outerR,ring.outerR*t,0,0,Math.PI*2);ctx.fillStyle=ring.color;ctx.fill();ctx.strokeStyle='rgba(0,0,0,.18)';ctx.lineWidth=.7;ctx.stroke();
-    ctx.beginPath();ctx.ellipse(0,0,ring.innerR,ring.innerR*t,0,0,Math.PI*2);ctx.fillStyle=ring.scored?'rgba(60,120,160,.28)':'rgba(45,105,145,.38)';ctx.fill();
-    ctx.beginPath();ctx.ellipse(-ring.outerR*.2,-ring.outerR*t*.28,ring.outerR*.35,ring.outerR*t*.12,-.4,0,Math.PI);ctx.fillStyle='rgba(255,255,255,.25)';ctx.fill();
-    if(ring.scored&&ring.onPoleForce>.3){
-      const pole=poles[ring.scoredPole],th=1+(pole.scoredRings.length-1-ring.slotIndex)*.7;
-      const d=Math.min(ring.onPoleForce/th,1);
-      ctx.beginPath();ctx.ellipse(0,0,ring.outerR+2,(ring.outerR+2)*t,0,0,Math.PI*2);
-      ctx.strokeStyle=`rgba(255,${Math.floor(100-d*100)},${Math.floor(100-d*100)},${d*.7})`;ctx.lineWidth=1+d;ctx.stroke();
+  const sorted = [...rings].sort((a, b) => { if (a.scored && !b.scored) return -1; if (!a.scored && b.scored) return 1; return a.y - b.y; });
+  for (let ring of sorted) {
+    ctx.save(); ctx.translate(ring.x, ring.y);
+    const t = ring.scored ? 0.28 : (0.28 + Math.abs(Math.cos(ring.rotation)) * 0.72);
+    ctx.beginPath(); ctx.ellipse(1.5, 2, ring.outerR, ring.outerR * t, 0, 0, Math.PI * 2);
+    ctx.fillStyle = 'rgba(0,0,0,.12)'; ctx.fill();
+    ctx.beginPath(); ctx.ellipse(0, 0, ring.outerR, ring.outerR * t, 0, 0, Math.PI * 2);
+    ctx.fillStyle = ring.color; ctx.fill();
+    ctx.strokeStyle = 'rgba(0,0,0,.18)'; ctx.lineWidth = 0.7; ctx.stroke();
+    ctx.beginPath(); ctx.ellipse(0, 0, ring.innerR, ring.innerR * t, 0, 0, Math.PI * 2);
+    ctx.fillStyle = ring.scored ? 'rgba(60,120,160,.28)' : 'rgba(45,105,145,.38)'; ctx.fill();
+    ctx.beginPath(); ctx.ellipse(-ring.outerR * 0.2, -ring.outerR * t * 0.28, ring.outerR * 0.35, ring.outerR * t * 0.12, -0.4, 0, Math.PI);
+    ctx.fillStyle = 'rgba(255,255,255,.25)'; ctx.fill();
+    if (ring.scored && ring.onPoleForce > 0.3) {
+      const pole = poles[ring.scoredPole];
+      const th = 1.0 + (pole.scoredRings.length - 1 - ring.slotIndex) * 0.7;
+      const d = Math.min(ring.onPoleForce / th, 1);
+      ctx.beginPath(); ctx.ellipse(0, 0, ring.outerR + 2, (ring.outerR + 2) * t, 0, 0, Math.PI * 2);
+      ctx.strokeStyle = `rgba(255,${Math.floor(100 - d * 100)},${Math.floor(100 - d * 100)},${d * 0.7})`;
+      ctx.lineWidth = 1 + d; ctx.stroke();
     }
     ctx.restore();
   }
+  
   // Nozzles
-  for(let j=0;j<3;j++){
-    const jet=jetPositions[j],on=activeJets[j];
-    ctx.beginPath();ctx.arc(jet.x,jet.y+2,6,0,Math.PI*2);ctx.fillStyle=on?'#48b8d8':'#484c55';ctx.fill();
-    ctx.strokeStyle='#2a2e35';ctx.lineWidth=1.5;ctx.stroke();
-    ctx.beginPath();ctx.arc(jet.x,jet.y+1,3.5,0,Math.PI*2);ctx.fillStyle=on?'#88ddff':'#383c45';ctx.fill();
-    if(on){ctx.beginPath();ctx.arc(jet.x,jet.y,10,0,Math.PI*2);ctx.fillStyle='rgba(80,190,255,.15)';ctx.fill()}
+  for (let j = 0; j < 3; j++) {
+    const jet = jetPositions[j], on = activeJets[j];
+    ctx.beginPath(); ctx.arc(jet.x, jet.y + 2, 6, 0, Math.PI * 2);
+    ctx.fillStyle = on ? '#48b8d8' : '#484c55'; ctx.fill();
+    ctx.strokeStyle = '#2a2e35'; ctx.lineWidth = 1.5; ctx.stroke();
+    ctx.beginPath(); ctx.arc(jet.x, jet.y + 1, 3.5, 0, Math.PI * 2);
+    ctx.fillStyle = on ? '#88ddff' : '#383c45'; ctx.fill();
+    if (on) {
+      ctx.beginPath(); ctx.arc(jet.x, jet.y, 10, 0, Math.PI * 2);
+      ctx.fillStyle = 'rgba(80,190,255,.15)'; ctx.fill();
+    }
   }
 }
 
 // ====== CONTROLS ======
-const jkm={'a':0,'s':1,'d':2};
-document.addEventListener('keydown',e=>{
-  if(!gameStarted)return;if(gameOver)return;
-  const kl=e.key.toLowerCase();
-  if(jkm[kl]!==undefined){activeJets[jkm[kl]]=true;document.querySelector(`[data-jet="${jkm[kl]}"]`)?.classList.add('pressed')}
-  if(['ArrowLeft','ArrowRight','ArrowUp','ArrowDown'].includes(e.key)){keysPressed[e.key]=true;e.preventDefault();const m={ArrowLeft:'left',ArrowRight:'right',ArrowUp:'up',ArrowDown:'down'};document.querySelector(`[data-tilt="${m[e.key]}"]`)?.classList.add('pressed')}
-  if(kl==='r')init();if(e.key===' ')e.preventDefault();
-});
-document.addEventListener('keyup',e=>{
-  const kl=e.key.toLowerCase();
-  if(jkm[kl]!==undefined){activeJets[jkm[kl]]=false;document.querySelector(`[data-jet="${jkm[kl]}"]`)?.classList.remove('pressed')}
-  if(['ArrowLeft','ArrowRight','ArrowUp','ArrowDown'].includes(e.key)){keysPressed[e.key]=false;const m={ArrowLeft:'left',ArrowRight:'right',ArrowUp:'up',ArrowDown:'down'};document.querySelector(`[data-tilt="${m[e.key]}"]`)?.classList.remove('pressed')}
-});
-
-document.querySelectorAll('.jetBtn').forEach(btn=>{
-  const j=parseInt(btn.dataset.jet);
-  const on=e=>{e.preventDefault();if(!gameOver&&gameStarted){activeJets[j]=true;btn.classList.add('pressed')}};
-  const off=e=>{e.preventDefault();activeJets[j]=false;btn.classList.remove('pressed')};
-  btn.addEventListener('mousedown',on);btn.addEventListener('mouseup',off);btn.addEventListener('mouseleave',off);
-  btn.addEventListener('touchstart',on,{passive:false});btn.addEventListener('touchend',off,{passive:false});btn.addEventListener('touchcancel',off,{passive:false});
+const jkm = {'a':0, 's':1, 'd':2};
+document.addEventListener('keydown', e => {
+  if (!gameStarted || gameOver) return;
+  const kl = e.key.toLowerCase();
+  if (jkm[kl] !== undefined) { activeJets[jkm[kl]] = true; document.querySelector(`[data-jet="${jkm[kl]}"]`)?.classList.add('pressed'); }
+  if (['ArrowLeft','ArrowRight','ArrowUp','ArrowDown'].includes(e.key)) {
+    keysPressed[e.key] = true; e.preventDefault();
+    const m = {ArrowLeft:'left', ArrowRight:'right', ArrowUp:'up', ArrowDown:'down'};
+    document.querySelector(`[data-tilt="${m[e.key]}"]`)?.classList.add('pressed');
+  }
+  if (kl === 'r') initGame();
 });
 
-document.querySelectorAll('.tiltBtn').forEach(btn=>{
-  const dir=btn.dataset.tilt;
-  const km={left:'ArrowLeft',right:'ArrowRight',up:'ArrowUp',down:'ArrowDown'};
-  const key=km[dir];
-  const on=e=>{e.preventDefault();if(!gameOver&&gameStarted){keysPressed[key]=true;btn.classList.add('pressed')}};
-  const off=e=>{e.preventDefault();keysPressed[key]=false;btn.classList.remove('pressed')};
-  btn.addEventListener('mousedown',on);btn.addEventListener('mouseup',off);btn.addEventListener('mouseleave',off);
-  btn.addEventListener('touchstart',on,{passive:false});btn.addEventListener('touchend',off,{passive:false});btn.addEventListener('touchcancel',off,{passive:false});
+document.addEventListener('keyup', e => {
+  const kl = e.key.toLowerCase();
+  if (jkm[kl] !== undefined) { activeJets[jkm[kl]] = false; document.querySelector(`[data-jet="${jkm[kl]}"]`)?.classList.remove('pressed'); }
+  if (['ArrowLeft','ArrowRight','ArrowUp','ArrowDown'].includes(e.key)) {
+    keysPressed[e.key] = false;
+    const m = {ArrowLeft:'left', ArrowRight:'right', ArrowUp:'up', ArrowDown:'down'};
+    document.querySelector(`[data-tilt="${m[e.key]}"]`)?.classList.remove('pressed');
+  }
+});
+
+document.querySelectorAll('.jetBtn').forEach(btn => {
+  const j = parseInt(btn.dataset.jet);
+  const on = e => { e.preventDefault(); if (gameStarted && !gameOver) { activeJets[j] = true; btn.classList.add('pressed'); }};
+  const off = e => { e.preventDefault(); activeJets[j] = false; btn.classList.remove('pressed'); };
+  btn.addEventListener('mousedown', on); btn.addEventListener('mouseup', off); btn.addEventListener('mouseleave', off);
+  btn.addEventListener('touchstart', on, {passive:false}); btn.addEventListener('touchend', off, {passive:false}); btn.addEventListener('touchcancel', off, {passive:false});
+});
+
+document.querySelectorAll('.tiltBtn').forEach(btn => {
+  const dir = btn.dataset.tilt;
+  const km = {left:'ArrowLeft', right:'ArrowRight', up:'ArrowUp', down:'ArrowDown'};
+  const key = km[dir];
+  const on = e => { e.preventDefault(); if (gameStarted && !gameOver) { keysPressed[key] = true; btn.classList.add('pressed'); }};
+  const off = e => { e.preventDefault(); keysPressed[key] = false; btn.classList.remove('pressed'); };
+  btn.addEventListener('mousedown', on); btn.addEventListener('mouseup', off); btn.addEventListener('mouseleave', off);
+  btn.addEventListener('touchstart', on, {passive:false}); btn.addEventListener('touchend', off, {passive:false}); btn.addEventListener('touchcancel', off, {passive:false});
 });
 
 // ====== LOOP ======
-function gameLoop(){update();render();requestAnimationFrame(gameLoop)}
+function gameLoop() {
+  update();
+  render();
+  requestAnimationFrame(gameLoop);
+}
 
 // ====== INIT ======
-initGyro();
+setupGyro();
 resize();
 gameLoop();
 </script>
