@@ -207,7 +207,7 @@ body{display:flex;justify-content:center;align-items:center;font-family:'Segoe U
 <div id="gameContainer"><div class="toyCase">
 <div class="cs cs1"></div><div class="cs cs2"></div><div class="cs cs3"></div><div class="cs cs4"></div>
 <div id="waterScreen"><canvas id="gameCanvas"></canvas><div class="wR"></div></div>
-<div class="ub"><button id="bSnd">🔊</button><button id="bFS">⛶</button><button id="bRe">↺</button><button id="bMe">☰</button></div>
+<div class="ub"><button id="bMus">♫</button><button id="bSnd">🔊</button><button id="bFS">⛶</button><button id="bRe">↺</button><button id="bMe">☰</button></div>
 <div class="gi" id="gyroInd" title="Tocar para calibrar (posición actual = centro)"><div class="gd" id="gyroDot"></div><span>GYRO ⊙</span></div>
 <div id="topPanel">
   <div class="ps"><div class="pl">Nivel</div><div class="pv lv" id="lV">1</div></div>
@@ -635,6 +635,197 @@ function hap(ms=15){if(navigator.vibrate)navigator.vibrate(ms)}function hapP(p){
 const sBtn=document.getElementById('bSnd');function uSB(){sBtn.textContent=sndOn?'🔊':'🔇'}uSB();
 sBtn.onclick=()=>{iA();sndOn=!sndOn;try{localStorage.setItem('wrt_snd',sndOn?'1':'0')}catch{};uSB()};
 
+// ===== MÚSICA PROCEDURAL =====
+let musOn=false,musMode='none'; // 'menu','game','win','none'
+try{musOn=localStorage.getItem('wrt_mus')==='1'}catch{}
+const mBtn=document.getElementById('bMus');
+function uMB(){mBtn.textContent=musOn?'♫':'♪';mBtn.style.opacity=musOn?'1':'0.5'}uMB();
+mBtn.onclick=()=>{
+  iA();musOn=!musOn;
+  try{localStorage.setItem('wrt_mus',musOn?'1':'0')}catch{}
+  uMB();
+  if(musOn){musicPlay(musMode==='none'?'menu':musMode)}
+  else{musicStop()}
+};
+
+// Nodos de audio persistentes
+let musGain=null,musNodes=[];
+function musicEnsureGain(){
+  if(!ac)return null;
+  if(!musGain){musGain=ac.createGain();musGain.gain.value=0;musGain.connect(ac.destination)}
+  return musGain;
+}
+
+function musicStop(){
+  if(musGain)musGain.gain.linearRampToValueAtTime(0,ac.currentTime+0.8);
+  setTimeout(()=>{
+    musNodes.forEach(n=>{try{n.stop()}catch{}});
+    musNodes=[];
+  },900);
+  musMode='none';
+}
+
+function musicPlay(mode){
+  if(!musOn||!ac)return;
+  musicEnsureGain();
+  // Fade out anterior
+  if(musNodes.length){
+    musGain.gain.linearRampToValueAtTime(0,ac.currentTime+0.5);
+    const old=musNodes.slice();
+    setTimeout(()=>old.forEach(n=>{try{n.stop()}catch{}}),600);
+    musNodes=[];
+  }
+  musMode=mode;
+  if(mode==='menu')musicMenu();
+  else if(mode==='game')musicGame();
+  else if(mode==='win')musicWin();
+}
+
+// ---- MENÚ: Ambiente acuático soñador ----
+function musicMenu(){
+  if(!ac||!musGain)return;
+  const t=ac.currentTime;
+  // Pad de fondo — acorde suave
+  const padFreqs=[130.81,196,261.63,329.63]; // C3,G3,C4,E4
+  padFreqs.forEach(f=>{
+    const o=ac.createOscillator();
+    o.type='sine';o.frequency.value=f;
+    const g=ac.createGain();g.gain.value=0.04;
+    const fl=ac.createBiquadFilter();fl.type='lowpass';fl.frequency.value=600;
+    // LFO tremolo sutil
+    const lfo=ac.createOscillator();lfo.type='sine';lfo.frequency.value=0.3+Math.random()*0.4;
+    const lfoG=ac.createGain();lfoG.gain.value=0.015;
+    lfo.connect(lfoG);lfoG.connect(g.gain);
+    o.connect(fl);fl.connect(g);g.connect(musGain);
+    lfo.start(t);o.start(t);
+    musNodes.push(o,lfo);
+  });
+  // Melodía pentatónica con delay
+  const melody=[261.63,293.66,329.63,392,440,523.25,440,392,329.63,293.66];
+  const delay=ac.createDelay();delay.delayTime.value=0.4;
+  const dGain=ac.createGain();dGain.gain.value=0.3;
+  const dFilt=ac.createBiquadFilter();dFilt.type='lowpass';dFilt.frequency.value=1200;
+  delay.connect(dGain);dGain.connect(dFilt);dFilt.connect(delay);dFilt.connect(musGain);
+  function playMelNote(idx){
+    if(musMode!=='menu'||!musOn)return;
+    const f=melody[idx%melody.length];
+    const o=ac.createOscillator();o.type='triangle';
+    o.frequency.value=f*(0.99+Math.random()*0.02);
+    const g=ac.createGain();
+    g.gain.setValueAtTime(0,ac.currentTime);
+    g.gain.linearRampToValueAtTime(0.06,ac.currentTime+0.05);
+    g.gain.exponentialRampToValueAtTime(0.001,ac.currentTime+1.8);
+    o.connect(g);g.connect(musGain);g.connect(delay);
+    o.start(ac.currentTime);o.stop(ac.currentTime+2);
+    setTimeout(()=>playMelNote(idx+1),1800+Math.random()*1200);
+  }
+  // Burbujas ambientales
+  function playBubble(){
+    if(musMode!=='menu'||!musOn)return;
+    const f=800+Math.random()*1600;
+    const o=ac.createOscillator();o.type='sine';o.frequency.value=f;
+    o.frequency.exponentialRampToValueAtTime(f*1.5,ac.currentTime+0.08);
+    const g=ac.createGain();g.gain.setValueAtTime(0.02,ac.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.001,ac.currentTime+0.15);
+    o.connect(g);g.connect(musGain);o.start();o.stop(ac.currentTime+0.2);
+    setTimeout(()=>playBubble(),2000+Math.random()*4000);
+  }
+  musGain.gain.linearRampToValueAtTime(1,ac.currentTime+1.5);
+  setTimeout(()=>playMelNote(0),500);
+  setTimeout(()=>playBubble(),1000);
+}
+
+// ---- JUEGO: Rítmico con tensión ----
+function musicGame(){
+  if(!ac||!musGain)return;
+  const t=ac.currentTime;
+  // Sub-bajo pulsante
+  const sub=ac.createOscillator();sub.type='sine';sub.frequency.value=55;
+  const subG=ac.createGain();subG.gain.value=0;
+  const subLfo=ac.createOscillator();subLfo.type='sine';subLfo.frequency.value=1.2;
+  const subLfoG=ac.createGain();subLfoG.gain.value=0.05;
+  subLfo.connect(subLfoG);subLfoG.connect(subG.gain);
+  sub.connect(subG);subG.connect(musGain);
+  sub.start(t);subLfo.start(t);
+  musNodes.push(sub,subLfo);
+  // Pad menor — tensión
+  const padFreqs=[130.81,155.56,196,233.08]; // Cm: C3,Eb3,G3,Bb3
+  padFreqs.forEach(f=>{
+    const o=ac.createOscillator();o.type='sine';o.frequency.value=f;
+    const g=ac.createGain();g.gain.value=0.025;
+    const fl=ac.createBiquadFilter();fl.type='lowpass';fl.frequency.value=500;
+    o.connect(fl);fl.connect(g);g.connect(musGain);o.start(t);
+    musNodes.push(o);
+  });
+  // Arpegio rítmico
+  const arpNotes=[196,233.08,261.63,311.13,261.63,233.08];
+  let arpIdx=0;
+  function playArp(){
+    if(musMode!=='game'||!musOn)return;
+    const f=arpNotes[arpIdx%arpNotes.length];
+    const o=ac.createOscillator();o.type='square';
+    o.frequency.value=f;
+    const g=ac.createGain();
+    const fl=ac.createBiquadFilter();fl.type='lowpass';fl.frequency.value=1800;
+    g.gain.setValueAtTime(0,ac.currentTime);
+    g.gain.linearRampToValueAtTime(0.035,ac.currentTime+0.02);
+    g.gain.exponentialRampToValueAtTime(0.001,ac.currentTime+0.25);
+    o.connect(fl);fl.connect(g);g.connect(musGain);
+    o.start(ac.currentTime);o.stop(ac.currentTime+0.3);
+    arpIdx++;
+    setTimeout(()=>playArp(),280+Math.random()*40);
+  }
+  // Percusión de agua
+  function playPerc(){
+    if(musMode!=='game'||!musOn)return;
+    const buf=ac.createBuffer(1,ac.sampleRate*0.06,ac.sampleRate);
+    const d=buf.getChannelData(0);
+    for(let i=0;i<d.length;i++)d[i]=(Math.random()*2-1)*Math.exp(-i/(d.length*0.15));
+    const s=ac.createBufferSource();s.buffer=buf;
+    const f=ac.createBiquadFilter();f.type='bandpass';f.frequency.value=400+Math.random()*300;f.Q.value=8;
+    const g=ac.createGain();g.gain.value=0.07;
+    s.connect(f);f.connect(g);g.connect(musGain);s.start();
+    setTimeout(()=>playPerc(),600+Math.random()*100);
+  }
+  musGain.gain.linearRampToValueAtTime(1,ac.currentTime+1);
+  setTimeout(()=>playArp(),300);
+  setTimeout(()=>playPerc(),600);
+}
+
+// ---- VICTORIA: Fanfarria ----
+function musicWin(){
+  if(!ac||!musGain)return;
+  musGain.gain.linearRampToValueAtTime(1,ac.currentTime+0.2);
+  const notes=[523.25,587.33,659.25,783.99,1046.5];
+  notes.forEach((f,i)=>{
+    const o=ac.createOscillator();o.type='triangle';
+    o.frequency.value=f;
+    const g=ac.createGain();
+    g.gain.setValueAtTime(0,ac.currentTime+i*0.15);
+    g.gain.linearRampToValueAtTime(0.1,ac.currentTime+i*0.15+0.05);
+    g.gain.exponentialRampToValueAtTime(0.001,ac.currentTime+i*0.15+1.2);
+    o.connect(g);g.connect(musGain);
+    o.start(ac.currentTime+i*0.15);o.stop(ac.currentTime+i*0.15+1.5);
+  });
+  // Acorde final sostenido
+  setTimeout(()=>{
+    if(musMode!=='win')return;
+    [523.25,659.25,783.99].forEach(f=>{
+      const o=ac.createOscillator();o.type='sine';o.frequency.value=f;
+      const g=ac.createGain();g.gain.setValueAtTime(0.06,ac.currentTime);
+      g.gain.exponentialRampToValueAtTime(0.001,ac.currentTime+3);
+      o.connect(g);g.connect(musGain);o.start();o.stop(ac.currentTime+3.5);
+    });
+  },800);
+  // Tras la fanfarria, volver a menú
+  setTimeout(()=>{if(musMode==='win')musicPlay('menu')},5000);
+}
+
+// Funciones de control desde el juego
+function musicToMenu(){if(musOn){iA();musicPlay('menu')}}
+function musicToGame(){if(musOn){iA();musicPlay('game')}}
+function musicToWin(){if(musOn){iA();musicPlay('win')}}
+
 // ===== GLOBALS =====
 const isIOS=/iPad|iPhone|iPod/.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
 const canFS=document.documentElement.requestFullscreen||document.documentElement.webkitRequestFullscreen;
@@ -843,17 +1034,17 @@ document.addEventListener('keydown',e=>{
 
 // ===== MENÚ =====
 function sP(id){document.querySelectorAll('.mp').forEach(p=>p.classList.remove('show'));document.getElementById(id).classList.add('show')}
-function oMenu(){paused=true;sP('pMain');buildLvSel();updateOnlineStatus();document.getElementById('menuOv').classList.add('show')}
+function oMenu(){paused=true;sP('pMain');buildLvSel();updateOnlineStatus();document.getElementById('menuOv').classList.add('show');musicToMenu()}
 function cMenu(){document.getElementById('menuOv').classList.remove('show');if(!gOver){paused=false;lFT=performance.now()}}
-document.getElementById('mPlay').onclick=()=>{iA();cMenu();initGame()};
+document.getElementById('mPlay').onclick=()=>{iA();cMenu();initGame();musicToGame()};
 document.getElementById('mTut').onclick=()=>{cMenu();openTut()};
 document.getElementById('mAcc').onclick=()=>{bPU();sP('pAcc')};document.getElementById('aBack').onclick=()=>sP('pMain');
 document.getElementById('mScores').onclick=()=>{rSc();sP('pScores')};document.getElementById('sBack').onclick=()=>sP('pMain');
 document.getElementById('mProfile').onclick=()=>{updProfile();sP('pProfile')};document.getElementById('profBack').onclick=()=>sP('pMain');
 document.getElementById('mFS').onclick=()=>{if(canFS&&!isIOS)tFS();else{sFI();sP('pFS')}};document.getElementById('fBack').onclick=()=>sP('pMain');
-document.getElementById('bMe').onclick=oMenu;document.getElementById('bRe').onclick=()=>{iA();initGame()};
+document.getElementById('bMe').onclick=oMenu;document.getElementById('bRe').onclick=()=>{iA();initGame();musicToGame()};
 document.getElementById('bFS').onclick=()=>{if(canFS&&!isIOS)tFS();else{oMenu();sFI();sP('pFS')}};
-document.getElementById('eNext').onclick=()=>{document.getElementById('endOv').classList.remove('show');if(curLv<TOTAL_LEVELS)curLv++;initGame()};
+document.getElementById('eNext').onclick=()=>{document.getElementById('endOv').classList.remove('show');if(curLv<TOTAL_LEVELS)curLv++;initGame();musicToGame()};
 document.getElementById('eMenu').onclick=()=>{document.getElementById('endOv').classList.remove('show');oMenu()};
 document.getElementById('eShare').onclick=()=>{const t=`🎮 Water Game Arcade EX - Nivel ${curLv}\n🏆 ${score+cTB(pTime)} pts | ⏱️ ${fT(pTime)}\n¡Supérame!`;if(navigator.share)navigator.share({title:'Water Game Arcade EX',text:t}).catch(()=>{});else navigator.clipboard?.writeText(t).then(()=>alert('¡Copiado!')).catch(()=>{})};
 
@@ -1416,7 +1607,7 @@ function calcColorReqBonus(){
 function spFx(x,y,pts,combo,color){const el=document.createElement('div');el.className='cpop';el.innerHTML=`<span class="cp">+${pts}</span>`;if(combo>1)el.innerHTML+=`<span class="cm">COMBO x${combo}!</span>`;const ws=document.getElementById('waterScreen'),wr=ws.getBoundingClientRect(),cr=GC.getBoundingClientRect();el.style.left=((wr.left-cr.left)+x*wr.width/CW-30)+'px';el.style.top=((wr.top-cr.top)+y*wr.height/CH-10)+'px';el.style.color=combo>=4?'#ff00ff':combo>=3?'#ff6b6b':combo>1?'#feca57':'#00ff88';el.style.textShadow=`0 0 10px ${el.style.color}`;document.querySelector('.toyCase').appendChild(el);setTimeout(()=>el.remove(),2000);for(let i=0;i<8+combo*4;i++)parts.push({x:x+(Math.random()-.5)*20,y,vx:(Math.random()-.5)*(2+combo),vy:-2-Math.random()*(2+combo),l:1,r:2+Math.random()*3,t:'s',c:color})}
 
 function showEnd(){
-  gOver=true;paused=true;
+  gOver=true;paused=true;musicToWin();
   // Desbloquear siguiente nivel, o todos si ya completó el 5
   if(curLv>=maxLv){
     if(curLv>=TOTAL_LEVELS){maxLv=TOTAL_LEVELS}else{maxLv=curLv+1}
