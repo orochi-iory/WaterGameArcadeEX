@@ -244,9 +244,12 @@ body{display:flex;justify-content:center;align-items:center;font-family:'Segoe U
   <div class="ts">
     <div class="ti">🌈</div>
     <h3>Bonus de Color Perfecto</h3>
-    <p>Si un palo tiene <strong style="color:#ff6b6b">5 o más aros del mismo color</strong>:</p>
-    <p style="font-size:1.3em;color:#ff6b6b;margin:10px 0">+500 BONUS</p>
-    <p style="font-size:0.85em;color:#888">No tienen que ser seguidos.<br>¡Cuenta al final del nivel!</p>
+    <p>Si un palo tiene <strong style="color:#ff6b6b">5+ aros del mismo color</strong>:</p>
+    <div style="display:flex;flex-direction:column;gap:6px;margin:8px 0">
+      <span style="background:#533;padding:5px 10px;border-radius:4px;color:#ff6b6b">5+ de 1 color = <strong>+500</strong></span>
+      <span style="background:#535;padding:5px 10px;border-radius:4px;color:#ff00ff">🔥 5+5 de 2 colores = <strong>+1500</strong></span>
+    </div>
+    <p style="font-size:0.85em;color:#feca57">⚠️ ¡El 2º combo es más frágil!</p>
   </div>
   <div class="ts">
     <div class="ti">⚠️</div>
@@ -483,8 +486,10 @@ const RING_TOP_MARGIN=10;    // Margen mínimo a la punta (aros llegan casi arri
 const TOTAL_RINGS=20;        // Aros totales para ganar
 const MIN_PER_POLE=5;        // Mínimo de aros por palo para poder ganar
 const COLOR_BONUS_THRESHOLD=5; // Aros del mismo color para bonus
-const COLOR_BONUS_POINTS=500;  // Puntos por cada color perfecto en un palo
+const COLOR_BONUS_POINTS=500;  // Puntos por combo de color simple
+const DOUBLE_COLOR_BONUS=1500; // Puntos por doble combo (2x5 colores en un palo)
 const TOP_RING_SENSITIVITY=2.5; // El aro más alto es X veces más sensible
+const DOUBLE_COMBO_EXTRA_SENS=1.8; // Sensibilidad extra para aros del 2º combo
 
 // CHORROS OSCILANTES
 const JET_SWING_SPEED=1.8;   // Velocidad de oscilación (rad/s)
@@ -502,13 +507,14 @@ let curLv=1,maxLv=1;try{maxLv=parseInt(localStorage.getItem('wrt_mlv')||'1')}cat
 
 // ===== LEVEL CONFIGS =====
 // Capacidad: floor((h-10)/12). Necesitamos >= 20 aros totales entre 3 palos
-// h=94 → 7 aros, h=106 → 8 aros, h=118 → 9 aros, h=130 → 10 aros
+// h=82 → 6, h=94 → 7, h=106 → 8, h=118 → 9, h=130 → 10
+// Siempre un palo de h=130 (10 aros) para permitir doble combo de color
 const LEVELS=[null,
-  {name:'Clásico',poles:[{x:100,y:FY,h:106,spd:0},{x:200,y:FY,h:118,spd:0},{x:300,y:FY,h:106,spd:0}]}, // 8+9+8=25
-  {name:'Alturas',poles:[{x:80,y:FY-30,h:94,spd:0},{x:200,y:FY,h:118,spd:0},{x:320,y:FY-50,h:94,spd:0}]}, // 7+9+7=23
-  {name:'Escalera',poles:[{x:70,y:FY,h:106,spd:0},{x:200,y:FY-40,h:94,spd:0},{x:330,y:FY-80,h:94,spd:0}]}, // 8+7+7=22
-  {name:'Movimiento',poles:[{x:100,y:FY,h:106,spd:0},{x:200,y:FY-25,h:94,spd:0.8},{x:300,y:FY,h:106,spd:0}]}, // 8+7+8=23
-  {name:'Caos',poles:[{x:80,y:FY-40,h:94,spd:1.2},{x:200,y:FY-15,h:106,spd:0.6},{x:320,y:FY-60,h:94,spd:1.5}]} // 7+8+7=22
+  {name:'Clásico',poles:[{x:100,y:FY,h:94,spd:0},{x:200,y:FY,h:130,spd:0},{x:300,y:FY,h:94,spd:0}]}, // 7+10+7=24
+  {name:'Alturas',poles:[{x:80,y:FY-30,h:82,spd:0},{x:200,y:FY,h:130,spd:0},{x:320,y:FY-50,h:82,spd:0}]}, // 6+10+6=22
+  {name:'Escalera',poles:[{x:70,y:FY,h:130,spd:0},{x:200,y:FY-40,h:82,spd:0},{x:330,y:FY-80,h:82,spd:0}]}, // 10+6+6=22
+  {name:'Movimiento',poles:[{x:100,y:FY,h:82,spd:0},{x:200,y:FY-20,h:130,spd:0.8},{x:300,y:FY,h:82,spd:0}]}, // 6+10+6=22
+  {name:'Caos',poles:[{x:80,y:FY-40,h:82,spd:1.2},{x:200,y:FY,h:130,spd:0.6},{x:320,y:FY-50,h:82,spd:1.5}]} // 6+10+6=22
 ];
 
 function buildLvSel(){
@@ -839,8 +845,14 @@ function update(dt){
 
     if(pole.ejCd>0){pole.ejCd-=dt;continue}
 
-    // El umbral de expulsión del aro superior es más bajo (más sensible)
-    const topRingThreshold=0.8/TOP_RING_SENSITIVITY; // ~0.32 para el de arriba
+    // El umbral de expulsión depende de la situación del palo
+    let ejectSens=TOP_RING_SENSITIVITY;
+    // Si el palo ya tiene un combo de 5 completo, los aros del 2º color son más frágiles
+    if(pole.sr.length>0){
+      const {combos}=countColorCombos(pole);
+      if(combos>=1) ejectSens*=DOUBLE_COMBO_EXTRA_SENS;
+    }
+    const topRingThreshold=0.8/ejectSens;
     
     if(pole.stress>topRingThreshold&&pole.sr.length>0){
       if(pole.stress>=MET){
@@ -871,11 +883,28 @@ function update(dt){
       r.y+=(r.tY-r.y)*.15;
       r.rot*=0.95;
       const danger=pole.stress/MET;
-      // El aro más alto vibra más (más sensible)
+      
+      // Calcular sensibilidad del aro
       const isTopRing=(r.si===pole.sr.length-1);
-      const sensitivity=isTopRing?TOP_RING_SENSITIVITY:1;
+      let sensitivity=isTopRing?TOP_RING_SENSITIVITY:1;
+      
+      // Sensibilidad extra si el palo ya tiene un combo de color completo
+      // y este aro pertenece al 2º grupo de color
+      const {combos,colorCount}=countColorCombos(pole);
+      if(combos>=1){
+        // ¿Hay un color que ya tiene 5+?
+        let firstComboColor=-1;
+        for(let ci in colorCount){
+          if(colorCount[ci]>=COLOR_BONUS_THRESHOLD){firstComboColor=parseInt(ci);break}
+        }
+        // Si este aro es de un color DIFERENTE al primer combo,
+        // es parte del 2º intento → más sensible
+        if(firstComboColor>=0 && r.ci!==firstComboColor && colorCount[r.ci]>=3){
+          sensitivity*=DOUBLE_COMBO_EXTRA_SENS;
+        }
+      }
+      
       if(danger*sensitivity>0.15){
-        // Vibración visual - el aro de arriba vibra mucho más
         r.shakeX=(Math.random()-.5)*danger*3*sensitivity;
         r.shakeY=(Math.random()-.5)*danger*sensitivity;
       }else{r.shakeX=0;r.shakeY=0}
@@ -1032,23 +1061,38 @@ function checkWinCondition(){
   }
 }
 
+// Contar cuántos colores tienen 5+ aros en un palo
+function countColorCombos(pole){
+  const colorCount={};
+  for(let r of pole.sr) colorCount[r.ci]=(colorCount[r.ci]||0)+1;
+  let combos=0;
+  for(let ci in colorCount) if(colorCount[ci]>=COLOR_BONUS_THRESHOLD) combos++;
+  return {combos,colorCount};
+}
+
 function calcColorBonus(){
-  // Calcular bonus por colores perfectos (5+ del mismo color en un palo)
   let totalBonus=0;
   let bonusDetails=[];
   const pal=gP();
   for(let pi=0;pi<poles.length;pi++){
     const pole=poles[pi];
-    // Contar aros por color en este palo
-    const colorCount={};
-    for(let r of pole.sr){
-      colorCount[r.ci]=(colorCount[r.ci]||0)+1;
-    }
-    // Ver si algún color alcanza el umbral
-    for(let ci in colorCount){
-      if(colorCount[ci]>=COLOR_BONUS_THRESHOLD){
-        totalBonus+=COLOR_BONUS_POINTS;
-        bonusDetails.push({pole:pi+1,color:pal[ci].n,count:colorCount[ci]});
+    const {combos,colorCount}=countColorCombos(pole);
+    
+    if(combos>=2){
+      // ¡Doble combo! Bonus especial
+      totalBonus+=DOUBLE_COLOR_BONUS;
+      const colors=[];
+      for(let ci in colorCount){
+        if(colorCount[ci]>=COLOR_BONUS_THRESHOLD) colors.push(pal[ci].n);
+      }
+      bonusDetails.push({pole:pi+1,color:colors.join(' + '),count:combos,isDouble:true});
+    }else if(combos===1){
+      // Combo simple
+      totalBonus+=COLOR_BONUS_POINTS;
+      for(let ci in colorCount){
+        if(colorCount[ci]>=COLOR_BONUS_THRESHOLD){
+          bonusDetails.push({pole:pi+1,color:pal[ci].n,count:colorCount[ci],isDouble:false});
+        }
       }
     }
   }
@@ -1096,7 +1140,11 @@ function showEnd(){
   if(colorBonus.total>0){
     h+=`<tr><th colspan="2">🌈 COLOR PERFECTO</th></tr>`;
     for(let b of colorBonus.details){
-      h+=`<tr style="color:#ff6b6b"><td>Palo ${b.pole}: ${b.count}× ${b.color}</td><td>+${COLOR_BONUS_POINTS}</td></tr>`;
+      if(b.isDouble){
+        h+=`<tr style="color:#ff00ff"><td>🔥 Palo ${b.pole}: DOBLE (${b.color})</td><td>+${DOUBLE_COLOR_BONUS}</td></tr>`;
+      }else{
+        h+=`<tr style="color:#ff6b6b"><td>Palo ${b.pole}: ${b.count}× ${b.color}</td><td>+${COLOR_BONUS_POINTS}</td></tr>`;
+      }
     }
   }
   
