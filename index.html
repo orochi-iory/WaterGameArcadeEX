@@ -38,7 +38,9 @@ body{display:flex;justify-content:center;align-items:center;font-family:'Segoe U
 .tb:active,.tb.pressed{transform:scale(.86)}.tb.h{background:linear-gradient(145deg,#8e7cc3,#5b4a96)}.tb.v{background:linear-gradient(145deg,#d4a843,#b08520)}
 .ub{position:absolute;top:2.8%;right:4%;display:flex;gap:5px;z-index:15}
 .ub button{width:clamp(26px,5vw,34px);height:clamp(26px,5vw,34px);border-radius:50%;border:2px solid #555;background:linear-gradient(145deg,#555,#333);color:#ccc;font-size:clamp(12px,2.5vw,15px);cursor:pointer;display:flex;align-items:center;justify-content:center}
-.gi{position:absolute;top:3%;left:4%;z-index:15;display:none;align-items:center;gap:3px;font-family:'Courier New',monospace;font-size:clamp(7px,1.4vw,9px);color:#555}
+.gi{position:absolute;top:3%;left:4%;z-index:15;display:none;align-items:center;gap:4px;font-family:'Courier New',monospace;font-size:clamp(7px,1.4vw,9px);color:#aaa;background:rgba(0,0,0,.4);padding:4px 8px;border-radius:12px;border:1px solid #444;cursor:pointer;transition:all .15s}
+.gi:active{transform:scale(.92)}
+.gi.cal{background:rgba(254,202,87,.3);border-color:#feca57}
 .gd{width:7px;height:7px;border-radius:50%;background:#444}.gd.on{background:#2ecc71;box-shadow:0 0 6px rgba(46,204,113,.6)}
 .cpop{position:absolute;font-family:'Courier New',monospace;font-weight:bold;pointer-events:none;z-index:50;animation:cpA 2s ease-out forwards;text-align:center;line-height:1.2}
 .cpop .cp{font-size:clamp(18px,4vw,24px)}.cpop .cm{font-size:clamp(10px,2.5vw,14px);display:block}
@@ -54,6 +56,7 @@ body{display:flex;justify-content:center;align-items:center;font-family:'Segoe U
 .hs p{color:#aab;font-size:clamp(9px,2vw,11px);line-height:1.4;font-family:'Courier New',monospace}
 .hs .key{display:inline-block;background:#2a2a3a;color:#48dbfb;padding:2px 6px;border-radius:4px;border:1px solid #444}
 .hios{background:rgba(231,76,60,.1);border:1px solid rgba(231,76,60,.3);border-radius:8px;padding:3%}.hios h3{color:#e74c3c!important}
+.hcal{background:rgba(254,202,87,.1);border:1px solid rgba(254,202,87,.3);border-radius:8px;padding:3%}.hcal h3{color:#feca57!important}
 .bb{margin-top:auto;padding:10px 30px;background:linear-gradient(145deg,#555,#333);color:#ccc;border:2px solid #555;border-radius:10px;cursor:pointer;font-family:'Courier New',monospace;font-size:clamp(11px,2.5vw,13px)}.bb:active{transform:scale(.95)}
 .pg{display:flex;flex-direction:column;gap:8px;width:100%;margin:2% 0}
 .po{display:flex;align-items:center;gap:8px;padding:8px 10px;background:#1a1a28;border-radius:8px;cursor:pointer;border:2px solid transparent}.po.active{border-color:#48dbfb}
@@ -78,7 +81,6 @@ body{display:flex;justify-content:center;align-items:center;font-family:'Segoe U
 .eb.ag{background:#27ae60}.eb.sh{background:#3498db}.eb.mn{background:#555}
 .tring{width:clamp(50px,14vw,70px);height:clamp(50px,14vw,70px);border:clamp(5px,1.8vw,9px) solid #e74c3c;border-radius:50%;box-shadow:0 0 20px rgba(231,76,60,.4);animation:trf 3s ease-in-out infinite}
 @keyframes trf{0%,100%{transform:translateY(0) rotate(0)}50%{transform:translateY(-8px) rotate(5deg)}}
-/* Levels */
 .lvsel{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;width:100%;margin:10px 0}
 .lvb{width:clamp(50px,12vw,65px);height:clamp(50px,12vw,65px);border-radius:12px;border:2px solid #444;background:#1a1a28;color:#fff;font-family:'Courier New',monospace;font-size:clamp(16px,4vw,22px);font-weight:bold;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px}
 .lvb .lvn{font-size:clamp(7px,1.5vw,9px);color:#667}.lvb.locked{opacity:.4;pointer-events:none}
@@ -90,7 +92,7 @@ body{display:flex;justify-content:center;align-items:center;font-family:'Segoe U
 <div class="cs cs1"></div><div class="cs cs2"></div><div class="cs cs3"></div><div class="cs cs4"></div>
 <div id="waterScreen"><canvas id="gameCanvas"></canvas><div class="wR"></div></div>
 <div class="ub"><button id="bSnd">🔊</button><button id="bFS">⛶</button><button id="bRe">↺</button><button id="bMe">☰</button></div>
-<div class="gi" id="gyroInd"><div class="gd" id="gyroDot"></div><span>GYRO</span></div>
+<div class="gi" id="gyroInd" title="Tocar para calibrar (posición actual = centro)"><div class="gd" id="gyroDot"></div><span>GYRO ⊙</span></div>
 <div id="topPanel">
   <div class="ps"><div class="pl">Nivel</div><div class="pv lv" id="lV">1</div></div>
   <div class="ps"><div class="pl">Puntos</div><div class="pv sc" id="sV">0</div></div>
@@ -107,9 +109,9 @@ body{display:flex;justify-content:center;align-items:center;font-family:'Segoe U
 <div id="tutOv" class="ov">
   <div class="ts act"><div class="ti">💧</div><h3>¡Bienvenido!</h3><p>Ensarta 20 aros en los palos con chorros de agua</p></div>
   <div class="ts"><div class="ti">💨</div><h3>Chorros</h3><p>3 botones impulsan los aros hacia arriba</p></div>
-  <div class="ts"><div class="ti">📐</div><h3>Inclina</h3><p>Mueve tu dispositivo para guiar los aros</p></div>
+  <div class="ts"><div class="ti">📐</div><h3>Inclina</h3><p>Mueve tu dispositivo para guiar los aros.<br><strong style="color:#feca57">Toca el indicador GYRO ⊙ para calibrar tu posición neutra.</strong></p></div>
   <div class="ts"><div class="ti">🔥</div><h3>Combos</h3><p>Mismo color seguido = x2, x3, x4, x5</p></div>
-  <div class="ts"><div class="ti">⚠️</div><h3>Cuidado</h3><p>Mantener chorros suelta aros. ¡3s = expulsión total!</p></div>
+  <div class="ts"><div class="ti">⚠️</div><h3>Cuidado</h3><p>Las barras en <span style="color:#ff5050">ROJO</span> rechazan aros. Mantener chorros suelta aros. ¡3s = expulsión total!</p></div>
   <div class="tdots"><div class="tdot on"></div><div class="tdot"></div><div class="tdot"></div><div class="tdot"></div><div class="tdot"></div></div>
   <div style="display:flex;gap:10px;margin-top:10px"><button class="mb" style="background:#555;width:auto;padding:10px 25px" id="tutSkip">SALTAR</button><button class="mb" style="background:#27ae60;width:auto;padding:10px 25px" id="tutNext">SIGUIENTE →</button></div>
 </div>
@@ -127,12 +129,13 @@ body{display:flex;justify-content:center;align-items:center;font-family:'Segoe U
   </div>
   <div class="mp" id="pHelp"><h2>❓ CÓMO JUGAR</h2>
     <div class="hs"><h3>🎯 Objetivo</h3><p>Ensarta 20 aros lo más rápido posible. ¡5 niveles!</p></div>
-    <div class="hs"><h3>💨 Chorros</h3><p><span class="key">A</span> <span class="key">S</span> <span class="key">D</span></p></div>
-    <div class="hs"><h3>📐 Inclinación</h3><p><span class="key">←</span> <span class="key">→</span> <span class="key">↑</span> <span class="key">↓</span></p></div>
-    <div class="hs"><h3>🔥 Combos</h3><p>Mismo color = x2,x3,x4,x5</p></div>
-    <div class="hs"><h3>⏱️ Bonus</h3><p>&lt;2m=+2000 | &lt;3m=+1500 | &lt;5m=+1000</p></div>
-    <div class="hs"><h3>⚠️</h3><p>Chorros sueltan aros uno a uno. 3s = ¡todos fuera!</p></div>
-    <div class="hs hios"><h3>🍎 iOS</h3><p>Activa giroscopio en menú.</p></div>
+    <div class="hs"><h3>💨 Chorros</h3><p><span class="key">A</span> <span class="key">S</span> <span class="key">D</span> o los botones inferiores. Impulsan los aros hacia arriba.</p></div>
+    <div class="hs"><h3>📐 Inclinación</h3><p><span class="key">←</span> <span class="key">→</span> <span class="key">↑</span> <span class="key">↓</span> o inclina el móvil si tienes giroscopio.</p></div>
+    <div class="hs hcal"><h3>⊙ CALIBRAR GIROSCOPIO</h3><p>Cuando juegues con el móvil, lo normal es sostenerlo con cierta inclinación (no totalmente recto). Para que tu posición cómoda sea el "centro neutro", <strong>toca el indicador GYRO ⊙</strong> (esquina superior izquierda) cuando estés en tu postura preferida. A partir de ese momento, mover el móvil desde ahí inclinará los aros. Puedes recalibrar cuando quieras.</p></div>
+    <div class="hs"><h3>🔥 Combos</h3><p>Mismo color seguido = x2, x3, x4, x5 puntos.</p></div>
+    <div class="hs"><h3>⏱️ Bonus tiempo</h3><p>&lt;2min = +2000 | &lt;3min = +1500 | &lt;5min = +1000</p></div>
+    <div class="hs"><h3>⚠️ Tensión</h3><p>Los chorros y movimientos generan tensión en los palos. Si te pasas, los aros se sueltan uno a uno. Si llegas al máximo (3s) ¡todos fuera! Tras una eyección, la barra se pone <span style="color:#ff5050">ROJA</span> brevemente y no acepta nuevos aros.</p></div>
+    <div class="hs hios"><h3>🍎 iOS</h3><p>Activa el giroscopio desde el menú principal (botón rojo).</p></div>
     <button class="bb" id="hBack">← VOLVER</button></div>
   <div class="mp" id="pAcc"><h2>👁️ ACCESIBILIDAD</h2><div class="pg" id="palGrid"></div><button class="bb" id="aBack">← VOLVER</button></div>
   <div class="mp" id="pScores"><h2>🏆 PUNTUACIONES</h2><div class="sl" id="sList"></div><button class="bb" id="sBack">← VOLVER</button></div>
@@ -186,30 +189,28 @@ const CW=400,CH=420;cvs.width=CW;cvs.height=CH;
 const GR=0.09,WD=0.92,BO=0.28,WL=28,FY=CH-18,JP=5.0,JR=200,JWd=85,RSk=0.07,TR=20,BP=100;
 
 // DESALOJO RECALIBRADO
-const TD=0.004;     // Tilt lateral (mitad de 0.0075)
-const TDY=0.02;     // Tilt vertical (solo arriba)
+const TD=0.0022;     // Tilt lateral (reducido de 0.004 a 0.0022)
+const TDY=0.02;      // Tilt vertical (solo arriba)
 const JD_BASE=0.025; // Chorro base sobre palos
 const JD_HOLD=0.15;  // Factor hold del chorro
 const MET=3.0;       // Mass eject time
+const POLE_COOLDOWN=0.6; // Cooldown rojo tras eyección (no acepta aros)
 
 let tX=0,tY=0,score=0,gt=0,gOver=false,paused=true,pTime=0,lFT=0;
 let aJ=[false,false,false],jH=[0,0,0];
 let jPos=[],poles=[],rings=[],parts=[],bubs=[],ky={},wPt=[],sLog=[];
 let hasGyro=false,gyroPerm=false,jSndT=0;
+// Calibrado del giroscopio
+let gOffG=0,gOffB=0,lastG=0,lastB=60;
 let firstPlay=true;try{firstPlay=localStorage.getItem('wrt_tut')!=='1'}catch{}
 let curLv=1,maxLv=1;try{maxLv=parseInt(localStorage.getItem('wrt_mlv')||'1')}catch{}
 
 // ===== LEVEL CONFIGS =====
 const LEVELS=[null,
-  // Lv1: Clásico - 3 palos en base
   {name:'Clásico',poles:[{x:100,y:FY,h:100,spd:0},{x:200,y:FY,h:120,spd:0},{x:300,y:FY,h:100,spd:0}]},
-  // Lv2: Alturas - palos a distintas alturas
   {name:'Alturas',poles:[{x:80,y:FY-40,h:80,spd:0},{x:200,y:FY,h:110,spd:0},{x:320,y:FY-70,h:70,spd:0}]},
-  // Lv3: Escalera - disposición asimétrica
   {name:'Escalera',poles:[{x:70,y:FY,h:90,spd:0},{x:200,y:FY-60,h:80,spd:0},{x:330,y:FY-120,h:70,spd:0}]},
-  // Lv4: Uno móvil
   {name:'Movimiento',poles:[{x:100,y:FY,h:100,spd:0},{x:200,y:FY-40,h:90,spd:0.8},{x:300,y:FY,h:100,spd:0}]},
-  // Lv5: Todos móviles
   {name:'Caos',poles:[{x:80,y:FY-60,h:80,spd:1.2},{x:200,y:FY-20,h:90,spd:0.6},{x:320,y:FY-90,h:70,spd:1.5}]}
 ];
 
@@ -233,15 +234,13 @@ function initGame(){
 
   jPos=[{x:CW*.2,y:CH-6},{x:CW*.5,y:CH-6},{x:CW*.8,y:CH-6}];
 
-  // Crear palos según nivel
   poles=[];
   lv.poles.forEach(p=>poles.push({
     x:p.x,bY:p.y,h:p.h,w:7,tR:5,sr:[],lc:-1,cc:0,
-    spd:p.spd,dir:1,origX:p.x,
-    stress:0,ejCd:0,ejCnt:0
+    spd:p.spd,dir:1,origX:p.x,vX:0,
+    stress:0,ejCd:0,ejCnt:0,rejectCd:0
   }));
 
-  // Aros
   rings=[];let id=0;
   for(let c=0;c<4;c++)for(let n=0;n<5;n++){
     rings.push({x:30+Math.random()*(CW-60),y:FY-12-Math.random()*80,vx:0,vy:0,
@@ -291,8 +290,36 @@ function setupGyro(){
   if(typeof DeviceOrientationEvent.requestPermission==='function'){document.getElementById('mGyro').style.display='block';document.getElementById('mGyro').onclick=()=>{DeviceOrientationEvent.requestPermission().then(r=>{if(r==='granted'){hasGyro=true;gyroPerm=true;window.addEventListener('deviceorientation',onG);document.getElementById('mGyro').textContent='✅ GIROSCOPIO';document.getElementById('mGyro').style.background='#27ae60';aGL()}}).catch(()=>{})}}
   else{let t=false;window.addEventListener('deviceorientation',function h(e){if(t)return;if(e.gamma!==null||e.beta!==null){t=true;hasGyro=true;gyroPerm=true;window.removeEventListener('deviceorientation',h);window.addEventListener('deviceorientation',onG);aGL()}})}
 }
-function onG(e){if(gOver||paused)return;if(e.gamma!==null)tX=Math.max(-1,Math.min(1,e.gamma/18));if(e.beta!==null)tY=Math.max(-1,Math.min(1,(e.beta-60)/20))}
-function aGL(){document.getElementById('gyroInd').style.display='flex';document.getElementById('gyroDot').classList.add('on');document.getElementById('tRow').style.display='none';document.getElementById('jRow').classList.add('exp');document.getElementById('waterScreen').style.height='60%';document.getElementById('topPanel').style.top='61%';document.getElementById('indicators').style.top='68%';document.getElementById('btnP').style.height='26%'}
+function onG(e){
+  if(e.gamma!==null)lastG=e.gamma;
+  if(e.beta!==null)lastB=e.beta;
+  if(gOver||paused)return;
+  if(e.gamma!==null)tX=Math.max(-1,Math.min(1,(e.gamma-gOffG)/18));
+  if(e.beta!==null)tY=Math.max(-1,Math.min(1,(e.beta-60-gOffB)/20));
+}
+function calibGyro(){
+  if(!hasGyro)return;
+  gOffG=lastG;
+  gOffB=lastB-60;
+  hap(30);
+  const gi=document.getElementById('gyroInd');
+  gi.classList.add('cal');
+  setTimeout(()=>gi.classList.remove('cal'),500);
+  tone(800,0.12,0.15);
+  setTimeout(()=>tone(1100,0.15,0.15),100);
+}
+function aGL(){
+  const gi=document.getElementById('gyroInd');
+  gi.style.display='flex';
+  gi.onclick=calibGyro;
+  document.getElementById('gyroDot').classList.add('on');
+  document.getElementById('tRow').style.display='none';
+  document.getElementById('jRow').classList.add('exp');
+  document.getElementById('waterScreen').style.height='60%';
+  document.getElementById('topPanel').style.top='61%';
+  document.getElementById('indicators').style.top='68%';
+  document.getElementById('btnP').style.height='26%';
+}
 
 // ===== PHYSICS =====
 function update(dt){
@@ -312,23 +339,24 @@ function update(dt){
 
   // ===== POLE STRESS & MOVEMENT =====
   for(let pole of poles){
-    // Movimiento de palos
+    // Movimiento de palos (dependiente de dt para suavidad)
     if(pole.spd>0){
-      pole.x+=pole.spd*pole.dir;
+      const prevX=pole.x;
+      pole.x+=pole.spd*pole.dir*dt*60;
       if(Math.abs(pole.x-pole.origX)>55){pole.dir*=-1;pole.x=pole.origX+55*pole.dir}
-      // Mover aros ensartados con el palo
+      pole.vX=(pole.x-prevX)/Math.max(dt,0.001);
       for(let r of pole.sr){r.x+=(pole.x-r.x)*0.3}
-    }
+    }else{pole.vX=0}
+
+    // Reducir cooldown de rechazo
+    if(pole.rejectCd>0)pole.rejectCd=Math.max(0,pole.rejectCd-dt);
 
     if(pole.sr.length===0){pole.stress=0;pole.ejCd=0;pole.ejCnt=0;continue}
 
-    // Calcular estrés total sobre este palo
+    // Calcular estrés total
     let poleStress=0;
-    // Tilt lateral (reducido)
     poleStress+=Math.abs(tX)*TD;
-    // Tilt vertical solo hacia arriba
     if(tY<-0.1)poleStress+=Math.abs(tY)*TDY;
-    // CHORROS: afectan al estrés basado en proximidad
     for(let j=0;j<3;j++){
       if(!aJ[j])continue;
       const dist=Math.abs(pole.x-jPos[j].x);
@@ -339,28 +367,24 @@ function update(dt){
       }
     }
 
-    // Acumular o reducir estrés
     if(poleStress>0.003){pole.stress+=dt}
     else{pole.stress=Math.max(0,pole.stress-dt*3);pole.ejCnt=0}
 
-    // Cooldown entre eyecciones
     if(pole.ejCd>0){pole.ejCd-=dt;continue}
 
-    // LÓGICA DE EYECCIÓN SECUENCIAL
     if(pole.stress>0.8&&pole.sr.length>0){
       if(pole.stress>=MET){
-        // MASS EJECT a los 3 segundos
         const all=[...pole.sr];
         for(let r of all)ejectRing(r);
         pole.stress=0;pole.ejCnt=0;
+        pole.rejectCd=POLE_COOLDOWN;
         hapP([50,30,50,30,100]);sUn();
       }else{
-        // EJECT UNO: solo el de arriba
         const topRing=pole.sr[pole.sr.length-1];
         ejectRing(topRing);
         pole.ejCnt++;
-        // Cooldown decreciente: 0.8s → 0.6s → 0.4s → 0.3s
         pole.ejCd=Math.max(0.3, 0.8-pole.ejCnt*0.15);
+        pole.rejectCd=POLE_COOLDOWN;
         hap(25);sUn();
       }
     }
@@ -372,7 +396,6 @@ function update(dt){
       const pole=poles[r.sp];
       r.y+=(r.tY-r.y)*.12;r.x+=(pole.x-r.x)*.12;
       r.rot*=0.95;
-      // Vibración visual según estrés del palo
       const danger=pole.stress/MET;
       if(danger>0.15){r.x+=(Math.random()-.5)*danger*3;r.y+=(Math.random()-.5)*danger}
     }else{
@@ -389,9 +412,13 @@ function update(dt){
     for(let r of rings){if(r.sc)continue;const dx=r.x-jet.x,dy=r.y-jet.y,dist=Math.sqrt(dx*dx+dy*dy),hd=Math.abs(dx);if(hd<JWd&&dist<JR&&dist>4){const f=Math.pow(1-dist/JR,1.2)*(1-hd/JWd);r.vy-=f*JP;r.vx+=(dx/Math.max(dist,10))*f*1.2;r.rotSpd+=(Math.random()-.5)*.04*f}}
   }
 
-  // Scoring check
+  // Scoring check (con cooldown de rechazo y límite de altura)
   for(let r of rings){if(r.sc)continue;for(let pi=0;pi<poles.length;pi++){
     const pole=poles[pi],pt=pole.bY-pole.h;
+    // No aceptar si está en cooldown de rechazo
+    if(pole.rejectCd>0)continue;
+    // No aceptar si el aro está por encima de la punta del palo (debe caer desde dentro)
+    if(r.y<pt-2)continue;
     if(Math.abs(r.x-pole.x)<r.iR*.9&&r.y>pt-r.oR*.6&&r.y<pt+22&&r.vy>.1){doScore(r,pi);break}
   }}
 
@@ -412,7 +439,20 @@ function uFree(r){
   if(r.y+r.oR>FY){r.y=FY-r.oR;r.vy=-Math.abs(r.vy)*BO*.25;r.vx*=.8;if(Math.abs(r.vy)<.25)r.vy=0;r.oF=true;r.rotSpd*=.8}
   if(r.oF&&spd<0.5){r.rotSpd*=.9;r.rot+=(0-r.rot)*.04}else r.rotSpd+=r.vx*0.002;
   r.rot+=r.rotSpd;
-  for(let pole of poles){const pt=pole.bY-pole.h,hw=pole.w/2+r.oR+1,dx=r.x-pole.x;if(Math.abs(dx)<hw&&r.y>pt+8&&r.y<pole.bY){if(dx>0){r.x=pole.x+hw;r.vx=Math.abs(r.vx)*BO}else{r.x=pole.x-hw;r.vx=-Math.abs(r.vx)*BO}}}
+  // Colisión con palos (respeta velocidad del palo si se mueve)
+  for(let pole of poles){
+    const pt=pole.bY-pole.h,hw=pole.w/2+r.oR+1,dx=r.x-pole.x;
+    if(Math.abs(dx)<hw&&r.y>pt+8&&r.y<pole.bY){
+      const poleVx=pole.vX||0;
+      if(dx>0){
+        r.x=pole.x+hw;
+        r.vx=Math.max(Math.abs(r.vx)*BO,poleVx);
+      }else{
+        r.x=pole.x-hw;
+        r.vx=Math.min(-Math.abs(r.vx)*BO,poleVx);
+      }
+    }
+  }
   for(let o of rings){if(o===r||o.sc)continue;const dx=o.x-r.x,dy=o.y-r.y,dist=Math.sqrt(dx*dx+dy*dy),mD=r.oR+o.oR;if(dist<mD&&dist>.1){const nx=dx/dist,ny=dy/dist,ov=(mD-dist)*.5;r.x-=nx*ov;r.y-=ny*ov;o.x+=nx*ov;o.y+=ny*ov;const rv=(r.vx-o.vx)*nx+(r.vy-o.vy)*ny;r.vx-=rv*nx*.3;r.vy-=rv*ny*.3;o.vx+=rv*nx*.3;o.vy+=rv*ny*.3}}
 }
 
@@ -434,7 +474,6 @@ function spFx(x,y,pts,combo,color){const el=document.createElement('div');el.cla
 
 function showEnd(){
   gOver=true;paused=true;
-  // Desbloquear siguiente nivel
   if(curLv>=maxLv&&curLv<5){maxLv=curLv+1;try{localStorage.setItem('wrt_mlv',maxLv)}catch{}}
   const tb=cTB(pTime);const ts=score+tb;svSc(ts,pTime,curLv);
   const isLast=curLv>=5;
@@ -453,21 +492,15 @@ function updUI(){document.getElementById('sV').textContent=score;document.getEle
 // ===== RENDER =====
 function render(){
   ctx.clearRect(0,0,CW,CH);
-  // Water
   const g=ctx.createLinearGradient(0,WL,0,CH);g.addColorStop(0,'rgba(55,140,195,.2)');g.addColorStop(.4,'rgba(35,105,165,.3)');g.addColorStop(1,'rgba(12,45,85,.5)');ctx.fillStyle=g;ctx.fillRect(0,WL,CW,CH-WL);
-  // Surface
   const to=tX*5;ctx.beginPath();ctx.moveTo(0,wPt[0].y-to*.5);for(let i=1;i<wPt.length;i++){const p=wPt[i-1],c=wPt[i],tl=to*((i/wPt.length)-.5);ctx.quadraticCurveTo(p.x,p.y+tl,(p.x+c.x)/2,(p.y+c.y)/2+tl)}ctx.lineTo(CW,0);ctx.lineTo(0,0);ctx.closePath();ctx.fillStyle='rgba(120,200,235,.08)';ctx.fill();
   ctx.beginPath();ctx.moveTo(0,wPt[0].y-to*.5);for(let i=1;i<wPt.length;i++){const p=wPt[i-1],c=wPt[i],tl=to*((i/wPt.length)-.5);ctx.quadraticCurveTo(p.x,p.y+tl,(p.x+c.x)/2,(p.y+c.y)/2+tl)}ctx.strokeStyle='rgba(255,255,255,.35)';ctx.lineWidth=2;ctx.stroke();
-  // Bubbles
   for(let b of bubs){ctx.globalAlpha=.15+Math.sin(b.w)*.05;ctx.beginPath();ctx.arc(b.x,b.y,Math.max(b.r,0.5),0,Math.PI*2);ctx.fillStyle='rgba(255,255,255,0.7)';ctx.fill();ctx.globalAlpha=1}
-  // Caustics
   ctx.globalAlpha=.04;for(let i=0;i<6;i++){const x=((gt*10+i*65)%(CW+50))-25,s=Math.sin(gt*.4+i)*12;ctx.fillStyle='#fff';ctx.beginPath();ctx.moveTo(x,WL+15);ctx.lineTo(x+12,WL+15);ctx.lineTo(x+25+s,CH-18);ctx.lineTo(x-10+s,CH-18);ctx.closePath();ctx.fill()}ctx.globalAlpha=1;
-  // Floor
   const fg=ctx.createLinearGradient(0,FY,0,CH);fg.addColorStop(0,'#5a4838');fg.addColorStop(1,'#382820');ctx.fillStyle=fg;ctx.fillRect(0,FY,CW,CH-FY);ctx.fillStyle='#786858';ctx.fillRect(0,FY,CW,1.5);
   // Poles
   for(let pole of poles){
     const pt=pole.bY-pole.h;
-    // Base/plataforma para palos flotantes
     if(pole.bY<FY-5){
       ctx.fillStyle='#705838';
       ctx.fillRect(pole.x-12,pole.bY-4,24,8);
@@ -475,12 +508,29 @@ function render(){
       ctx.fillRect(pole.x-10,pole.bY-3,20,6);
     }
     ctx.fillStyle='rgba(0,0,0,.08)';ctx.fillRect(pole.x-pole.w/2+2,pt+3,pole.w,pole.h);
-    const pg=ctx.createLinearGradient(pole.x-pole.w/2,0,pole.x+pole.w/2,0);pg.addColorStop(0,'#a07548');pg.addColorStop(.3,'#cca070');pg.addColorStop(.7,'#b89058');pg.addColorStop(1,'#886038');ctx.fillStyle=pg;ctx.fillRect(pole.x-pole.w/2,pt,pole.w,pole.h);
-    ctx.beginPath();ctx.arc(pole.x,pt,pole.tR,0,Math.PI*2);const tg=ctx.createRadialGradient(pole.x-1,pt-1,0,pole.x,pt,pole.tR);tg.addColorStop(0,'#fde0b0');tg.addColorStop(1,'#906838');ctx.fillStyle=tg;ctx.fill();
+    // Color base del palo (rojo si está en cooldown de rechazo)
+    if(pole.rejectCd>0){
+      const intensity=pole.rejectCd/POLE_COOLDOWN;
+      ctx.fillStyle=`rgb(${200+Math.floor(intensity*55)},${Math.floor(50*(1-intensity))},${Math.floor(50*(1-intensity))})`;
+      ctx.fillRect(pole.x-pole.w/2,pt,pole.w,pole.h);
+      // Borde brillante rojo
+      ctx.strokeStyle=`rgba(255,80,80,${intensity})`;
+      ctx.lineWidth=2;
+      ctx.strokeRect(pole.x-pole.w/2-1,pt-1,pole.w+2,pole.h+2);
+    }else{
+      const pg=ctx.createLinearGradient(pole.x-pole.w/2,0,pole.x+pole.w/2,0);pg.addColorStop(0,'#a07548');pg.addColorStop(.3,'#cca070');pg.addColorStop(.7,'#b89058');pg.addColorStop(1,'#886038');ctx.fillStyle=pg;ctx.fillRect(pole.x-pole.w/2,pt,pole.w,pole.h);
+    }
+    ctx.beginPath();ctx.arc(pole.x,pt,pole.tR,0,Math.PI*2);
+    if(pole.rejectCd>0){
+      const intensity=pole.rejectCd/POLE_COOLDOWN;
+      ctx.fillStyle=`rgb(${230+Math.floor(intensity*25)},${Math.floor(80*(1-intensity))},${Math.floor(80*(1-intensity))})`;
+    }else{
+      const tg=ctx.createRadialGradient(pole.x-1,pt-1,0,pole.x,pt,pole.tR);tg.addColorStop(0,'#fde0b0');tg.addColorStop(1,'#906838');ctx.fillStyle=tg;
+    }
+    ctx.fill();
     ctx.fillStyle='#584028';ctx.beginPath();ctx.moveTo(pole.x-11,pole.bY);ctx.lineTo(pole.x+11,pole.bY);ctx.lineTo(pole.x+8,pole.bY-5);ctx.lineTo(pole.x-8,pole.bY-5);ctx.closePath();ctx.fill();
     // Stress glow
     if(pole.stress>0.3&&pole.sr.length>0){const d=Math.min(pole.stress/MET,1);ctx.fillStyle=`rgba(255,50,50,${d*0.3})`;ctx.fillRect(pole.x-pole.w/2-2,pt,pole.w+4,pole.h)}
-    // Moving indicator
     if(pole.spd>0){ctx.fillStyle='rgba(255,255,100,0.15)';ctx.beginPath();ctx.arc(pole.x,pt-8,3,0,Math.PI*2);ctx.fill()}
   }
   // Jets
