@@ -4,9 +4,45 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, maximum-scale=1.0">
 <meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Water Arcade">
 <meta name="author" content="orochi_iory">
 <meta name="description" content="Water Game Arcade EX - El clásico juguete de aros acuáticos, ahora en tu pantalla">
+<meta name="theme-color" content="#080810">
 <title>Water Game Arcade EX</title>
+<!-- PWA Icons -->
+<link rel="icon" id="dynFavicon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 180 180'><defs><linearGradient id='bg' x1='0' y1='0' x2='1' y2='1'><stop offset='0' stop-color='%230a1628'/><stop offset='1' stop-color='%23061018'/></linearGradient><linearGradient id='w' x1='0' y1='.4' x2='0' y2='1'><stop offset='0' stop-color='%2348b4dc' stop-opacity='.15'/><stop offset='1' stop-color='%231e5078' stop-opacity='.3'/></linearGradient><radialGradient id='d' cx='.47' cy='.46'><stop offset='0' stop-color='%2388ddff'/><stop offset='1' stop-color='%232a8ab8'/></radialGradient></defs><rect width='180' height='180' rx='36' fill='url(%23bg)'/><rect x='10' y='80' width='160' height='90' fill='url(%23w)'/><rect x='87' y='40' width='6' height='100' rx='2' fill='%23b89058'/><circle cx='90' cy='40' r='5' fill='%23cca070'/><ellipse cx='70' cy='55' rx='28' ry='10' fill='none' stroke='%23e74c3c' stroke-width='5'/><ellipse cx='110' cy='75' rx='22' ry='8' fill='none' stroke='%233498db' stroke-width='5'/><ellipse cx='80' cy='60' rx='18' ry='6' fill='none' stroke='%232ecc71' stroke-width='5'/><ellipse cx='100' cy='80' rx='14' ry='5' fill='none' stroke='%23f1c40f' stroke-width='5'/><path d='M90 110Q78 128 78 134Q78 146 90 146Q102 146 102 134Q102 128 90 110Z' fill='url(%23d)' stroke='rgba(255,255,255,0.3)'/><text x='90' y='158' text-anchor='middle' font-family='monospace' font-weight='bold' font-size='13' fill='white'>WATER</text><text x='90' y='172' text-anchor='middle' font-family='monospace' font-weight='bold' font-size='10' fill='%23feca57'>ARCADE EX</text></svg>">
+<!-- Apple touch icon generado al instante -->
+<link rel="apple-touch-icon" id="dynAppleIcon">
+<script>
+// Generar icono PNG inmediatamente para apple-touch-icon
+(function(){
+  var c=document.createElement('canvas');c.width=180;c.height=180;
+  var x=c.getContext('2d'),S=180,r=36;
+  // Fondo redondeado
+  var bg=x.createLinearGradient(0,0,S,S);
+  bg.addColorStop(0,'#0a1628');bg.addColorStop(1,'#061018');
+  x.beginPath();x.moveTo(r,0);x.lineTo(S-r,0);x.quadraticCurveTo(S,0,S,r);x.lineTo(S,S-r);x.quadraticCurveTo(S,S,S-r,S);x.lineTo(r,S);x.quadraticCurveTo(0,S,0,S-r);x.lineTo(0,r);x.quadraticCurveTo(0,0,r,0);x.closePath();x.fillStyle=bg;x.fill();
+  // Agua
+  var wg=x.createLinearGradient(0,80,0,S);wg.addColorStop(0,'rgba(72,180,220,0.15)');wg.addColorStop(1,'rgba(30,80,120,0.3)');
+  x.fillStyle=wg;x.fillRect(10,80,160,90);
+  // Aros
+  [{y:55,c:'#e74c3c',s:28},{y:75,c:'#3498db',s:22},{y:60,c:'#2ecc71',s:18},{y:80,c:'#f1c40f',s:14}].forEach(function(ring,i){
+    x.beginPath();x.ellipse(90+Math.sin(i*1.8)*20,ring.y,ring.s,ring.s*0.35,0,0,Math.PI*2);x.strokeStyle=ring.c;x.lineWidth=5;x.stroke();
+  });
+  // Palo
+  var pg=x.createLinearGradient(87,40,93,40);pg.addColorStop(0,'#a07548');pg.addColorStop(.5,'#cca070');pg.addColorStop(1,'#886038');
+  x.fillStyle=pg;x.fillRect(87,40,6,100);
+  x.beginPath();x.arc(90,40,5,0,Math.PI*2);x.fillStyle='#cca070';x.fill();
+  // Gota
+  x.beginPath();x.moveTo(90,110);x.bezierCurveTo(90,110,78,128,78,134);x.bezierCurveTo(78,141,83,146,90,146);x.bezierCurveTo(97,146,102,141,102,134);x.bezierCurveTo(102,128,90,110,90,110);x.closePath();
+  var dg=x.createRadialGradient(86,130,2,90,134,14);dg.addColorStop(0,'#88ddff');dg.addColorStop(1,'#2a8ab8');x.fillStyle=dg;x.fill();
+  // Texto
+  x.font='bold 13px monospace';x.fillStyle='#fff';x.textAlign='center';x.fillText('WATER',90,158);
+  x.font='bold 10px monospace';x.fillStyle='#feca57';x.fillText('ARCADE EX',90,172);
+  try{document.getElementById('dynAppleIcon').href=c.toDataURL('image/png')}catch(e){}
+})();
+</script>
 <style>
 *{margin:0;padding:0;box-sizing:border-box;touch-action:none;-webkit-user-select:none;user-select:none}
 html,body{width:100%;height:100%;overflow:hidden;background:#080810}
@@ -48,7 +84,7 @@ body{display:flex;justify-content:center;align-items:center;font-family:'Segoe U
 .cpop .cp{font-size:clamp(18px,4vw,24px)}.cpop .cm{font-size:clamp(10px,2.5vw,14px);display:block}
 @keyframes cpA{0%{transform:scale(.4) translateY(0);opacity:0}15%{transform:scale(1.2) translateY(-8px);opacity:1}100%{transform:scale(.7) translateY(-70px);opacity:0}}
 .ov{position:absolute;top:0;left:0;width:100%;height:100%;border-radius:4%;display:none;flex-direction:column;align-items:center;overflow-y:auto}.ov.show{display:flex}
-#menuOv{background:linear-gradient(180deg,rgba(5,8,25,.97),rgba(2,5,15,.99));z-index:200;justify-content:center;padding:4% 5%;gap:1.5%}
+#menuOv{background:linear-gradient(180deg,rgba(5,8,25,.97),rgba(2,5,15,.99));z-index:200;justify-content:flex-start;padding:3% 5%;gap:1%}
 #menuOv .sub{color:#6bb8d8;font-size:clamp(9px,2.2vw,12px);font-family:'Courier New',monospace;margin-bottom:5px}
 
 /* Logo estilo juguete */
@@ -75,7 +111,7 @@ body{display:flex;justify-content:center;align-items:center;font-family:'Segoe U
 .credits strong{color:#7aa}
 .aiTag{background:linear-gradient(90deg,#667,#556);padding:2px 8px;border-radius:10px;font-size:0.9em}
 .mb{width:85%;max-width:280px;padding:clamp(9px,2.3vw,13px) 20px;border:none;border-radius:12px;cursor:pointer;font-family:'Courier New',monospace;font-weight:bold;font-size:clamp(11px,2.6vw,14px);color:white;transition:all .15s;box-shadow:0 4px 15px rgba(0,0,0,.3),inset 0 1px 0 rgba(255,255,255,.2);text-shadow:0 1px 2px rgba(0,0,0,.3)}.mb:hover{transform:translateY(-2px);box-shadow:0 6px 20px rgba(0,0,0,.4),inset 0 1px 0 rgba(255,255,255,.2)}.mb:active{transform:scale(.95) translateY(0);box-shadow:0 2px 8px rgba(0,0,0,.3),inset 0 1px 0 rgba(255,255,255,.1)}
-.mp{display:none;flex-direction:column;align-items:center;width:100%;height:100%;padding:3%;overflow-y:auto;gap:2%}.mp.show{display:flex}
+.mp{display:none;flex-direction:column;align-items:center;width:100%;min-height:0;flex:1;padding:3%;overflow-y:auto;gap:2%}.mp.show{display:flex}
 .mp h2{color:#48dbfb;font-size:clamp(15px,3.8vw,20px);font-family:'Courier New',monospace;margin-bottom:2%}
 .hs{width:100%;margin-bottom:2%}.hs h3{color:#feca57;font-size:clamp(10px,2.2vw,13px);font-family:'Courier New',monospace;margin-bottom:1%}
 .hs p{color:#aab;font-size:clamp(9px,2vw,11px);line-height:1.4;font-family:'Courier New',monospace}
@@ -87,10 +123,22 @@ body{display:flex;justify-content:center;align-items:center;font-family:'Segoe U
 .po{display:flex;align-items:center;gap:8px;padding:8px 10px;background:#1a1a28;border-radius:8px;cursor:pointer;border:2px solid transparent}.po.active{border-color:#48dbfb}
 .pn{color:#ccc;font-family:'Courier New',monospace;font-size:clamp(9px,2vw,11px);flex:1}
 .pd{display:flex;gap:4px}.pdt{width:clamp(16px,4vw,22px);height:clamp(16px,4vw,22px);border-radius:50%;border:2px solid rgba(255,255,255,.2);display:flex;align-items:center;justify-content:center;font-size:clamp(8px,2vw,12px)}
-.sl{width:100%;font-family:'Courier New',monospace;flex:1;overflow-y:auto}
-.se{display:flex;justify-content:space-between;padding:clamp(5px,1.3vw,8px) 3%;border-bottom:1px solid #1a1a28;font-size:clamp(10px,2.3vw,13px)}
+.sl{width:100%;font-family:'Courier New',monospace;flex:1;overflow-y:auto;min-height:120px}
+.se{display:flex;justify-content:space-between;align-items:center;padding:clamp(5px,1.3vw,8px) 3%;border-bottom:1px solid #1a1a28;font-size:clamp(10px,2.3vw,13px)}
 .se .rk{color:#feca57;min-width:25px}.se .sp{color:#00ff88;font-weight:bold}.se .sd{color:#556;font-size:clamp(7px,1.6vw,9px)}
+.se .pname{color:#48dbfb;font-size:clamp(9px,2vw,11px);max-width:80px;overflow:hidden;text-overflow:ellipsis}
+.se.me{background:rgba(72,219,251,.1);border-radius:4px}
 .ns{color:#556;font-size:clamp(10px,2.3vw,12px);text-align:center;padding:10%}
+.scoreTabs{display:flex;gap:8px;margin-bottom:10px}
+.stab{flex:1;padding:8px;border:none;border-radius:8px;background:#1a1a28;color:#667;font-family:'Courier New',monospace;font-size:clamp(10px,2.3vw,12px);cursor:pointer;transition:all .2s}
+.stab.active{background:#2a3a4a;color:#48dbfb;box-shadow:0 0 10px rgba(72,219,251,.2)}
+.stab:hover{background:#2a2a38}
+.playerName{display:flex;gap:6px;margin:10px 0;width:100%;max-width:250px}
+.playerName input{flex:1;padding:8px 12px;border:2px solid #3a3a4a;border-radius:8px;background:#1a1a28;color:#fff;font-family:'Courier New',monospace;font-size:clamp(11px,2.5vw,13px)}
+.playerName input:focus{outline:none;border-color:#48dbfb}
+.playerName button{padding:8px 12px;border:none;border-radius:8px;background:#27ae60;color:#fff;cursor:pointer;font-size:14px}
+.loadingDots{display:inline-block}.loadingDots::after{content:'';animation:dots 1.5s infinite}
+@keyframes dots{0%{content:''}33%{content:'.'}66%{content:'..'}100%{content:'...'}}
 #tutOv{background:rgba(0,0,0,.95);z-index:210;justify-content:center;padding:4% 5%;gap:2%;overflow-y:auto}
 .ts{display:none;flex-direction:column;align-items:center;text-align:center;gap:8px;max-width:340px;width:100%}.ts.act{display:flex}
 .ts .ti{font-size:clamp(36px,9vw,50px);margin-bottom:4px}
@@ -283,7 +331,19 @@ body{display:flex;justify-content:center;align-items:center;font-family:'Segoe U
     </div>
   </div>
   <div class="mp" id="pAcc"><h2>👁️ ACCESIBILIDAD</h2><div class="pg" id="palGrid"></div><button class="bb" id="aBack">← VOLVER</button></div>
-  <div class="mp" id="pScores"><h2>🏆 PUNTUACIONES</h2><div class="sl" id="sList"></div><button class="bb" id="sBack">← VOLVER</button></div>
+  <div class="mp" id="pScores">
+    <h2>🏆 PUNTUACIONES</h2>
+    <div class="scoreTabs">
+      <button class="stab active" id="tabLocal">📱 Local</button>
+      <button class="stab" id="tabGlobal">🌐 Global</button>
+    </div>
+    <div class="sl" id="sList"></div>
+    <div class="playerName" id="playerNameBox" style="display:none">
+      <input type="text" id="playerNameInput" placeholder="Tu nombre..." maxlength="15">
+      <button id="saveNameBtn">💾</button>
+    </div>
+    <button class="bb" id="sBack">← VOLVER</button>
+  </div>
   <div class="mp" id="pFS"><h2>📱 PANTALLA COMPLETA</h2><div class="fsi" id="fsInfo"></div><button class="bb" id="fBack">← VOLVER</button></div>
 </div>
 
@@ -298,6 +358,82 @@ body{display:flex;justify-content:center;align-items:center;font-family:'Segoe U
   </div>
 </div>
 </div></div>
+
+<!-- Firebase SDK -->
+<script type="module">
+// ===== FIREBASE CONFIG =====
+const FIREBASE_CONFIG = {
+  apiKey: "AIzaSyAim5A296syoSKyz5DvtxoamjK2k_7P8Zo",
+  authDomain: "water-game-arcade-ex.firebaseapp.com",
+  projectId: "water-game-arcade-ex",
+  storageBucket: "water-game-arcade-ex.firebasestorage.app",
+  messagingSenderId: "303642977554",
+  appId: "1:303642977554:web:948c3fe8dc0ccc4525ffcb",
+  measurementId: "G-L8ET96N6VP"
+};
+
+// Firebase imports
+import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
+import { getFirestore, collection, addDoc, query, orderBy, limit, getDocs, serverTimestamp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
+
+// Inicializar Firebase (solo si está configurado)
+let db = null;
+let fbEnabled = false;
+
+try {
+  if (FIREBASE_CONFIG.apiKey !== "TU_API_KEY") {
+    const app = initializeApp(FIREBASE_CONFIG);
+    db = getFirestore(app);
+    fbEnabled = true;
+    console.log('🔥 Firebase conectado');
+  } else {
+    console.log('⚠️ Firebase no configurado - usando solo puntuaciones locales');
+  }
+} catch (e) {
+  console.error('Error inicializando Firebase:', e);
+}
+
+// Exponer funciones de Firebase globalmente
+window.fbEnabled = fbEnabled;
+
+// Guardar puntuación global
+window.saveGlobalScore = async function(scoreData) {
+  if (!fbEnabled || !db) return null;
+  try {
+    const docRef = await addDoc(collection(db, 'leaderboard'), {
+      ...scoreData,
+      timestamp: serverTimestamp()
+    });
+    console.log('✅ Puntuación guardada:', docRef.id);
+    return docRef.id;
+  } catch (e) {
+    console.error('Error guardando puntuación:', e);
+    return null;
+  }
+};
+
+// Obtener top puntuaciones globales
+window.getGlobalScores = async function(limitCount = 50) {
+  if (!fbEnabled || !db) return [];
+  try {
+    const q = query(
+      collection(db, 'leaderboard'),
+      orderBy('score', 'desc'),
+      limit(limitCount)
+    );
+    const snapshot = await getDocs(q);
+    const scores = [];
+    let rank = 1;
+    snapshot.forEach(doc => {
+      scores.push({ id: doc.id, rank: rank++, ...doc.data() });
+    });
+    return scores;
+  } catch (e) {
+    console.error('Error obteniendo puntuaciones:', e);
+    return [];
+  }
+};
+</script>
 
 <script>
 // ===== AUDIO =====
@@ -494,9 +630,122 @@ document.getElementById('eShare').onclick=()=>{const t=`🎮 Water Game Arcade E
 
 function tFS(){try{if(!document.fullscreenElement&&!document.webkitFullscreenElement){const e=document.documentElement;if(e.requestFullscreen)e.requestFullscreen();else if(e.webkitRequestFullscreen)e.webkitRequestFullscreen()}else{if(document.exitFullscreen)document.exitFullscreen();else if(document.webkitExitFullscreen)document.webkitExitFullscreen()}}catch{}}
 function sFI(){const e=document.getElementById('fsInfo');if(isIOS)e.innerHTML=`<p style="font-size:24px">📤</p><p><strong>Safari:</strong> Compartir → Añadir a inicio</p>`;else e.innerHTML=`<p>Pulsa <strong>F11</strong></p>`}
+// ===== SISTEMA DE PUNTUACIONES =====
+let scoreTab = 'local'; // 'local' o 'global'
+let playerName = '';
+try { playerName = localStorage.getItem('wrt_pname') || ''; } catch {}
+
+// Puntuaciones locales
 function gSc(){try{return JSON.parse(localStorage.getItem('wrt_s6')||'[]')}catch{return[]}}
-function svSc(p,t,lv){const s=gSc(),d=new Date();s.push({p,t,lv,d:`${d.getDate()}/${d.getMonth()+1}/${d.getFullYear()}`,ts:Date.now()});s.sort((a,b)=>b.p-a.p);if(s.length>20)s.length=20;try{localStorage.setItem('wrt_s6',JSON.stringify(s))}catch{}}
-function rSc(){const s=gSc(),e=document.getElementById('sList');if(!s.length){e.innerHTML='<div class="ns">Sin puntuaciones</div>';return}e.innerHTML=s.map((x,i)=>`<div class="se"><span class="rk">#${i+1}</span><span class="sp">${x.p}pts</span><span class="sd">Lv${x.lv||1} ${fT(x.t)} ${x.d}</span></div>`).join('')}
+
+function svSc(p,t,lv){
+  const s=gSc(),d=new Date();
+  const entry = {
+    p, t, lv,
+    d:`${d.getDate()}/${d.getMonth()+1}/${d.getFullYear()}`,
+    ts:Date.now(),
+    name: playerName || 'Anónimo'
+  };
+  s.push(entry);
+  s.sort((a,b)=>b.p-a.p);
+  if(s.length>20)s.length=20;
+  try{localStorage.setItem('wrt_s6',JSON.stringify(s))}catch{}
+  
+  // También guardar en Firebase si está habilitado
+  if(window.fbEnabled && window.saveGlobalScore){
+    window.saveGlobalScore({
+      name: playerName || 'Anónimo',
+      score: p,
+      time: t,
+      level: lv,
+      date: entry.d
+    });
+  }
+}
+
+// Renderizar puntuaciones locales
+function rScLocal(){
+  const s=gSc(),e=document.getElementById('sList');
+  if(!s.length){
+    e.innerHTML='<div class="ns">Sin puntuaciones locales<br><span style="font-size:0.8em;color:#444">¡Juega para registrar tu primera!</span></div>';
+    return;
+  }
+  e.innerHTML=s.map((x,i)=>`<div class="se">
+    <span class="rk">#${i+1}</span>
+    <span class="pname">${x.name||'---'}</span>
+    <span class="sp">${x.p}pts</span>
+    <span class="sd">Lv${x.lv||1} ${fT(x.t)} ${x.d}</span>
+  </div>`).join('');
+}
+
+// Renderizar puntuaciones globales
+async function rScGlobal(){
+  const e=document.getElementById('sList');
+  
+  if(!window.fbEnabled){
+    e.innerHTML='<div class="ns">🔧 Firebase no configurado<br><span style="font-size:0.8em;color:#444">Configura Firebase en el código para habilitar puntuaciones globales</span></div>';
+    return;
+  }
+  
+  e.innerHTML='<div class="ns"><span class="loadingDots">Cargando</span></div>';
+  
+  try {
+    const scores = await window.getGlobalScores(50);
+    if(!scores.length){
+      e.innerHTML='<div class="ns">Sin puntuaciones globales<br><span style="font-size:0.8em;color:#444">¡Sé el primero en aparecer!</span></div>';
+      return;
+    }
+    e.innerHTML=scores.map(x=>{
+      const isMe = playerName && x.name === playerName;
+      return `<div class="se${isMe?' me':''}">
+        <span class="rk">#${x.rank}</span>
+        <span class="pname">${x.name||'Anónimo'}</span>
+        <span class="sp">${x.score}pts</span>
+        <span class="sd">Lv${x.level||1} ${fT(x.time||0)}</span>
+      </div>`;
+    }).join('');
+  } catch(err) {
+    e.innerHTML='<div class="ns">Error cargando puntuaciones<br><span style="font-size:0.8em;color:#f55">'+err.message+'</span></div>';
+  }
+}
+
+// Función principal para renderizar según pestaña activa
+function rSc(){
+  updateScoreTabs();
+  document.getElementById('playerNameBox').style.display = scoreTab==='global'?'flex':'none';
+  document.getElementById('playerNameInput').value = playerName;
+  
+  if(scoreTab==='local'){
+    rScLocal();
+  } else {
+    rScGlobal();
+  }
+}
+
+// Actualizar estado visual de pestañas
+function updateScoreTabs(){
+  document.getElementById('tabLocal').classList.toggle('active', scoreTab==='local');
+  document.getElementById('tabGlobal').classList.toggle('active', scoreTab==='global');
+}
+
+// Event listeners para pestañas
+document.getElementById('tabLocal').onclick=()=>{scoreTab='local';rSc()};
+document.getElementById('tabGlobal').onclick=()=>{scoreTab='global';rSc()};
+
+// Guardar nombre del jugador
+document.getElementById('saveNameBtn').onclick=()=>{
+  const input = document.getElementById('playerNameInput');
+  playerName = input.value.trim().substring(0,15);
+  try{localStorage.setItem('wrt_pname',playerName)}catch{}
+  input.blur();
+  // Feedback visual
+  const btn = document.getElementById('saveNameBtn');
+  btn.textContent = '✓';
+  setTimeout(()=>btn.textContent='💾',1000);
+};
+document.getElementById('playerNameInput').onkeydown=(e)=>{
+  if(e.key==='Enter')document.getElementById('saveNameBtn').click();
+};
 function fT(s){const m=Math.floor(s/60),ss=Math.floor(s%60);return`${m}:${ss<10?'0':''}${ss}`}
 function cTB(s){if(s<120)return 2000;if(s<180)return 1500;if(s<300)return 1000;if(s<600)return 500;return 200}
 
