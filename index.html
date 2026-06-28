@@ -107,9 +107,38 @@ body{display:flex;justify-content:center;align-items:center;font-family:'Segoe U
 .gameSubtitle .ex{background:linear-gradient(180deg,#ff6b6b,#e74c3c);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;font-size:1.1em;text-shadow:none;filter:drop-shadow(0 0 6px rgba(231,76,60,.5))}
 
 /* Créditos */
-.credits{display:flex;flex-direction:column;align-items:center;gap:2px;margin-top:10px;font-family:'Courier New',monospace;font-size:clamp(8px,1.8vw,10px);color:#556}
+.credits{display:flex;flex-direction:column;align-items:center;gap:2px;margin-top:8px;font-family:'Courier New',monospace;font-size:clamp(8px,1.8vw,10px);color:#556}
 .credits strong{color:#7aa}
 .aiTag{background:linear-gradient(90deg,#667,#556);padding:2px 8px;border-radius:10px;font-size:0.9em}
+
+/* Sección online */
+.onlineBox{width:90%;max-width:290px;background:linear-gradient(145deg,rgba(15,20,40,.8),rgba(10,15,30,.9));border:1px solid #2a3a5a;border-radius:14px;padding:10px 12px;margin:4px 0}
+.onlineHeader{display:flex;align-items:center;gap:6px;margin-bottom:8px;font-family:'Courier New',monospace;font-size:clamp(9px,2vw,11px);color:#7aa}
+.onlineDot{width:8px;height:8px;border-radius:50%;background:#555;transition:all .4s}
+.onlineDot.on{background:#2ecc71;box-shadow:0 0 8px rgba(46,204,113,.6)}
+.onlineDot.off{background:#e74c3c;box-shadow:0 0 8px rgba(231,76,60,.4)}
+.onlineBtns{display:flex;gap:6px}
+.mbSmall{width:50%!important;max-width:none!important;padding:clamp(7px,1.8vw,10px) 8px!important;font-size:clamp(10px,2.2vw,12px)!important}
+.menuRow{display:flex;gap:6px;width:90%;max-width:290px}
+.menuRow .mbMini{width:50%!important;max-width:none!important;padding:clamp(7px,1.8vw,10px) 6px!important;font-size:clamp(9px,2vw,11px)!important}
+
+/* Perfil */
+.profileCard{width:100%;background:#1a1a2a;border-radius:12px;padding:12px;display:flex;align-items:center;gap:12px;border:1px solid #2a2a3a}
+.profileIcon{font-size:clamp(30px,8vw,42px);background:linear-gradient(145deg,#2a3a5a,#1a2a40);width:clamp(50px,12vw,60px);height:clamp(50px,12vw,60px);border-radius:50%;display:flex;align-items:center;justify-content:center;border:2px solid #3a4a6a;flex-shrink:0}
+.profileInfo{flex:1;min-width:0}
+.profileLabel{font-family:'Courier New',monospace;font-size:clamp(8px,1.8vw,10px);color:#667;margin-bottom:4px}
+.profileStats{width:100%;display:flex;flex-direction:column;gap:6px;margin:10px 0}
+.profileStat{display:flex;align-items:center;gap:8px;background:#1a1a2a;padding:8px 12px;border-radius:8px;border:1px solid #2a2a3a}
+.statIcon{font-size:clamp(16px,4vw,20px)}
+.statLabel{flex:1;font-family:'Courier New',monospace;font-size:clamp(9px,2vw,11px);color:#889}
+.statValue{font-family:'Courier New',monospace;font-size:clamp(12px,3vw,16px);font-weight:bold;color:#48dbfb;text-shadow:0 0 6px rgba(72,219,251,.3)}
+.onlineExplain{width:100%;background:rgba(72,219,251,.08);border:1px solid rgba(72,219,251,.2);border-radius:10px;padding:12px;margin:6px 0}
+.onlineExplain h3{font-family:'Courier New',monospace;font-size:clamp(11px,2.5vw,13px);color:#48dbfb;margin-bottom:6px}
+.onlineExplain p{font-family:'Courier New',monospace;font-size:clamp(9px,2vw,11px);color:#99a;line-height:1.5;margin:3px 0}
+.onlineExplain ul{list-style:none;padding:4px 0;margin:4px 0}
+.onlineExplain li{font-family:'Courier New',monospace;font-size:clamp(9px,2vw,11px);color:#aab;padding:2px 0}
+.profileNote{color:#2ecc71!important;font-weight:bold;margin-top:6px!important}
+
 .mb{width:85%;max-width:280px;padding:clamp(9px,2.3vw,13px) 20px;border:none;border-radius:12px;cursor:pointer;font-family:'Courier New',monospace;font-weight:bold;font-size:clamp(11px,2.6vw,14px);color:white;transition:all .15s;box-shadow:0 4px 15px rgba(0,0,0,.3),inset 0 1px 0 rgba(255,255,255,.2);text-shadow:0 1px 2px rgba(0,0,0,.3)}.mb:hover{transform:translateY(-2px);box-shadow:0 6px 20px rgba(0,0,0,.4),inset 0 1px 0 rgba(255,255,255,.2)}.mb:active{transform:scale(.95) translateY(0);box-shadow:0 2px 8px rgba(0,0,0,.3),inset 0 1px 0 rgba(255,255,255,.1)}
 .mp{display:none;flex-direction:column;align-items:center;width:100%;min-height:0;flex:1;padding:3%;overflow-y:auto;gap:2%}.mp.show{display:flex}
 .mp h2{color:#48dbfb;font-size:clamp(15px,3.8vw,20px);font-family:'Courier New',monospace;margin-bottom:2%}
@@ -285,6 +314,17 @@ body{display:flex;justify-content:center;align-items:center;font-family:'Segoe U
     </div>
   </div>
   <div class="ts">
+    <div class="ti">☁️</div>
+    <h3>Juego Online</h3>
+    <p>Tu progreso se guarda <strong style="color:#48dbfb">automáticamente</strong>:</p>
+    <div style="background:#1a1a28;padding:10px;border-radius:8px;margin-top:8px;text-align:left">
+      <p style="margin:4px 0">🏆 Ranking <strong>global</strong> de puntuaciones</p>
+      <p style="margin:4px 0">📊 Niveles desbloqueados</p>
+      <p style="margin:4px 0">👤 Tu nombre de jugador</p>
+    </div>
+    <p style="font-size:0.85em;color:#2ecc71;margin-top:8px">🔒 Sesión anónima — sin cuenta ni registro</p>
+  </div>
+  <div class="ts">
     <div class="ti">🎮</div>
     <h3>¡Listo para Jugar!</h3>
     <p>Recuerda:</p>
@@ -324,9 +364,21 @@ body{display:flex;justify-content:center;align-items:center;font-family:'Segoe U
     <div class="lvsel" id="lvSel"></div>
     <button class="mb" style="background:linear-gradient(145deg,#2ecc71,#1a8a48)" id="mPlay">🎮 JUGAR</button>
     <button class="mb" style="background:linear-gradient(145deg,#3498db,#2070a8)" id="mTut">📖 TUTORIAL</button>
-    <button class="mb" style="background:linear-gradient(145deg,#00b894,#008866)" id="mAcc">👁️ ACCESIBILIDAD</button>
-    <button class="mb" style="background:linear-gradient(145deg,#f39c12,#c87f0a)" id="mScores">🏆 PUNTUACIONES</button>
-    <button class="mb" style="background:linear-gradient(145deg,#8e44ad,#6a2c85)" id="mFS">📱 PANTALLA COMPLETA</button>
+    <!-- Sección online destacada -->
+    <div class="onlineBox" id="onlineBox">
+      <div class="onlineHeader">
+        <div class="onlineDot" id="onlineDot"></div>
+        <span id="onlineStatus">Conectando...</span>
+      </div>
+      <div class="onlineBtns">
+        <button class="mb mbSmall" style="background:linear-gradient(145deg,#f39c12,#c87f0a)" id="mScores">🏆 Ranking</button>
+        <button class="mb mbSmall" style="background:linear-gradient(145deg,#9b59b6,#7d3c98)" id="mProfile">👤 Perfil</button>
+      </div>
+    </div>
+    <div class="menuRow">
+      <button class="mb mbMini" style="background:linear-gradient(145deg,#00b894,#008866)" id="mAcc">👁️ Accesibilidad</button>
+      <button class="mb mbMini" style="background:linear-gradient(145deg,#8e44ad,#6a2c85)" id="mFS">📱 Pantalla</button>
+    </div>
     <button class="mb" style="background:linear-gradient(145deg,#e74c3c,#b82818);display:none" id="mGyro">📐 ACTIVAR GIROSCOPIO</button>
     <div class="credits">
       <span>Creado por <strong>orochi_iory</strong></span>
@@ -335,17 +387,55 @@ body{display:flex;justify-content:center;align-items:center;font-family:'Segoe U
   </div>
   <div class="mp" id="pAcc"><h2>👁️ ACCESIBILIDAD</h2><div class="pg" id="palGrid"></div><button class="bb" id="aBack">← VOLVER</button></div>
   <div class="mp" id="pScores">
-    <h2>🏆 PUNTUACIONES</h2>
+    <h2>🏆 RANKING</h2>
     <div class="scoreTabs">
-      <button class="stab active" id="tabLocal">📱 Local</button>
+      <button class="stab active" id="tabLocal">📱 Este dispositivo</button>
       <button class="stab" id="tabGlobal">🌐 Global</button>
     </div>
     <div class="sl" id="sList"></div>
-    <div class="playerName" id="playerNameBox" style="display:none">
-      <input type="text" id="playerNameInput" placeholder="Tu nombre..." maxlength="15">
-      <button id="saveNameBtn">💾</button>
-    </div>
     <button class="bb" id="sBack">← VOLVER</button>
+  </div>
+  <div class="mp" id="pProfile">
+    <h2>👤 PERFIL ONLINE</h2>
+    <div class="profileCard">
+      <div class="profileIcon">👤</div>
+      <div class="profileInfo">
+        <div class="profileLabel">Tu nombre</div>
+        <div class="playerName" id="playerNameBox">
+          <input type="text" id="playerNameInput" placeholder="Elige un nombre..." maxlength="15">
+          <button id="saveNameBtn">💾</button>
+        </div>
+      </div>
+    </div>
+    <div class="profileStats">
+      <div class="profileStat">
+        <span class="statIcon">🎯</span>
+        <span class="statLabel">Nivel máximo</span>
+        <span class="statValue" id="profMaxLv">1</span>
+      </div>
+      <div class="profileStat">
+        <span class="statIcon">🏆</span>
+        <span class="statLabel">Partidas jugadas</span>
+        <span class="statValue" id="profGames">0</span>
+      </div>
+      <div class="profileStat">
+        <span class="statIcon">⭐</span>
+        <span class="statLabel">Mejor puntuación</span>
+        <span class="statValue" id="profBest">0</span>
+      </div>
+    </div>
+    <div class="onlineExplain">
+      <h3>☁️ ¿Cómo funciona?</h3>
+      <p>Tu sesión es <strong>anónima</strong>, no necesitas crear una cuenta.</p>
+      <p>Se guarda automáticamente en este dispositivo:</p>
+      <ul>
+        <li>📊 Tu progreso y niveles desbloqueados</li>
+        <li>🏆 Tus puntuaciones en el ranking global</li>
+        <li>👤 Tu nombre de jugador</li>
+      </ul>
+      <p class="profileNote">🔒 Sin email, sin contraseña, sin datos personales</p>
+    </div>
+    <button class="bb" id="profBack">← VOLVER</button>
   </div>
   <div class="mp" id="pFS"><h2>📱 PANTALLA COMPLETA</h2><div class="fsi" id="fsInfo"></div><button class="bb" id="fBack">← VOLVER</button></div>
 </div>
@@ -375,64 +465,110 @@ const FIREBASE_CONFIG = {
   measurementId: "G-L8ET96N6VP"
 };
 
-// Firebase imports
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
-import { getFirestore, collection, addDoc, query, orderBy, limit, getDocs, serverTimestamp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
+import { getFirestore, collection, addDoc, doc, getDoc, setDoc, query, orderBy, limit, getDocs, serverTimestamp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
+import { getAuth, signInAnonymously, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
 
-// Inicializar Firebase (solo si está configurado)
-let db = null;
-let fbEnabled = false;
+let db=null, auth=null, fbEnabled=false, fbUser=null;
 
 try {
-  if (FIREBASE_CONFIG.apiKey !== "TU_API_KEY") {
-    const app = initializeApp(FIREBASE_CONFIG);
-    db = getFirestore(app);
-    fbEnabled = true;
-    console.log('🔥 Firebase conectado');
-  } else {
-    console.log('⚠️ Firebase no configurado - usando solo puntuaciones locales');
-  }
-} catch (e) {
-  console.error('Error inicializando Firebase:', e);
+  const app = initializeApp(FIREBASE_CONFIG);
+  db = getFirestore(app);
+  auth = getAuth(app);
+  fbEnabled = true;
+  console.log('🔥 Firebase conectado');
+} catch(e) {
+  console.error('Firebase init error:', e);
 }
 
-// Exponer funciones de Firebase globalmente
 window.fbEnabled = fbEnabled;
+window.fbUser = null;
 
-// Guardar puntuación global
-window.saveGlobalScore = async function(scoreData) {
-  if (!fbEnabled || !db) return null;
+// ===== AUTH ANÓNIMO =====
+if(fbEnabled && auth){
+  onAuthStateChanged(auth, user => {
+    if(user){
+      fbUser = user;
+      window.fbUser = user;
+      console.log('👤 Usuario:', user.uid.substring(0,8));
+      // Cargar progreso del usuario
+      loadUserProgress(user.uid);
+    }
+  });
+  // Login anónimo automático
+  signInAnonymously(auth).catch(e => console.error('Auth error:', e));
+}
+
+// ===== PROGRESO DE USUARIO EN LA NUBE =====
+async function loadUserProgress(uid){
+  if(!db) return;
   try {
-    const docRef = await addDoc(collection(db, 'leaderboard'), {
+    const snap = await getDoc(doc(db,'users',uid));
+    if(snap.exists()){
+      const data = snap.data();
+      // Sincronizar: usar el mayor entre local y nube
+      const cloudMax = data.maxLevel || 1;
+      const localMax = parseInt(localStorage.getItem('wrt_mlv')||'1');
+      const best = Math.max(cloudMax, localMax);
+      if(best > localMax){
+        localStorage.setItem('wrt_mlv', best);
+        window.dispatchEvent(new CustomEvent('progressLoaded', {detail:{maxLevel:best, name:data.name||''}}));
+      }
+      if(data.name && !localStorage.getItem('wrt_pname')){
+        localStorage.setItem('wrt_pname', data.name);
+        window.dispatchEvent(new CustomEvent('progressLoaded', {detail:{maxLevel:best, name:data.name}}));
+      }
+      console.log('☁️ Progreso cargado: Lv'+best);
+    }
+  } catch(e){ console.error('Load progress error:', e); }
+}
+
+window.saveUserProgress = async function(data){
+  if(!fbEnabled || !db || !fbUser) return;
+  try {
+    await setDoc(doc(db,'users',fbUser.uid), {
+      name: data.name || 'Anónimo',
+      maxLevel: data.maxLevel || 1,
+      lastUpdated: serverTimestamp()
+    }, {merge:true});
+  } catch(e){ console.error('Save progress error:', e); }
+};
+
+// ===== LEADERBOARD =====
+window.saveGlobalScore = async function(scoreData){
+  if(!fbEnabled || !db) return null;
+  try {
+    const entry = {
       ...scoreData,
+      uid: fbUser ? fbUser.uid : 'anon',
       timestamp: serverTimestamp()
-    });
-    console.log('✅ Puntuación guardada:', docRef.id);
+    };
+    const docRef = await addDoc(collection(db,'leaderboard'), entry);
     return docRef.id;
-  } catch (e) {
-    console.error('Error guardando puntuación:', e);
+  } catch(e){
+    console.error('Save score error:', e);
     return null;
   }
 };
 
-// Obtener top puntuaciones globales
-window.getGlobalScores = async function(limitCount = 50) {
-  if (!fbEnabled || !db) return [];
+window.getGlobalScores = async function(limitCount=50){
+  if(!fbEnabled || !db) return [];
   try {
-    const q = query(
-      collection(db, 'leaderboard'),
-      orderBy('score', 'desc'),
-      limit(limitCount)
-    );
+    const q = query(collection(db,'leaderboard'), orderBy('score','desc'), limit(limitCount));
     const snapshot = await getDocs(q);
     const scores = [];
     let rank = 1;
-    snapshot.forEach(doc => {
-      scores.push({ id: doc.id, rank: rank++, ...doc.data() });
+    snapshot.forEach(d => {
+      const data = d.data();
+      scores.push({
+        id:d.id, rank:rank++,
+        ...data,
+        isMe: fbUser && data.uid === fbUser.uid
+      });
     });
     return scores;
-  } catch (e) {
-    console.error('Error obteniendo puntuaciones:', e);
+  } catch(e){
+    console.error('Get scores error:', e);
     return [];
   }
 };
@@ -472,13 +608,13 @@ const cvs=document.getElementById('gameCanvas'),ctx=cvs.getContext('2d');
 const CW=400,CH=420;cvs.width=CW;cvs.height=CH;
 const GR=0.09,WD=0.92,BO=0.28,WL=28,FY=CH-18,JR=200,JWd=85,RSk=0.07,BP=100;
 
-// DESALOJO RECALIBRADO
-const TD=0.0012;     // Tilt lateral (reducido para giroscopio)
-const TDY=0.005;     // Tilt vertical - MUY reducido (afecta a todos los palos)
-const JD_BASE=0.025; // Chorro base sobre palos
-const JD_HOLD=0.15;  // Factor hold del chorro
-const MET=3.0;       // Mass eject time
-const POLE_COOLDOWN=0.6; // Cooldown rojo tras eyección (no acepta aros)
+// DESALOJO - valores permisivos para doble combo
+const TD=0.0008;     // Tilt lateral (bajado de 0.0012)
+const TDY=0.003;     // Tilt vertical (bajado de 0.005)
+const JD_BASE=0.018; // Chorro base sobre palos (bajado de 0.025)
+const JD_HOLD=0.10;  // Factor hold del chorro (bajado de 0.15)
+const MET=3.5;       // Mass eject time (subido de 3.0 = más margen)
+const POLE_COOLDOWN=0.6; // Cooldown rojo tras eyección
 
 // SISTEMA DE AROS Y VICTORIA
 const RING_STACK_HEIGHT=12;  // Altura que ocupa cada aro apilado
@@ -563,7 +699,7 @@ function initGame(){
 
 // ===== TUTORIAL =====
 let tutS=0;
-const TUT_STEPS=11; // Total de pasos del tutorial
+const TUT_STEPS=12; // Total de pasos del tutorial
 
 function openTut(){
   document.getElementById('tutOv').classList.add('show');
@@ -621,12 +757,13 @@ document.addEventListener('keydown',e=>{
 
 // ===== MENÚ =====
 function sP(id){document.querySelectorAll('.mp').forEach(p=>p.classList.remove('show'));document.getElementById(id).classList.add('show')}
-function oMenu(){paused=true;sP('pMain');buildLvSel();document.getElementById('menuOv').classList.add('show')}
+function oMenu(){paused=true;sP('pMain');buildLvSel();updateOnlineStatus();document.getElementById('menuOv').classList.add('show')}
 function cMenu(){document.getElementById('menuOv').classList.remove('show');if(!gOver){paused=false;lFT=performance.now()}}
 document.getElementById('mPlay').onclick=()=>{iA();cMenu();initGame()};
 document.getElementById('mTut').onclick=()=>{cMenu();openTut()};
 document.getElementById('mAcc').onclick=()=>{bPU();sP('pAcc')};document.getElementById('aBack').onclick=()=>sP('pMain');
 document.getElementById('mScores').onclick=()=>{rSc();sP('pScores')};document.getElementById('sBack').onclick=()=>sP('pMain');
+document.getElementById('mProfile').onclick=()=>{updProfile();sP('pProfile')};document.getElementById('profBack').onclick=()=>sP('pMain');
 document.getElementById('mFS').onclick=()=>{if(canFS&&!isIOS)tFS();else{sFI();sP('pFS')}};document.getElementById('fBack').onclick=()=>sP('pMain');
 document.getElementById('bMe').onclick=oMenu;document.getElementById('bRe').onclick=()=>{iA();initGame()};
 document.getElementById('bFS').onclick=()=>{if(canFS&&!isIOS)tFS();else{oMenu();sFI();sP('pFS')}};
@@ -657,15 +794,20 @@ function svSc(p,t,lv){
   if(s.length>20)s.length=20;
   try{localStorage.setItem('wrt_s6',JSON.stringify(s))}catch{}
   
-  // También guardar en Firebase si está habilitado
-  if(window.fbEnabled && window.saveGlobalScore){
-    window.saveGlobalScore({
-      name: playerName || 'Anónimo',
-      score: p,
-      time: t,
-      level: lv,
-      date: entry.d
-    });
+  // Firebase: guardar puntuación + sincronizar progreso
+  if(window.fbEnabled){
+    if(window.saveGlobalScore){
+      window.saveGlobalScore({
+        name: playerName || 'Anónimo',
+        score: p, time: t, level: lv, date: entry.d
+      });
+    }
+    if(window.saveUserProgress){
+      window.saveUserProgress({
+        name: playerName || 'Anónimo',
+        maxLevel: maxLv
+      });
+    }
   }
 }
 
@@ -702,7 +844,7 @@ async function rScGlobal(){
       return;
     }
     e.innerHTML=scores.map(x=>{
-      const isMe = playerName && x.name === playerName;
+      const isMe = x.isMe || false;
       return `<div class="se${isMe?' me':''}">
         <span class="rk">#${x.rank}</span>
         <span class="pname">${x.name||'Anónimo'}</span>
@@ -718,8 +860,6 @@ async function rScGlobal(){
 // Función principal para renderizar según pestaña activa
 function rSc(){
   updateScoreTabs();
-  document.getElementById('playerNameBox').style.display = scoreTab==='global'?'flex':'none';
-  document.getElementById('playerNameInput').value = playerName;
   
   if(scoreTab==='local'){
     rScLocal();
@@ -744,7 +884,10 @@ document.getElementById('saveNameBtn').onclick=()=>{
   playerName = input.value.trim().substring(0,15);
   try{localStorage.setItem('wrt_pname',playerName)}catch{}
   input.blur();
-  // Feedback visual
+  if(window.saveUserProgress){
+    window.saveUserProgress({name:playerName,maxLevel:maxLv});
+  }
+  updateOnlineStatus();
   const btn = document.getElementById('saveNameBtn');
   btn.textContent = '✓';
   setTimeout(()=>btn.textContent='💾',1000);
@@ -752,6 +895,39 @@ document.getElementById('saveNameBtn').onclick=()=>{
 document.getElementById('playerNameInput').onkeydown=(e)=>{
   if(e.key==='Enter')document.getElementById('saveNameBtn').click();
 };
+
+// ===== ONLINE STATUS & PROFILE =====
+function updateOnlineStatus(){
+  try{
+    const dot=document.getElementById('onlineDot');
+    const st=document.getElementById('onlineStatus');
+    if(!dot||!st)return;
+    if(window.fbEnabled && window.fbUser){
+      dot.className='onlineDot on';
+      st.textContent=playerName?'Online: '+playerName:'Online (sin nombre)';
+    }else if(window.fbEnabled){
+      dot.className='onlineDot';
+      st.textContent='Conectando...';
+    }else{
+      dot.className='onlineDot off';
+      st.textContent='Solo local';
+    }
+  }catch(e){}
+}
+
+function updProfile(){
+  try{
+    document.getElementById('profMaxLv').textContent=maxLv>=5?'✓ Todos':maxLv;
+    const scores=gSc();
+    document.getElementById('profGames').textContent=scores.length;
+    document.getElementById('profBest').textContent=scores.length?scores[0].p:0;
+    document.getElementById('playerNameInput').value=playerName;
+  }catch(e){}
+}
+
+setTimeout(updateOnlineStatus,2000);
+setTimeout(updateOnlineStatus,5000);
+
 function fT(s){const m=Math.floor(s/60),ss=Math.floor(s%60);return`${m}:${ss<10?'0':''}${ss}`}
 function cTB(s){if(s<120)return 2000;if(s<180)return 1500;if(s<300)return 1000;if(s<600)return 500;return 200}
 
@@ -1102,7 +1278,11 @@ function spFx(x,y,pts,combo,color){const el=document.createElement('div');el.cla
 
 function showEnd(){
   gOver=true;paused=true;
-  if(curLv>=maxLv&&curLv<5){maxLv=curLv+1;try{localStorage.setItem('wrt_mlv',maxLv)}catch{}}
+  // Desbloquear siguiente nivel, o todos si ya completó el 5
+  if(curLv>=maxLv){
+    if(curLv>=5){maxLv=5}else{maxLv=curLv+1}
+    try{localStorage.setItem('wrt_mlv',maxLv)}catch{}
+  }
   
   const tb=cTB(pTime);
   const colorBonus=calcColorBonus();
@@ -1295,6 +1475,21 @@ document.querySelectorAll('.jb').forEach(btn=>{const j=parseInt(btn.dataset.jet)
 document.querySelectorAll('.tb').forEach(btn=>{const dir=btn.dataset.tilt;const km={left:'ArrowLeft',right:'ArrowRight',up:'ArrowUp',down:'ArrowDown'};const key=km[dir];const on=e=>{e.preventDefault();if(!paused&&!gOver){ky[key]=true;btn.classList.add('pressed')}};const off=e=>{e.preventDefault();ky[key]=false;btn.classList.remove('pressed')};btn.addEventListener('mousedown',on);btn.addEventListener('mouseup',off);btn.addEventListener('mouseleave',off);btn.addEventListener('touchstart',on,{passive:false});btn.addEventListener('touchend',off,{passive:false});btn.addEventListener('touchcancel',off,{passive:false})});
 
 function loop(ts){if(!lFT)lFT=ts;let dt=(ts-lFT)/1000;lFT=ts;if(dt>0.1)dt=0.016;if(dt<0)dt=0.016;if(!paused&&!gOver)update(Math.min(dt,0.033));render();requestAnimationFrame(loop)}
+
+// ===== CLOUD SYNC LISTENER =====
+window.addEventListener('progressLoaded', e=>{
+  const d=e.detail;
+  if(d.maxLevel && d.maxLevel>maxLv){
+    maxLv=d.maxLevel;
+    buildLvSel();
+    console.log('☁️ Niveles sincronizados: '+maxLv);
+  }
+  if(d.name && !playerName){
+    playerName=d.name;
+    try{localStorage.setItem('wrt_pname',d.name)}catch{}
+  }
+  updateOnlineStatus();
+});
 
 // ===== INIT =====
 setupGyro();bPU();buildLvSel();initGame();paused=true;lFT=0;resize();requestAnimationFrame(loop);
