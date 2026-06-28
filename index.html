@@ -166,8 +166,11 @@ body{display:flex;justify-content:center;align-items:center;font-family:'Segoe U
 .stab:hover{background:#2a2a38}
 /* Sub-tabs para ranking global */
 .subTabs{display:flex;gap:4px;margin-bottom:8px;width:100%}
-.subtab{flex:1;padding:clamp(5px,1.2vw,7px);border:1px solid #2a2a38;border-radius:6px;background:transparent;color:#556;font-family:'Courier New',monospace;font-size:clamp(9px,2vw,11px);cursor:pointer;transition:all .2s}
+.subtab{flex:1;padding:clamp(5px,1.2vw,7px);border:1px solid #2a2a38;border-radius:6px;background:transparent;color:#556;font-family:'Courier New',monospace;font-size:clamp(9px,2vw,11px);cursor:pointer;transition:all .2s;min-width:0}
 .subtab.active{background:rgba(254,202,87,.15);color:#feca57;border-color:rgba(254,202,87,.3)}
+.subtab.lvC{border-color:#3a2a4a}
+.subtab.lvC.active{background:rgba(155,89,182,.2);border-color:rgba(155,89,182,.5);color:#c39bd3}
+.levelRows{flex-wrap:wrap}
 .playerName{display:flex;gap:6px;margin:10px 0;width:100%;max-width:250px}
 .playerName input{flex:1;padding:8px 12px;border:2px solid #3a3a4a;border-radius:8px;background:#1a1a28;color:#fff;font-family:'Courier New',monospace;font-size:clamp(11px,2.5vw,13px)}
 .playerName input:focus{outline:none;border-color:#48dbfb}
@@ -405,12 +408,17 @@ body{display:flex;justify-content:center;align-items:center;font-family:'Segoe U
       <button class="subtab" data-gmode="alltime">👑 Histórico</button>
       <button class="subtab" data-gmode="level">📊 Nivel</button>
     </div>
-    <div class="subTabs" id="levelPicker" style="display:none">
-      <button class="subtab active" data-lv="1">Lv1</button>
-      <button class="subtab" data-lv="2">Lv2</button>
-      <button class="subtab" data-lv="3">Lv3</button>
-      <button class="subtab" data-lv="4">Lv4</button>
-      <button class="subtab" data-lv="5">Lv5</button>
+    <div class="subTabs levelRows" id="levelPicker" style="display:none">
+      <button class="subtab active" data-lv="1">1</button>
+      <button class="subtab" data-lv="2">2</button>
+      <button class="subtab" data-lv="3">3</button>
+      <button class="subtab" data-lv="4">4</button>
+      <button class="subtab" data-lv="5">5</button>
+      <button class="subtab lvC" data-lv="6">6🎨</button>
+      <button class="subtab lvC" data-lv="7">7🎨</button>
+      <button class="subtab lvC" data-lv="8">8🎨</button>
+      <button class="subtab lvC" data-lv="9">9🎨</button>
+      <button class="subtab lvC" data-lv="10">10🎨</button>
     </div>
     <div class="sl" id="sList"></div>
     <button class="bb" id="sBack">← VOLVER</button>
@@ -1508,58 +1516,72 @@ function render(){
   // Poles
   for(let pole of poles){
     const pt=pole.bY-pole.h;
-    if(pole.bY<FY-5){
-      ctx.fillStyle='#705838';
-      ctx.fillRect(pole.x-12,pole.bY-4,24,8);
-      ctx.fillStyle='#806848';
-      ctx.fillRect(pole.x-10,pole.bY-3,20,6);
-    }
-    ctx.fillStyle='rgba(0,0,0,.08)';ctx.fillRect(pole.x-pole.w/2+2,pt+3,pole.w,pole.h);
-    
-    // Determinar color del palo
     const hasReqColor=pole.reqColor>=0;
-    let poleColor=null;
-    if(hasReqColor) poleColor=gP()[pole.reqColor].c;
+    let poleColor=hasReqColor?gP()[pole.reqColor].c:null;
     
-    // Color base del palo
+    // Base/soporte del palo
+    if(pole.bY<FY-5){
+      ctx.fillStyle=hasReqColor?poleColor:'rgba(220,230,240,0.4)';
+      ctx.globalAlpha=hasReqColor?0.25:0.3;
+      ctx.fillRect(pole.x-12,pole.bY-4,24,8);
+      ctx.globalAlpha=hasReqColor?0.35:0.4;
+      ctx.fillRect(pole.x-10,pole.bY-3,20,6);
+      ctx.globalAlpha=1;
+    }
+    
+    // Sombra del palo
+    ctx.fillStyle='rgba(0,0,0,.06)';ctx.fillRect(pole.x-pole.w/2+2,pt+3,pole.w,pole.h);
+    
+    // === CUERPO DEL PALO ===
     if(pole.rejectCd>0){
+      // Rechazo rojo
       const intensity=pole.rejectCd/POLE_COOLDOWN;
       ctx.fillStyle=`rgb(${200+Math.floor(intensity*55)},${Math.floor(50*(1-intensity))},${Math.floor(50*(1-intensity))})`;
       ctx.fillRect(pole.x-pole.w/2,pt,pole.w,pole.h);
-      ctx.strokeStyle=`rgba(255,80,80,${intensity})`;
-      ctx.lineWidth=2;
+      ctx.strokeStyle=`rgba(255,80,80,${intensity})`;ctx.lineWidth=2;
       ctx.strokeRect(pole.x-pole.w/2-1,pt-1,pole.w+2,pole.h+2);
-    }else if(hasReqColor){
-      // Palo coloreado — teñido del color requerido
-      ctx.fillStyle=poleColor;
-      ctx.globalAlpha=0.5;
+    }else{
+      // Color base: translúcido blanco (libre) o del color requerido
+      const baseColor=poleColor||'rgba(220,235,250,0.55)';
+      ctx.fillStyle=baseColor;
+      ctx.globalAlpha=hasReqColor?0.45:0.35;
       ctx.fillRect(pole.x-pole.w/2,pt,pole.w,pole.h);
       ctx.globalAlpha=1;
-      // Borde sutil del color
-      ctx.strokeStyle=poleColor;
-      ctx.globalAlpha=0.4;
-      ctx.lineWidth=1.5;
-      ctx.strokeRect(pole.x-pole.w/2-1,pt-1,pole.w+2,pole.h+2);
+      // Brillo lateral (efecto plástico)
+      const shine=ctx.createLinearGradient(pole.x-pole.w/2,0,pole.x+pole.w/2,0);
+      shine.addColorStop(0,'rgba(255,255,255,0.02)');
+      shine.addColorStop(0.3,'rgba(255,255,255,0.18)');
+      shine.addColorStop(0.5,'rgba(255,255,255,0.08)');
+      shine.addColorStop(1,'rgba(255,255,255,0.01)');
+      ctx.fillStyle=shine;
+      ctx.fillRect(pole.x-pole.w/2,pt,pole.w,pole.h);
+      // Borde sutil
+      ctx.strokeStyle=poleColor||'rgba(200,215,230,0.35)';
+      ctx.globalAlpha=hasReqColor?0.4:0.25;
+      ctx.lineWidth=1;
+      ctx.strokeRect(pole.x-pole.w/2,pt,pole.w,pole.h);
       ctx.globalAlpha=1;
-      // Brillo en la punta del color
-      ctx.beginPath();ctx.arc(pole.x,pt,pole.tR+2,0,Math.PI*2);
-      ctx.fillStyle=poleColor;ctx.globalAlpha=0.2;ctx.fill();ctx.globalAlpha=1;
-    }else{
-      const pg=ctx.createLinearGradient(pole.x-pole.w/2,0,pole.x+pole.w/2,0);pg.addColorStop(0,'#a07548');pg.addColorStop(.3,'#cca070');pg.addColorStop(.7,'#b89058');pg.addColorStop(1,'#886038');ctx.fillStyle=pg;ctx.fillRect(pole.x-pole.w/2,pt,pole.w,pole.h);
     }
-    // Punta del palo
+    
+    // === PUNTA DEL PALO ===
     ctx.beginPath();ctx.arc(pole.x,pt,pole.tR,0,Math.PI*2);
     if(pole.rejectCd>0){
       const intensity=pole.rejectCd/POLE_COOLDOWN;
       ctx.fillStyle=`rgb(${230+Math.floor(intensity*25)},${Math.floor(80*(1-intensity))},${Math.floor(80*(1-intensity))})`;
-    }else if(hasReqColor){
-      ctx.fillStyle=poleColor;ctx.globalAlpha=0.7;
     }else{
-      const tg=ctx.createRadialGradient(pole.x-1,pt-1,0,pole.x,pt,pole.tR);tg.addColorStop(0,'#fde0b0');tg.addColorStop(1,'#906838');ctx.fillStyle=tg;
+      ctx.fillStyle=poleColor||'rgba(220,235,250,0.7)';
+      ctx.globalAlpha=hasReqColor?0.65:0.5;
     }
     ctx.fill();ctx.globalAlpha=1;
-    // Base del palo
-    ctx.fillStyle='#584028';ctx.beginPath();ctx.moveTo(pole.x-11,pole.bY);ctx.lineTo(pole.x+11,pole.bY);ctx.lineTo(pole.x+8,pole.bY-5);ctx.lineTo(pole.x-8,pole.bY-5);ctx.closePath();ctx.fill();
+    // Brillo en la punta
+    ctx.beginPath();ctx.arc(pole.x-1,pt-1,pole.tR*0.5,0,Math.PI*2);
+    ctx.fillStyle='rgba(255,255,255,0.25)';ctx.fill();
+    
+    // === BASE DEL PALO ===
+    ctx.fillStyle=poleColor||'rgba(180,200,220,0.3)';
+    ctx.globalAlpha=hasReqColor?0.35:0.25;
+    ctx.beginPath();ctx.moveTo(pole.x-11,pole.bY);ctx.lineTo(pole.x+11,pole.bY);ctx.lineTo(pole.x+8,pole.bY-5);ctx.lineTo(pole.x-8,pole.bY-5);ctx.closePath();ctx.fill();
+    ctx.globalAlpha=1;
     // Stress glow
     if(pole.stress>0.3&&pole.sr.length>0){const d=Math.min(pole.stress/MET,1);ctx.fillStyle=`rgba(255,50,50,${d*0.3})`;ctx.fillRect(pole.x-pole.w/2-2,pt,pole.w+4,pole.h)}
     if(pole.spd>0){ctx.fillStyle='rgba(255,255,100,0.15)';ctx.beginPath();ctx.arc(pole.x,pt-8,3,0,Math.PI*2);ctx.fill()}
