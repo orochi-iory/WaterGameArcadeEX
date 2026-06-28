@@ -112,15 +112,15 @@ body{display:flex;justify-content:center;align-items:center;font-family:'Segoe U
 .aiTag{background:linear-gradient(90deg,#667,#556);padding:2px 8px;border-radius:10px;font-size:0.9em}
 
 /* Sección online */
-.onlineBox{width:90%;max-width:290px;background:linear-gradient(145deg,rgba(15,20,40,.8),rgba(10,15,30,.9));border:1px solid #2a3a5a;border-radius:14px;padding:10px 12px;margin:4px 0}
-.onlineHeader{display:flex;align-items:center;gap:6px;margin-bottom:8px;font-family:'Courier New',monospace;font-size:clamp(9px,2vw,11px);color:#7aa}
-.onlineDot{width:8px;height:8px;border-radius:50%;background:#555;transition:all .4s}
+.onlineBox{width:92%;max-width:310px;background:linear-gradient(145deg,rgba(15,20,40,.8),rgba(10,15,30,.9));border:1px solid #2a3a5a;border-radius:14px;padding:12px 14px;margin:5px 0}
+.onlineHeader{display:flex;align-items:center;gap:8px;margin-bottom:8px;font-family:'Courier New',monospace;font-size:clamp(10px,2.3vw,12px);color:#7aa}
+.onlineDot{width:9px;height:9px;border-radius:50%;background:#555;transition:all .4s}
 .onlineDot.on{background:#2ecc71;box-shadow:0 0 8px rgba(46,204,113,.6)}
 .onlineDot.off{background:#e74c3c;box-shadow:0 0 8px rgba(231,76,60,.4)}
-.onlineBtns{display:flex;gap:6px}
-.mbSmall{width:50%!important;max-width:none!important;padding:clamp(7px,1.8vw,10px) 8px!important;font-size:clamp(10px,2.2vw,12px)!important}
-.menuRow{display:flex;gap:6px;width:90%;max-width:290px}
-.menuRow .mbMini{width:50%!important;max-width:none!important;padding:clamp(7px,1.8vw,10px) 6px!important;font-size:clamp(9px,2vw,11px)!important}
+.onlineBtns{display:flex;gap:8px}
+.mbSmall{width:50%!important;max-width:none!important;padding:clamp(9px,2.2vw,12px) 10px!important;font-size:clamp(11px,2.5vw,13px)!important}
+.menuRow{display:flex;gap:8px;width:92%;max-width:310px}
+.menuRow .mbMini{width:50%!important;max-width:none!important;padding:clamp(9px,2.2vw,12px) 8px!important;font-size:clamp(10px,2.3vw,12px)!important}
 
 /* Perfil */
 .profileCard{width:100%;background:#1a1a2a;border-radius:12px;padding:12px;display:flex;align-items:center;gap:12px;border:1px solid #2a2a3a}
@@ -139,9 +139,9 @@ body{display:flex;justify-content:center;align-items:center;font-family:'Segoe U
 .onlineExplain li{font-family:'Courier New',monospace;font-size:clamp(9px,2vw,11px);color:#aab;padding:2px 0}
 .profileNote{color:#2ecc71!important;font-weight:bold;margin-top:6px!important}
 
-.mb{width:85%;max-width:280px;padding:clamp(9px,2.3vw,13px) 20px;border:none;border-radius:12px;cursor:pointer;font-family:'Courier New',monospace;font-weight:bold;font-size:clamp(11px,2.6vw,14px);color:white;transition:all .15s;box-shadow:0 4px 15px rgba(0,0,0,.3),inset 0 1px 0 rgba(255,255,255,.2);text-shadow:0 1px 2px rgba(0,0,0,.3)}.mb:hover{transform:translateY(-2px);box-shadow:0 6px 20px rgba(0,0,0,.4),inset 0 1px 0 rgba(255,255,255,.2)}.mb:active{transform:scale(.95) translateY(0);box-shadow:0 2px 8px rgba(0,0,0,.3),inset 0 1px 0 rgba(255,255,255,.1)}
+.mb{width:88%;max-width:300px;padding:clamp(10px,2.5vw,14px) 20px;border:none;border-radius:12px;cursor:pointer;font-family:'Courier New',monospace;font-weight:bold;font-size:clamp(12px,2.8vw,15px);color:white;transition:all .15s;box-shadow:0 4px 15px rgba(0,0,0,.3),inset 0 1px 0 rgba(255,255,255,.2);text-shadow:0 1px 2px rgba(0,0,0,.3)}.mb:hover{transform:translateY(-2px);box-shadow:0 6px 20px rgba(0,0,0,.4),inset 0 1px 0 rgba(255,255,255,.2)}.mb:active{transform:scale(.95) translateY(0);box-shadow:0 2px 8px rgba(0,0,0,.3),inset 0 1px 0 rgba(255,255,255,.1)}
 .mp{display:none;flex-direction:column;align-items:center;width:100%;min-height:0;flex:1;padding:3%;overflow-y:auto;gap:2%}.mp.show{display:flex}
-.mp h2{color:#48dbfb;font-size:clamp(15px,3.8vw,20px);font-family:'Courier New',monospace;margin-bottom:2%}
+.mp h2{color:#48dbfb;font-size:clamp(16px,4vw,22px);font-family:'Courier New',monospace;margin-bottom:2%}
 .hs{width:100%;margin-bottom:2%}.hs h3{color:#feca57;font-size:clamp(10px,2.2vw,13px);font-family:'Courier New',monospace;margin-bottom:1%}
 .hs p{color:#aab;font-size:clamp(9px,2vw,11px);line-height:1.4;font-family:'Courier New',monospace}
 .hs .key{display:inline-block;background:#2a2a3a;color:#48dbfb;padding:2px 6px;border-radius:4px;border:1px solid #444}
@@ -152,16 +152,22 @@ body{display:flex;justify-content:center;align-items:center;font-family:'Segoe U
 .po{display:flex;align-items:center;gap:8px;padding:8px 10px;background:#1a1a28;border-radius:8px;cursor:pointer;border:2px solid transparent}.po.active{border-color:#48dbfb}
 .pn{color:#ccc;font-family:'Courier New',monospace;font-size:clamp(9px,2vw,11px);flex:1}
 .pd{display:flex;gap:4px}.pdt{width:clamp(16px,4vw,22px);height:clamp(16px,4vw,22px);border-radius:50%;border:2px solid rgba(255,255,255,.2);display:flex;align-items:center;justify-content:center;font-size:clamp(8px,2vw,12px)}
-.sl{width:100%;font-family:'Courier New',monospace;flex:1;overflow-y:auto;min-height:120px}
-.se{display:flex;justify-content:space-between;align-items:center;padding:clamp(5px,1.3vw,8px) 3%;border-bottom:1px solid #1a1a28;font-size:clamp(10px,2.3vw,13px)}
-.se .rk{color:#feca57;min-width:25px}.se .sp{color:#00ff88;font-weight:bold}.se .sd{color:#556;font-size:clamp(7px,1.6vw,9px)}
-.se .pname{color:#48dbfb;font-size:clamp(9px,2vw,11px);max-width:80px;overflow:hidden;text-overflow:ellipsis}
-.se.me{background:rgba(72,219,251,.1);border-radius:4px}
-.ns{color:#556;font-size:clamp(10px,2.3vw,12px);text-align:center;padding:10%}
-.scoreTabs{display:flex;gap:8px;margin-bottom:10px}
-.stab{flex:1;padding:8px;border:none;border-radius:8px;background:#1a1a28;color:#667;font-family:'Courier New',monospace;font-size:clamp(10px,2.3vw,12px);cursor:pointer;transition:all .2s}
+.sl{width:100%;font-family:'Courier New',monospace;flex:1;overflow-y:auto;min-height:100px;-webkit-overflow-scrolling:touch}
+.se{display:flex;align-items:center;padding:clamp(7px,1.8vw,10px) 3%;border-bottom:1px solid #1a1a28;font-size:clamp(11px,2.5vw,14px);gap:6px}
+.se .rk{color:#feca57;min-width:28px;font-weight:bold;font-size:clamp(11px,2.5vw,14px)}
+.se .sp{color:#00ff88;font-weight:bold;font-size:clamp(11px,2.5vw,14px)}
+.se .sd{color:#667;font-size:clamp(8px,1.8vw,10px)}
+.se .pname{color:#48dbfb;font-size:clamp(10px,2.3vw,12px);flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.se.me{background:rgba(72,219,251,.1);border-radius:6px;border:1px solid rgba(72,219,251,.15)}
+.ns{color:#667;font-size:clamp(11px,2.5vw,13px);text-align:center;padding:10%}
+.scoreTabs{display:flex;gap:6px;margin-bottom:6px;width:100%}
+.stab{flex:1;padding:clamp(8px,2vw,10px);border:none;border-radius:8px;background:#1a1a28;color:#667;font-family:'Courier New',monospace;font-size:clamp(11px,2.5vw,13px);cursor:pointer;transition:all .2s}
 .stab.active{background:#2a3a4a;color:#48dbfb;box-shadow:0 0 10px rgba(72,219,251,.2)}
 .stab:hover{background:#2a2a38}
+/* Sub-tabs para ranking global */
+.subTabs{display:flex;gap:4px;margin-bottom:8px;width:100%}
+.subtab{flex:1;padding:clamp(5px,1.2vw,7px);border:1px solid #2a2a38;border-radius:6px;background:transparent;color:#556;font-family:'Courier New',monospace;font-size:clamp(9px,2vw,11px);cursor:pointer;transition:all .2s}
+.subtab.active{background:rgba(254,202,87,.15);color:#feca57;border-color:rgba(254,202,87,.3)}
 .playerName{display:flex;gap:6px;margin:10px 0;width:100%;max-width:250px}
 .playerName input{flex:1;padding:8px 12px;border:2px solid #3a3a4a;border-radius:8px;background:#1a1a28;color:#fff;font-family:'Courier New',monospace;font-size:clamp(11px,2.5vw,13px)}
 .playerName input:focus{outline:none;border-color:#48dbfb}
@@ -186,8 +192,8 @@ body{display:flex;justify-content:center;align-items:center;font-family:'Segoe U
 .eb{padding:8px 18px;border:none;border-radius:10px;cursor:pointer;font-family:'Courier New',monospace;font-weight:bold;font-size:clamp(10px,2.3vw,13px);color:white}.eb:active{transform:scale(.95)}
 .eb.ag{background:#27ae60}.eb.sh{background:#3498db}.eb.mn{background:#555}
 
-.lvsel{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;width:100%;margin:10px 0}
-.lvb{width:clamp(50px,12vw,65px);height:clamp(50px,12vw,65px);border-radius:12px;border:2px solid #444;background:#1a1a28;color:#fff;font-family:'Courier New',monospace;font-size:clamp(16px,4vw,22px);font-weight:bold;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px}
+.lvsel{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;width:100%;margin:8px 0}
+.lvb{width:clamp(52px,13vw,68px);height:clamp(52px,13vw,68px);border-radius:12px;border:2px solid #444;background:#1a1a28;color:#fff;font-family:'Courier New',monospace;font-size:clamp(18px,4.5vw,24px);font-weight:bold;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;transition:all .15s}
 .lvb .lvn{font-size:clamp(7px,1.5vw,9px);color:#667}.lvb.locked{opacity:.4;pointer-events:none}
 .lvb.cur{border-color:#feca57;box-shadow:0 0 10px rgba(254,202,87,.3)}
 </style>
@@ -389,8 +395,20 @@ body{display:flex;justify-content:center;align-items:center;font-family:'Segoe U
   <div class="mp" id="pScores">
     <h2>🏆 RANKING</h2>
     <div class="scoreTabs">
-      <button class="stab active" id="tabLocal">📱 Este dispositivo</button>
+      <button class="stab active" id="tabLocal">📱 Local</button>
       <button class="stab" id="tabGlobal">🌐 Global</button>
+    </div>
+    <div class="subTabs" id="globalSubTabs" style="display:none">
+      <button class="subtab active" data-gmode="today">🔥 Hoy</button>
+      <button class="subtab" data-gmode="alltime">👑 Histórico</button>
+      <button class="subtab" data-gmode="level">📊 Nivel</button>
+    </div>
+    <div class="subTabs" id="levelPicker" style="display:none">
+      <button class="subtab active" data-lv="1">Lv1</button>
+      <button class="subtab" data-lv="2">Lv2</button>
+      <button class="subtab" data-lv="3">Lv3</button>
+      <button class="subtab" data-lv="4">Lv4</button>
+      <button class="subtab" data-lv="5">Lv5</button>
     </div>
     <div class="sl" id="sList"></div>
     <button class="bb" id="sBack">← VOLVER</button>
@@ -466,7 +484,7 @@ const FIREBASE_CONFIG = {
 };
 
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
-import { getFirestore, collection, addDoc, doc, getDoc, setDoc, query, orderBy, limit, getDocs, serverTimestamp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
+import { getFirestore, collection, addDoc, doc, getDoc, setDoc, query, orderBy, limit, where, getDocs, serverTimestamp, Timestamp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
 import { getAuth, signInAnonymously, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
 
 let db=null, auth=null, fbEnabled=false, fbUser=null;
@@ -551,10 +569,26 @@ window.saveGlobalScore = async function(scoreData){
   }
 };
 
-window.getGlobalScores = async function(limitCount=50){
+window.getGlobalScores = async function(opts={}){
   if(!fbEnabled || !db) return [];
+  const lim = opts.limit || 50;
   try {
-    const q = query(collection(db,'leaderboard'), orderBy('score','desc'), limit(limitCount));
+    const constraints = [collection(db,'leaderboard'), orderBy('score','desc')];
+    
+    // Filtro por fecha (hoy)
+    if(opts.today){
+      const now = new Date();
+      const start = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+      constraints.push(where('timestamp','>=', Timestamp.fromDate(start)));
+    }
+    
+    // Filtro por nivel
+    if(opts.level){
+      constraints.push(where('level','==', opts.level));
+    }
+    
+    constraints.push(limit(lim));
+    const q = query(...constraints);
     const snapshot = await getDocs(q);
     const scores = [];
     let rank = 1;
@@ -774,7 +808,9 @@ document.getElementById('eShare').onclick=()=>{const t=`🎮 Water Game Arcade E
 function tFS(){try{if(!document.fullscreenElement&&!document.webkitFullscreenElement){const e=document.documentElement;if(e.requestFullscreen)e.requestFullscreen();else if(e.webkitRequestFullscreen)e.webkitRequestFullscreen()}else{if(document.exitFullscreen)document.exitFullscreen();else if(document.webkitExitFullscreen)document.webkitExitFullscreen()}}catch{}}
 function sFI(){const e=document.getElementById('fsInfo');if(isIOS)e.innerHTML=`<p style="font-size:24px">📤</p><p><strong>Safari:</strong> Compartir → Añadir a inicio</p>`;else e.innerHTML=`<p>Pulsa <strong>F11</strong></p>`}
 // ===== SISTEMA DE PUNTUACIONES =====
-let scoreTab = 'local'; // 'local' o 'global'
+let scoreTab = 'local';
+let globalMode = 'today'; // 'today', 'alltime', 'level'
+let globalLevel = 1;
 let playerName = '';
 try { playerName = localStorage.getItem('wrt_pname') || ''; } catch {}
 
@@ -831,18 +867,30 @@ async function rScGlobal(){
   const e=document.getElementById('sList');
   
   if(!window.fbEnabled){
-    e.innerHTML='<div class="ns">🔧 Firebase no configurado<br><span style="font-size:0.8em;color:#444">Configura Firebase en el código para habilitar puntuaciones globales</span></div>';
+    e.innerHTML='<div class="ns">🔧 Firebase no configurado<br><span style="font-size:0.85em;color:#556">Configura Firebase para rankings globales</span></div>';
     return;
   }
   
   e.innerHTML='<div class="ns"><span class="loadingDots">Cargando</span></div>';
   
   try {
-    const scores = await window.getGlobalScores(50);
+    const opts = {limit:50};
+    if(globalMode==='today') opts.today=true;
+    if(globalMode==='level') opts.level=globalLevel;
+    
+    const scores = await window.getGlobalScores(opts);
+    
+    const emptyMsg = globalMode==='today'
+      ? 'Sin puntuaciones hoy<br><span style="font-size:0.85em;color:#556">¡Sé el primero del día!</span>'
+      : globalMode==='level'
+      ? `Sin puntuaciones en Nivel ${globalLevel}<br><span style="font-size:0.85em;color:#556">¡Conquista este nivel!</span>`
+      : 'Sin puntuaciones globales<br><span style="font-size:0.85em;color:#556">¡Sé el primero!</span>';
+    
     if(!scores.length){
-      e.innerHTML='<div class="ns">Sin puntuaciones globales<br><span style="font-size:0.8em;color:#444">¡Sé el primero en aparecer!</span></div>';
+      e.innerHTML='<div class="ns">'+emptyMsg+'</div>';
       return;
     }
+    
     e.innerHTML=scores.map(x=>{
       const isMe = x.isMe || false;
       return `<div class="se${isMe?' me':''}">
@@ -853,30 +901,45 @@ async function rScGlobal(){
       </div>`;
     }).join('');
   } catch(err) {
-    e.innerHTML='<div class="ns">Error cargando puntuaciones<br><span style="font-size:0.8em;color:#f55">'+err.message+'</span></div>';
+    e.innerHTML='<div class="ns">Error cargando<br><span style="font-size:0.85em;color:#f55">'+err.message+'</span></div>';
   }
 }
 
 // Función principal para renderizar según pestaña activa
 function rSc(){
-  updateScoreTabs();
-  
-  if(scoreTab==='local'){
-    rScLocal();
-  } else {
-    rScGlobal();
-  }
-}
-
-// Actualizar estado visual de pestañas
-function updateScoreTabs(){
+  // Tabs principales
   document.getElementById('tabLocal').classList.toggle('active', scoreTab==='local');
   document.getElementById('tabGlobal').classList.toggle('active', scoreTab==='global');
+  
+  // Sub-tabs globales
+  const gSub=document.getElementById('globalSubTabs');
+  const lvPick=document.getElementById('levelPicker');
+  gSub.style.display=scoreTab==='global'?'flex':'none';
+  lvPick.style.display=(scoreTab==='global'&&globalMode==='level')?'flex':'none';
+  
+  // Actualizar estados activos de subtabs
+  document.querySelectorAll('[data-gmode]').forEach(b=>{
+    b.classList.toggle('active',b.dataset.gmode===globalMode);
+  });
+  document.querySelectorAll('[data-lv]').forEach(b=>{
+    b.classList.toggle('active',parseInt(b.dataset.lv)===globalLevel);
+  });
+  
+  if(scoreTab==='local') rScLocal();
+  else rScGlobal();
 }
 
-// Event listeners para pestañas
+// Event listeners pestañas principales
 document.getElementById('tabLocal').onclick=()=>{scoreTab='local';rSc()};
 document.getElementById('tabGlobal').onclick=()=>{scoreTab='global';rSc()};
+
+// Sub-tabs globales
+document.querySelectorAll('[data-gmode]').forEach(b=>{
+  b.onclick=()=>{globalMode=b.dataset.gmode;rSc()};
+});
+document.querySelectorAll('[data-lv]').forEach(b=>{
+  b.onclick=()=>{globalLevel=parseInt(b.dataset.lv);rSc()};
+});
 
 // Guardar nombre del jugador
 document.getElementById('saveNameBtn').onclick=()=>{
