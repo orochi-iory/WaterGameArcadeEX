@@ -138,6 +138,8 @@ input { -webkit-user-select: text; user-select: text; touch-action: auto; }
     inset 0 2px 0 rgba(255,255,255,.48),
     inset 0 -22px 38px rgba(0, 35, 65, .3);
   overflow: hidden;
+  perspective: 900px;
+  transform-style: preserve-3d;
 }
 .toy-case::before {
   content: "";
@@ -151,6 +153,27 @@ input { -webkit-user-select: text; user-select: text; touch-action: auto; }
   background: linear-gradient(125deg, rgba(255,255,255,.36), transparent 72%);
   pointer-events: none;
 }
+.toy-case::after {
+  content: "AQUA PLAY  //  WATER LAB";
+  position: absolute;
+  z-index: 0;
+  left: 14%;
+  right: 14%;
+  bottom: 27px;
+  height: 76px;
+  display: grid;
+  place-items: end center;
+  padding-bottom: 12px;
+  border: 1px solid rgba(155, 250, 246, .16);
+  border-radius: 50%;
+  color: rgba(174, 249, 245, .35);
+  background: radial-gradient(ellipse at 50% 15%, rgba(98, 239, 225, .2), rgba(4, 74, 111, .18) 63%, transparent 70%);
+  box-shadow: inset 0 7px 13px rgba(0, 38, 67, .2), 0 5px 0 rgba(0, 49, 79, .24);
+  font: 700 8px "DM Mono", monospace;
+  letter-spacing: .18em;
+  pointer-events: none;
+}
+#waterScreen, .hud-panel, .controls { transform: translateZ(7px); }
 .case-screw {
   position: absolute;
   z-index: 20;
@@ -176,14 +199,14 @@ input { -webkit-user-select: text; user-select: text; touch-action: auto; }
   border-radius: 22px;
   overflow: hidden;
   border: 7px solid #087191;
-  background: #07182d;
+  background: #0a6f96;
   box-shadow:
-    inset 0 0 0 2px rgba(190, 255, 255, .55),
-    inset 0 0 35px rgba(0, 0, 0, .72),
+    inset 0 0 0 2px rgba(190, 255, 255, .65),
+    inset 0 0 24px rgba(0, 31, 55, .34),
     0 5px 0 rgba(0, 55, 83, .7),
     0 9px 18px rgba(0, 0, 0, .38);
 }
-#gameCanvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+#gameCanvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; filter: saturate(1.18) contrast(1.08); }
 .screen-glare {
   position: absolute;
   z-index: 3;
@@ -199,7 +222,7 @@ input { -webkit-user-select: text; user-select: text; touch-action: auto; }
   z-index: 4;
   pointer-events: none;
   inset: 0;
-  box-shadow: inset 0 0 42px rgba(0,0,0,.64), inset 0 -25px 50px rgba(0,0,0,.22);
+  box-shadow: inset 0 0 24px rgba(0, 23, 42, .24), inset 0 -14px 28px rgba(0, 31, 55, .12);
 }
 
 .utility-bar {
@@ -258,8 +281,8 @@ input { -webkit-user-select: text; user-select: text; touch-action: auto; }
   padding: 9px 10px 8px;
   border: 2px solid rgba(122, 240, 235, .38);
   border-radius: 14px;
-  background: linear-gradient(180deg, rgba(10, 62, 83, .96), rgba(4, 31, 54, .96));
-  box-shadow: inset 0 2px 0 rgba(255,255,255,.15), 0 4px 12px rgba(0,0,0,.24);
+  background: linear-gradient(180deg, rgba(21, 101, 122, .98), rgba(3, 35, 59, .98));
+  box-shadow: inset 0 2px 0 rgba(255,255,255,.22), inset 0 -4px 0 rgba(0, 0, 0, .18), 0 4px 0 rgba(0, 60, 86, .55), 0 7px 12px rgba(0,0,0,.24);
 }
 .hud-stat { min-width: 0; text-align: center; }
 .hud-label { color: #648098; font: 8px "DM Mono", monospace; letter-spacing: .08em; text-transform: uppercase; }
@@ -294,10 +317,20 @@ input { -webkit-user-select: text; user-select: text; touch-action: auto; }
   margin-top: 8px;
   border: 2px solid rgba(202, 255, 252, .45);
   border-radius: 20px;
-  background: linear-gradient(160deg, rgba(35, 197, 201, .92), rgba(5, 91, 125, .96));
-  box-shadow: inset 0 2px 0 rgba(255,255,255,.28), inset 0 -8px 16px rgba(0, 47, 75, .22), 0 5px 12px rgba(0,0,0,.24);
+  background: linear-gradient(160deg, rgba(47, 216, 211, .96), rgba(5, 91, 125, .98));
+  box-shadow: inset 0 2px 0 rgba(255,255,255,.36), inset 0 -9px 16px rgba(0, 47, 75, .3), 0 6px 0 rgba(0, 64, 91, .62), 0 10px 16px rgba(0,0,0,.24);
 }
-.jet-row, .tilt-row { display: flex; align-items: center; justify-content: center; gap: 11%; }
+.controls::before {
+  content: "";
+  position: absolute;
+  z-index: 0;
+  inset: 5px;
+  border: 1px solid rgba(226, 255, 254, .32);
+  border-radius: 15px;
+  box-shadow: inset 0 2px 5px rgba(0, 57, 79, .2), inset 0 -1px 0 rgba(255,255,255,.16);
+  pointer-events: none;
+}
+.jet-row, .tilt-row { position: relative; z-index: 1; display: flex; align-items: center; justify-content: center; gap: 11%; }
 .tilt-row { gap: 4%; margin-top: 7px; }
 .control-btn {
   position: relative;

@@ -120,6 +120,7 @@ let latestOrientation = { gamma: 0, beta: 60 };
 const canvas = $('gameCanvas');
 const waterScreen = $('waterScreen');
 const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: false, powerPreference: 'high-performance' });
+renderer.setClearColor(0x061b31, 1);
 renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
 renderer.outputColorSpace = THREE.SRGBColorSpace;
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
@@ -167,10 +168,10 @@ function makeGradientTexture() {
   c.width = 512; c.height = 512;
   const ctx = c.getContext('2d');
   const g = ctx.createLinearGradient(0, 0, 0, 512);
-  g.addColorStop(0, '#1f648a');
-  g.addColorStop(.33, '#0e4168');
-  g.addColorStop(.72, '#072647');
-  g.addColorStop(1, '#031324');
+  g.addColorStop(0, '#35b7d1');
+  g.addColorStop(.26, '#147ea6');
+  g.addColorStop(.62, '#0a4d76');
+  g.addColorStop(1, '#062a4c');
   ctx.fillStyle = g; ctx.fillRect(0, 0, 512, 512);
   const glow = ctx.createRadialGradient(250, 120, 10, 250, 180, 330);
   glow.addColorStop(0, 'rgba(112,233,255,.27)');
@@ -186,7 +187,7 @@ function makeGradientTexture() {
 }
 
 const background = new THREE.Mesh(
-  new THREE.PlaneGeometry(14, 8),
+  new THREE.PlaneGeometry(20, 14),
   new THREE.MeshBasicMaterial({ map: makeGradientTexture(), side: THREE.DoubleSide })
 );
 background.position.set(0, -.15, -2.45);
@@ -253,20 +254,54 @@ stageGroup.add(floorTrim);
 const tankHeight = WATER_TOP - BASE_Y;
 const waterVolume = new THREE.Mesh(
   new THREE.BoxGeometry(11.7, tankHeight, 4.95),
-  new THREE.MeshPhysicalMaterial({ color: 0x167ca9, roughness: .12, metalness: .08, transmission: .12, transparent: true, opacity: .20, depthWrite: false, side: THREE.DoubleSide })
+  new THREE.MeshPhysicalMaterial({ color: 0x2ad0ef, roughness: .18, metalness: .02, transmission: .08, transparent: true, opacity: .075, depthWrite: false, side: THREE.DoubleSide })
 );
 waterVolume.position.set(0, BASE_Y + tankHeight / 2, .1);
 waterVolume.receiveShadow = true;
 stageGroup.add(waterVolume);
 
-// Lámina vertical que mantiene el aspecto de juguete lleno de agua incluso
-// cuando la cámara del móvil mira de frente al tanque.
+function makeWaterTexture() {
+  const c = document.createElement('canvas');
+  c.width = 768; c.height = 512;
+  const ctx = c.getContext('2d');
+  const gradient = ctx.createLinearGradient(0, 0, 0, c.height);
+  gradient.addColorStop(0, 'rgba(63, 215, 240, .86)');
+  gradient.addColorStop(.42, 'rgba(18, 133, 183, .82)');
+  gradient.addColorStop(1, 'rgba(5, 57, 103, .92)');
+  ctx.fillStyle = gradient; ctx.fillRect(0, 0, c.width, c.height);
+  const glow = ctx.createRadialGradient(390, 170, 20, 390, 190, 420);
+  glow.addColorStop(0, 'rgba(157, 246, 255, .34)');
+  glow.addColorStop(1, 'rgba(157, 246, 255, 0)');
+  ctx.fillStyle = glow; ctx.fillRect(0, 0, c.width, c.height);
+  for (let row = 0; row < 14; row++) {
+    const y = 28 + row * 38;
+    ctx.beginPath();
+    for (let x = -30; x <= c.width + 30; x += 18) {
+      const wave = Math.sin(x * .024 + row * .8) * 8 + Math.sin(x * .057 - row) * 3;
+      if (x === -30) ctx.moveTo(x, y + wave); else ctx.lineTo(x, y + wave);
+    }
+    ctx.strokeStyle = `rgba(173, 247, 255, ${.045 + (row % 3) * .018})`;
+    ctx.lineWidth = row % 4 === 0 ? 3 : 1.5; ctx.stroke();
+  }
+  for (let i = 0; i < 28; i++) {
+    ctx.fillStyle = `rgba(190, 251, 255, ${.08 + Math.random() * .13})`;
+    ctx.beginPath(); ctx.arc(Math.random() * c.width, 25 + Math.random() * (c.height - 50), 1 + Math.random() * 3, 0, TAU); ctx.fill();
+  }
+  const texture = new THREE.CanvasTexture(c);
+  texture.colorSpace = THREE.SRGBColorSpace;
+  return texture;
+}
+
+// Lámina de fondo: da color y una distorsión acuática legible sin poner un
+// filtro azul opaco delante de los aros.
 const waterBackdrop = new THREE.Mesh(
   new THREE.PlaneGeometry(11.7, tankHeight, 48, 24),
-  new THREE.MeshPhysicalMaterial({ color: 0x0c78aa, emissive: 0x052d51, emissiveIntensity: .65, roughness: .18, metalness: .08, transparent: true, opacity: .28, depthWrite: false, side: THREE.DoubleSide })
+  new THREE.MeshBasicMaterial({ map: makeWaterTexture(), transparent: true, opacity: .78, depthWrite: false, side: THREE.DoubleSide })
 );
 waterBackdrop.position.set(0, BASE_Y + tankHeight / 2, -1.88);
 stageGroup.add(waterBackdrop);
+const waterBackdropBaseZ = new Float32Array(waterBackdrop.geometry.attributes.position.count);
+for (let i = 0; i < waterBackdropBaseZ.length; i++) waterBackdropBaseZ[i] = waterBackdrop.geometry.attributes.position.getZ(i);
 
 const waterGeometry = new THREE.PlaneGeometry(11.7, 4.95, 48, 18);
 waterGeometry.rotateX(-Math.PI / 2);
@@ -274,7 +309,7 @@ const waterBaseZ = new Float32Array(waterGeometry.attributes.position.count);
 for (let i = 0; i < waterGeometry.attributes.position.count; i++) waterBaseZ[i] = waterGeometry.attributes.position.getZ(i);
 const waterSurface = new THREE.Mesh(
   waterGeometry,
-  new THREE.MeshPhysicalMaterial({ color: 0x42c8ee, emissive: 0x063f66, emissiveIntensity: .6, roughness: .12, metalness: .22, transparent: true, opacity: .34, depthWrite: false, side: THREE.DoubleSide })
+  new THREE.MeshPhysicalMaterial({ color: 0x63e7f4, emissive: 0x0b6d91, emissiveIntensity: .8, roughness: .1, metalness: .12, transparent: true, opacity: .24, depthWrite: false, side: THREE.DoubleSide })
 );
 waterSurface.position.set(0, WATER_TOP, .1);
 waterSurface.receiveShadow = true;
@@ -398,12 +433,12 @@ function createPole(def) {
   const capacity = Math.max(5, Math.floor((def.h - .18) / RING_STEP));
   const hasRequirement = def.rc !== undefined;
   const reqColor = hasRequirement ? PALETTES[paletteIndex].colors[def.rc].hex : '#b4e6f5';
-  const shaftMaterial = new THREE.MeshStandardMaterial({ color: reqColor, emissive: reqColor, emissiveIntensity: hasRequirement ? .28 : .08, roughness: .24, metalness: .42, transparent: true, opacity: .82 });
+  const shaftMaterial = new THREE.MeshStandardMaterial({ color: reqColor, emissive: reqColor, emissiveIntensity: hasRequirement ? .52 : .3, roughness: .28, metalness: .08, transparent: true, opacity: .96 });
   const shaft = new THREE.Mesh(new THREE.CylinderGeometry(.075, .12, def.h, 18), shaftMaterial);
   shaft.position.y = def.h / 2;
   shaft.castShadow = true;
   group.add(shaft);
-  const baseMaterial = new THREE.MeshStandardMaterial({ color: hasRequirement ? reqColor : 0x84b2c6, emissive: hasRequirement ? reqColor : 0x123c50, emissiveIntensity: .16, roughness: .3, metalness: .62 });
+  const baseMaterial = new THREE.MeshStandardMaterial({ color: hasRequirement ? reqColor : 0x5bd8e4, emissive: hasRequirement ? reqColor : 0x0c526e, emissiveIntensity: .3, roughness: .22, metalness: .1 });
   const base = new THREE.Mesh(new THREE.CylinderGeometry(.38, .48, .18, 24), baseMaterial);
   base.position.y = .09; base.castShadow = true; group.add(base);
   const collar = new THREE.Mesh(new THREE.TorusGeometry(.22, .045, 8, 24), baseMaterial);
@@ -426,7 +461,7 @@ function createPole(def) {
 function createRing(ci, index) {
   const info = PALETTES[paletteIndex].colors[ci];
   const color = new THREE.Color(info.hex);
-  const material = new THREE.MeshStandardMaterial({ color, emissive: color, emissiveIntensity: .28, roughness: .2, metalness: .32 });
+  const material = new THREE.MeshStandardMaterial({ color, emissive: color, emissiveIntensity: .62, roughness: .28, metalness: .08 });
   const mesh = new THREE.Mesh(new THREE.TorusGeometry(RING_RADIUS, .088, 16, 36), material);
   mesh.castShadow = true; mesh.receiveShadow = true;
   // Un aro real cae plano sobre un palo vertical: el agujero mira hacia arriba.
@@ -488,6 +523,22 @@ function updatePoleLabel(pole) {
   }
 }
 
+let visualScaleX = 1;
+
+// El modelo nació con proporción panorámica, pero el juguete se juega sobre
+// todo en móvil. Comprimimos solo la composición horizontal para que el
+// acuario llene una pantalla cuadrada; los aros y las bases compensan esa
+// escala para conservar círculos y volumen.
+function applyVisualScale(aspect = 1) {
+  visualScaleX = clamp(aspect * .5, .5, 1);
+  [stageGroup, poleGroup, ringGroup, effectGroup].forEach((group) => { group.scale.x = visualScaleX; });
+  marineDecor.scale.x = visualScaleX;
+  poles.forEach((pole) => { pole.group.scale.x = 1 / visualScaleX; });
+  rings.forEach((ring) => { ring.mesh.scale.x = 1 / visualScaleX; });
+  nozzles.forEach((nozzle) => { nozzle.scale.x = 1 / visualScaleX; });
+  jetBeams.forEach((beam) => { beam.scale.x = 1 / visualScaleX; });
+}
+
 function initGame(level = currentLevel) {
   currentLevel = clamp(level, 1, maxLevel);
   storage.set('wrt_current_level', String(currentLevel));
@@ -496,6 +547,8 @@ function initGame(level = currentLevel) {
   clearGroup(poleGroup);
   poles = LEVELS[currentLevel].poles.map(createPole);
   resetRings();
+  const screenAspect = waterScreen.clientWidth && waterScreen.clientHeight ? waterScreen.clientWidth / waterScreen.clientHeight : 1;
+  applyVisualScale(screenAspect);
   updateUI(true);
   $('endOv').classList.remove('show');
   $('menuLevel').textContent = currentLevel;
@@ -516,6 +569,12 @@ function updateWater(dt) {
   }
   pos.needsUpdate = true;
   if (Math.floor(waveTime * 30) % 2 === 0) waterGeometry.computeVertexNormals();
+  const backPos = waterBackdrop.geometry.attributes.position;
+  for (let i = 0; i < backPos.count; i++) {
+    const x = backPos.getX(i); const y = backPos.getY(i);
+    backPos.setZ(i, waterBackdropBaseZ[i] + Math.sin(x * .8 + waveTime * 1.4) * .018 + Math.cos(y * 1.3 - waveTime) * .012);
+  }
+  backPos.needsUpdate = true;
   stars.rotation.z = Math.sin(waveTime * .08) * .012;
   bubbles.forEach((bubble, index) => {
     bubble.position.y += bubble.userData.speed * dt;
@@ -547,7 +606,8 @@ function updateJetVisuals(dt) {
     beam.material.opacity = lerp(beam.material.opacity, active ? .24 : 0, Math.min(1, dt * 13));
     beam.material.emissiveIntensity = active ? 1.35 + Math.sin(state.elapsed * 18) * .25 : .5;
     nozzle.material.emissiveIntensity = active ? .75 : .1;
-    nozzle.scale.setScalar(active ? 1.06 + Math.sin(state.elapsed * 20) * .04 : 1);
+    const pulse = active ? 1.06 + Math.sin(state.elapsed * 20) * .04 : 1;
+    nozzle.scale.set(pulse / visualScaleX, pulse, pulse);
   }
 }
 
@@ -1201,15 +1261,17 @@ function resizeRenderer() {
   const aspect = rect.width / rect.height;
   renderer.setSize(rect.width, rect.height, false);
   camera.aspect = aspect;
-  // Encuadra el tanque completo. En móvil el ancho útil suele ser menor que
-  // la altura, así que la distancia se calcula también con el FOV horizontal.
-  const fieldWidth = 12.8;
-  const fieldHeight = 6.6;
+  applyVisualScale(aspect);
+  // El escenario se compacta horizontalmente en pantallas casi cuadradas.
+  // Así la cámara no tiene que alejarse para encajar un tanque panorámico y
+  // desaparecen las franjas negras que dejaban el juego como una miniatura.
+  const fieldWidth = 12.8 * visualScaleX;
+  const fieldHeight = 6.2;
   const verticalFov = THREE.MathUtils.degToRad(camera.fov);
   const horizontalFov = 2 * Math.atan(Math.tan(verticalFov / 2) * aspect);
   const fitVertical = (fieldHeight / 2) / Math.tan(verticalFov / 2);
   const fitHorizontal = (fieldWidth / 2) / Math.tan(horizontalFov / 2);
-  camera.userData.fitZ = Math.max(14.8, fitVertical, fitHorizontal) + .55;
+  camera.userData.fitZ = Math.max(7.2, fitVertical, fitHorizontal) + .35;
   camera.updateProjectionMatrix();
 }
 window.addEventListener('resize', resizeRenderer);
