@@ -37,7 +37,9 @@ const RING_HOLE_RADIUS = RING_RADIUS - RING_TUBE;
 const RING_MASS = .72;
 const RING_BUOYANCY_FORCE = 3.5;
 const POLE_TIP_RADIUS = .11;
-const RING_CAPTURE_RADIUS = Math.max(.06, RING_HOLE_RADIUS - POLE_TIP_RADIUS - .015);
+// Radio máximo en el que la punta puede entrar físicamente por el hueco.
+// No hay tolerancia visual extra: fuera de este radio Cannon colisiona.
+const RING_CAPTURE_RADIUS = Math.max(.06, RING_HOLE_RADIUS - POLE_TIP_RADIUS);
 const ringFlatQuaternion = new THREE.Quaternion().setFromEuler(new THREE.Euler(Math.PI / 2, 0, 0));
 const GRAVITY = -5.6;
 const NOZZLE_Y = BASE_Y + 0.12;
@@ -615,9 +617,13 @@ function resetRings() {
   for (let ci = 0; ci < 4; ci++) {
     for (let n = 0; n < 5; n++) {
       const ring = createRing(ci, index++);
-      ring.x = -4.45 + Math.random() * 8.9;
+      // Cada aro nace sobre un carril de palo real, no perdido por todo el
+      // tanque. Sigue necesitando altura y alineación fina, pero el jugador
+      // puede resolverlo con los chorros y el eje de profundidad.
+      const spawnPole = poles[ring.index % poles.length];
+      ring.x = spawnPole.baseX + (Math.random() - .5) * .42;
       ring.y = BASE_Y + .35 + Math.random() * (WATER_TOP - BASE_Y - 1.05);
-      ring.z = -.5 + Math.random() * 1.55;
+      ring.z = (Math.random() - .5) * .56;
       setRingVisualPosition(ring, ring.x, ring.y, ring.z);
       rings.push(ring);
     }
@@ -868,7 +874,9 @@ function applyCannonForces(dt) {
     body.force.x += (currentX - body.velocity.x) * RING_MASS * .42 * submerged;
     body.force.z += (currentZ - body.velocity.z) * RING_MASS * .42 * submerged;
     body.force.x += state.tiltX * RING_MASS * 3.4;
-    body.force.z += state.tiltY * RING_MASS * 3.4;
+    // ↑ / ↓ y beta del giroscopio son el carril delante/fondo real. No
+    // recolocan el aro: aplican una fuerza continua sobre Z.
+    body.force.z += state.tiltY * RING_MASS * 4.8;
     body.force.y += -state.tiltY * RING_MASS * .35;
     body.torque.x += -body.angularVelocity.x * (1.1 + submerged * 1.8);
     body.torque.z += -body.angularVelocity.z * (1.1 + submerged * 1.8);
