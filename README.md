@@ -20,13 +20,13 @@ Water Game Arcade EX ya no es un canvas 2D: el tablero completo se renderiza con
 - 💍 Aros como mallas 3D reales, con volumen, materiales, brillo, glyphs y rotación.
 - 🪄 Palos, soportes, luces, balizas y etiquetas de capacidad en el espacio 3D.
 - 💨 Chorros con conos de agua, oscilación, partículas y fuerzas físicas.
-- ⚙️ Física personalizada 2.5D: gravedad, flotación, inclinación, impulsos, colisiones y tensión.
+- ⚙️ Física 3D con cuerpos rígidos Cannon-es: gravedad, flotación, drag, orientación, velocidad angular y colisiones.
 - 🎮 Diez niveles: cinco clásicos y cinco niveles con requisitos de color.
-- 🔥 Combos, bonus de tiempo, bonus de color perfecto y expulsión por tensión.
+- 🔥 Combos, bonus de tiempo y bonus de color perfecto.
 - 📱 Controles táctiles, teclado, giroscopio, vibración y pantalla completa.
 - 👁️ Cinco paletas accesibles con formas para diferenciar los colores.
 - 💾 Ranking local y sincronización global opcional con Firebase.
-- 🔊 Audio procedural para chorros, combos, tensión, victoria y música ambiental.
+- 🔊 Audio procedural para chorros, combos, victoria y música ambiental.
 
 ## 🎯 Cómo jugar
 
@@ -38,11 +38,11 @@ Ensarta los **20 aros** en los tres palos. Para completar un nivel necesitas al 
 | Chorro central | `S` | Botón verde | Botón frontal 2 |
 | Chorro derecho | `D` | Botón azul | Botón frontal 3 |
 | Inclinar izquierda/derecha | `←` / `→` | Botones laterales | Cruceta / stick izquierdo |
-| Inclinar arriba/abajo | `↑` / `↓` | Botones dorados | Cruceta / stick izquierdo |
+| Mover profundidad delante/fondo | `↑` / `↓` | Botones dorados | Cruceta / stick izquierdo |
 | Reiniciar | `R` | `↺` | — |
 | Menú | — | `☰` | — |
 
-Mantener un chorro cerca de un palo durante demasiado tiempo aumenta la tensión. Los aros superiores vibran primero y el palo se ilumina en rojo antes de expulsarlos.
+La profundidad es física: un aro delante o detrás del palo no entra aunque parezca alineado en pantalla. Ajusta `↑` / `↓`, usa los chorros para darle altura y deja que las colisiones naturales lo guíen hasta la base.
 
 ## 🏆 Puntuación
 
@@ -55,7 +55,7 @@ Mantener un chorro cerca de un palo durante demasiado tiempo aumenta la tensión
 
 ## ▶️ Ejecutar
 
-Es un proyecto estático. No hay bundler ni instalación obligatoria: Three.js está incluido localmente como módulo ES en `vendor/three.module.js`, por lo que el juego puede arrancar aunque el CDN esté bloqueado.
+Es un proyecto estático. No hay bundler ni instalación obligatoria: Three.js y Cannon-es están incluidos localmente como módulos ES en `vendor/`, por lo que el juego puede arrancar aunque el CDN esté bloqueado.
 
 ```bash
 # Opción recomendada
@@ -81,8 +81,10 @@ Para usar otro proyecto, sustituye `FIREBASE_CONFIG` en `game3d.js` y habilita:
 ```text
 index.html          → carcasa arcade, HUD, menús, tutorial y controles
 styles.css          → diseño responsive, overlays y estética de hardware acuático
-game3d.js           → escena Three.js, física, audio, persistencia y Firebase opcional
+game3d.js           → escena Three.js, física Cannon-es, audio, persistencia y Firebase opcional
 vendor/three.module.js → runtime local de Three.js 0.160.0
+vendor/cannon-es.js    → motor local de cuerpos rígidos Cannon-es 0.20.0
+vendor/CANNON-ES-LICENSE → licencia MIT de Cannon-es
 vendor/THREE-LICENSE   → licencia MIT de Three.js
 ```
 
