@@ -32,15 +32,15 @@ Water Game Arcade EX ya no es un canvas 2D: el tablero completo se renderiza con
 
 Ensarta los **20 aros** en los tres palos. Para completar un nivel necesitas al menos **5 aros en cada palo**. En los niveles 6–10, cada palo también pide una cantidad mínima de un color concreto.
 
-| Acción | Teclado | Pantalla táctil |
-| --- | --- | --- |
-| Chorro izquierdo | `A` | Botón rojo |
-| Chorro central | `S` | Botón verde |
-| Chorro derecho | `D` | Botón azul |
-| Inclinar izquierda/derecha | `←` / `→` | Botones laterales |
-| Inclinar arriba/abajo | `↑` / `↓` | Botones dorados |
-| Reiniciar | `R` | `↺` |
-| Menú | — | `☰` |
+| Acción | Teclado | Pantalla táctil | Mando |
+| --- | --- | --- | --- |
+| Chorro izquierdo | `A` | Botón rojo | Botón frontal 1 |
+| Chorro central | `S` | Botón verde | Botón frontal 2 |
+| Chorro derecho | `D` | Botón azul | Botón frontal 3 |
+| Inclinar izquierda/derecha | `←` / `→` | Botones laterales | Cruceta / stick izquierdo |
+| Inclinar arriba/abajo | `↑` / `↓` | Botones dorados | Cruceta / stick izquierdo |
+| Reiniciar | `R` | `↺` | — |
+| Menú | — | `☰` | — |
 
 Mantener un chorro cerca de un palo durante demasiado tiempo aumenta la tensión. Los aros superiores vibran primero y el palo se ilumina en rojo antes de expulsarlos.
 

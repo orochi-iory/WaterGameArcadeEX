@@ -25,6 +25,10 @@ const WATER_Y = -1.72;
 const WATER_TOP = 2.55;
 const RING_STEP = 0.34;
 const RING_RADIUS = 0.34;
+const RING_TUBE = .088;
+const RING_HOLE_RADIUS = RING_RADIUS - RING_TUBE;
+const RING_CAPTURE_RADIUS = RING_HOLE_RADIUS - .04;
+const POLE_COLLISION_RADIUS = .43;
 const GRAVITY = -5.6;
 const NOZZLE_Y = BASE_Y + 0.12;
 const JET_X = [-3.35, 0, 3.35];
@@ -98,7 +102,25 @@ const state = {
   currentCombo: 1,
   lastUiScore: -1
 };
-const input = { jets: [false, false, false], keys: {}, gyro: false };
+const input = {
+  jets: [false, false, false], keys: {}, gyro: false,
+  pointerJets: [false, false, false], keyboardJets: [false, false, false], gamepadJets: [false, false, false],
+  pointerKeys: {}, keyboardKeys: {}, gamepadKeys: {}
+};
+function refreshJetInput(index) {
+  input.jets[index] = Boolean(input.pointerJets[index] || input.keyboardJets[index] || input.gamepadJets[index]);
+  const button = document.querySelector(`[data-jet="${index}"]`);
+  button?.classList.toggle('pressed', input.jets[index]); button?.setAttribute('aria-pressed', String(input.jets[index]));
+}
+function refreshTiltInput(key) {
+  input.keys[key] = Boolean(input.pointerKeys[key] || input.keyboardKeys[key] || input.gamepadKeys[key]);
+  const direction = { ArrowLeft: 'left', ArrowRight: 'right', ArrowUp: 'up', ArrowDown: 'down' }[key];
+  if (direction) {
+    const button = document.querySelector(`[data-tilt="${direction}"]`);
+    button?.classList.toggle('pressed', input.keys[key]); button?.setAttribute('aria-pressed', String(input.keys[key]));
+  }
+}
+
 let rings = [];
 let poles = [];
 let particles = [];
@@ -462,20 +484,24 @@ function createRing(ci, index) {
   const info = PALETTES[paletteIndex].colors[ci];
   const color = new THREE.Color(info.hex);
   const material = new THREE.MeshStandardMaterial({ color, emissive: color, emissiveIntensity: .62, roughness: .28, metalness: .08 });
-  const mesh = new THREE.Mesh(new THREE.TorusGeometry(RING_RADIUS, .088, 16, 36), material);
+  const mesh = new THREE.Mesh(new THREE.TorusGeometry(RING_RADIUS, RING_TUBE, 16, 36), material);
   mesh.castShadow = true; mesh.receiveShadow = true;
   // Un aro real cae plano sobre un palo vertical: el agujero mira hacia arriba.
   // El eje Z del TorusGeometry se gira al eje Y para que no quede de canto.
-  mesh.rotation.set(Math.PI / 2 + (Math.random() - .5) * .08, (Math.random() - .5) * .12, Math.random() * TAU);
+  mesh.rotation.set(Math.PI / 2, 0, 0);
   const glyph = new THREE.Sprite(new THREE.SpriteMaterial({ map: glyphTexture(info.glyph, ['#ffffff', '#f3df72', '#fff000'].includes(info.hex.toLowerCase())), transparent: true, depthTest: false }));
   glyph.userData.shared = true;
   glyph.scale.set(.27, .27, 1); glyph.position.set(0, .12, 0); mesh.add(glyph);
   ringGroup.add(mesh);
   return {
     mesh, ci, color: info.hex, glyph: info.glyph, index, x: 0, y: 0, z: 0, vx: 0, vy: 0, vz: 0,
-    scored: false, pole: null, stackIndex: -1, targetY: 0, points: 0, spin: (Math.random() - .5) * 2.2,
+    scored: false, pole: null, stackIndex: -1, targetY: 0, dropping: false, dropFromY: 0, dropTime: 0, points: 0, spin: (Math.random() - .5) * 2.2,
     seed: Math.random() * TAU
   };
+}
+
+function setRingVisualPosition(ring, x, y, z) {
+  ring.mesh.position.set(x * visualScaleX, y, z);
 }
 
 function resetRings() {
@@ -490,7 +516,7 @@ function resetRings() {
       ring.z = -.5 + Math.random() * 1.55;
       ring.vx = (Math.random() - .5) * .55;
       ring.vy = (Math.random() - .5) * .35;
-      ring.mesh.position.set(ring.x, ring.y, ring.z);
+      setRingVisualPosition(ring, ring.x, ring.y, ring.z);
       rings.push(ring);
     }
   }
@@ -530,11 +556,12 @@ let visualScaleX = 1;
 // acuario llene una pantalla cuadrada; los aros y las bases compensan esa
 // escala para conservar círculos y volumen.
 function applyVisualScale(aspect = 1) {
-  visualScaleX = clamp(aspect * .5, .5, 1);
-  [stageGroup, poleGroup, ringGroup, effectGroup].forEach((group) => { group.scale.x = visualScaleX; });
+  visualScaleX = clamp(aspect * .5, .3, 1);
+  [stageGroup, poleGroup, effectGroup].forEach((group) => { group.scale.x = visualScaleX; });
+  ringGroup.scale.x = 1;
   marineDecor.scale.x = visualScaleX;
   poles.forEach((pole) => { pole.group.scale.x = 1 / visualScaleX; });
-  rings.forEach((ring) => { ring.mesh.scale.x = 1 / visualScaleX; });
+  rings.forEach((ring) => { ring.mesh.scale.setScalar(1); setRingVisualPosition(ring, ring.x, ring.y, ring.z); });
   nozzles.forEach((nozzle) => { nozzle.scale.x = 1 / visualScaleX; });
   jetBeams.forEach((beam) => { beam.scale.x = 1 / visualScaleX; });
 }
@@ -543,7 +570,10 @@ function initGame(level = currentLevel) {
   currentLevel = clamp(level, 1, maxLevel);
   storage.set('wrt_current_level', String(currentLevel));
   state.score = 0; state.elapsed = 0; state.tiltX = 0; state.tiltY = 0; state.gameOver = false; state.winQueued = false; state.currentCombo = 1;
-  input.jets.fill(false); input.keys = {};
+  input.jets.fill(false);
+  input.pointerJets.fill(false); input.keyboardJets.fill(false); input.gamepadJets.fill(false);
+  input.keys = {}; input.pointerKeys = {}; input.keyboardKeys = {}; input.gamepadKeys = {};
+  document.querySelectorAll('.control-btn').forEach((button) => { button.classList.remove('pressed'); button.setAttribute('aria-pressed', 'false'); });
   clearGroup(poleGroup);
   poles = LEVELS[currentLevel].poles.map(createPole);
   resetRings();
@@ -706,12 +736,22 @@ function updatePoles(dt) {
     if (pole._labelKey !== labelKey) { updateLabel(pole.label, labelText, labelColor); pole._labelKey = labelKey; }
     for (const ring of pole.rings) {
       const dangerShake = danger * danger * .045;
-      ring.x = pole.x; ring.y = ring.targetY; ring.z = .04;
-      ring.mesh.position.x = pole.x + (Math.random() - .5) * dangerShake;
-      ring.mesh.position.y = ring.targetY + (Math.random() - .5) * dangerShake;
-      ring.mesh.position.z = .04 + Math.sin(state.elapsed * 2 + ring.seed) * danger * .035;
-      ring.mesh.rotation.z += ring.spin * dt * .15;
-      ring.mesh.rotation.x = Math.PI / 2 + Math.sin(state.elapsed * 1.7 + ring.seed) * danger * .06;
+      ring.x = pole.x; ring.z = .04;
+      if (ring.dropping) {
+        ring.dropTime = Math.min(.22, ring.dropTime + dt);
+        const progress = ring.dropTime / .22;
+        const eased = 1 - Math.pow(1 - progress, 3);
+        ring.y = lerp(ring.dropFromY, ring.targetY, eased);
+        if (progress >= 1) ring.dropping = false;
+      } else {
+        ring.y = ring.targetY;
+      }
+      const visualX = pole.x + (ring.dropping ? 0 : (Math.random() - .5) * dangerShake);
+      const visualY = ring.y + (ring.dropping ? 0 : (Math.random() - .5) * dangerShake);
+      const visualZ = .04 + Math.sin(state.elapsed * 2 + ring.seed) * danger * .035;
+      setRingVisualPosition(ring, visualX, visualY, visualZ);
+      // El aro es plano y conserva su círculo: solo puede bajar por el eje del palo.
+      ring.mesh.rotation.set(Math.PI / 2, 0, 0);
     }
     if (pole.reqLabel) {
       const req = PALETTES[paletteIndex].colors[pole.reqColor];
@@ -770,10 +810,8 @@ function updateFreeRing(ring, dt) {
   if (ring.x > 4.72) { ring.x = 4.72; ring.vx = -Math.abs(ring.vx) * .45; }
   if (ring.y < BASE_Y + .27) { ring.y = BASE_Y + .27; ring.vy = Math.abs(ring.vy) * .34; ring.vx *= .72; }
   if (ring.y > 2.62) { ring.y = 2.62; ring.vy = -Math.abs(ring.vy) * .45; }
-  ring.mesh.position.set(ring.x, ring.y, ring.z);
-  ring.mesh.rotation.z += ring.spin * dt + ring.vx * dt * .08;
-  ring.mesh.rotation.x = Math.PI / 2 + Math.sin(state.elapsed * .8 + ring.seed) * .12 + ring.vz * .08;
-  ring.mesh.rotation.y += dt * .2;
+  setRingVisualPosition(ring, ring.x, ring.y, ring.z);
+  ring.mesh.rotation.set(Math.PI / 2, 0, 0);
 }
 
 function updateScoring(dt) {
@@ -782,10 +820,27 @@ function updateScoring(dt) {
     for (const pole of poles) {
       if (pole.rejectCd > 0 || pole.rings.length >= pole.capacity) continue;
       const topY = BASE_Y + pole.h;
-      if (Math.abs(ring.x - pole.x) > .43 || Math.abs(ring.z) > 1.05) continue;
-      if (ring.y < topY - .26 || ring.y > topY + .52 || ring.vy > -.02) continue;
-      scoreRing(ring, pole);
-      break;
+      const dx = ring.x - pole.x;
+      const dz = ring.z;
+      const radialDistance = Math.hypot(dx, dz);
+      const inPoleHeight = ring.y > topY - .12 && ring.y < topY + .32;
+      if (!inPoleHeight || ring.vy >= -.02) continue;
+
+      // El hueco del aro debe estar realmente encima del palo. Si solo roza
+      // el cilindro, rebota y se aparta en vez de teletransportarse al stack.
+      if (radialDistance <= RING_CAPTURE_RADIUS) {
+        scoreRing(ring, pole, topY);
+        break;
+      }
+      if (radialDistance < POLE_COLLISION_RADIUS) {
+        const distance = Math.max(radialDistance, .001);
+        const nx = dx / distance; const nz = dz / distance;
+        const impact = clamp((POLE_COLLISION_RADIUS - radialDistance) / POLE_COLLISION_RADIUS, 0, 1);
+        ring.vx += nx * (1.8 + impact * 1.8) * dt;
+        ring.vz += nz * (1.8 + impact * 1.8) * dt;
+        ring.vy = Math.abs(ring.vy) * .24 + .25 * impact;
+        ring.spin += (Math.random() - .5) * .08;
+      }
     }
   }
 }
@@ -797,10 +852,13 @@ function countColorCombos(pole) {
   return { combos, counts };
 }
 
-function scoreRing(ring, pole) {
+function scoreRing(ring, pole, topY) {
   ring.scored = true; ring.pole = pole; ring.stackIndex = pole.rings.length;
-  ring.x = pole.x; ring.y = BASE_Y + .23 + ring.stackIndex * RING_STEP; ring.z = .04; ring.targetY = ring.y;
+  ring.targetY = BASE_Y + .23 + ring.stackIndex * RING_STEP;
+  ring.x = pole.x; ring.y = topY + .16; ring.z = .04;
+  ring.dropFromY = ring.y; ring.dropTime = 0; ring.dropping = true;
   ring.vx = 0; ring.vy = 0; ring.vz = 0;
+  setRingVisualPosition(ring, ring.x, ring.y, ring.z);
   pole.rings.push(ring);
   const combo = pole.lastColor === ring.ci ? pole.combo + 1 : 1;
   pole.lastColor = ring.ci; pole.combo = combo; ring.points = 100 * combo;
@@ -816,7 +874,7 @@ function scoreRing(ring, pole) {
 
 function recalculatePole(pole) {
   pole.rings.forEach((ring, index) => {
-    ring.stackIndex = index; ring.targetY = BASE_Y + .23 + index * RING_STEP; ring.x = pole.x; ring.y = ring.targetY; ring.mesh.position.set(ring.x, ring.y, .04);
+    ring.stackIndex = index; ring.targetY = BASE_Y + .23 + index * RING_STEP; ring.x = pole.x; ring.y = ring.targetY; ring.dropping = false; setRingVisualPosition(ring, ring.x, ring.y, .04);
   });
   const last = pole.rings[pole.rings.length - 1];
   pole.lastColor = last ? last.ci : -1;
@@ -835,7 +893,8 @@ function ejectRing(ring, fromStress = false) {
   ring.scored = false; ring.pole = null; ring.stackIndex = -1; ring.points = 0;
   ring.x = pole.x + (Math.random() - .5) * .25; ring.y = ring.targetY + .08; ring.z = .18;
   ring.vx = (Math.random() - .5) * 2.1 + pole.vX * .035; ring.vy = 1.0 + Math.random() * .8; ring.vz = (Math.random() - .5) * .5;
-  ring.mesh.position.set(ring.x, ring.y, ring.z);
+  ring.dropping = false;
+  setRingVisualPosition(ring, ring.x, ring.y, ring.z);
   recalculatePole(pole);
   if (fromStress) { sfxFail(); showToast('TENSIÓN · ARO EXPULSADO'); vibrate(35); }
   updateUI(true);
@@ -861,6 +920,7 @@ function updateCamera(dt) {
 }
 
 function updateGame(dt) {
+  updateGamepad();
   updateCamera(dt);
   if (state.paused || state.gameOver) {
     updateWater(dt);
@@ -959,7 +1019,10 @@ function showToast(message) {
 
 function showEnd() {
   if (state.gameOver) return;
-  state.gameOver = true; state.paused = true; input.jets.fill(false);
+  state.gameOver = true; state.paused = true;
+  input.pointerJets.fill(false); input.keyboardJets.fill(false); input.gamepadJets.fill(false);
+  input.pointerKeys = {}; input.keyboardKeys = {}; input.gamepadKeys = {}; input.keys = {};
+  input.jets.fill(false); document.querySelectorAll('.control-btn').forEach((button) => { button.classList.remove('pressed'); button.setAttribute('aria-pressed', 'false'); });
   musicWin();
   const time = timeBonus(state.elapsed); const colors = colorBonus(); const requirements = requirementBonus();
   const total = state.score + time + colors.total + requirements.total;
@@ -1081,16 +1144,48 @@ function showFullscreenInfo() { $('fsInfo').innerHTML = /iPhone|iPad|iPod/i.test
 function vibrate(pattern) { navigator.vibrate?.(pattern); }
 
 function bindHold(button, on, off) {
-  const start = (event) => { event.preventDefault(); button.setPointerCapture?.(event.pointerId); on(); button.classList.add('pressed'); };
-  const end = (event) => { event.preventDefault(); off(); button.classList.remove('pressed'); };
-  button.addEventListener('pointerdown', start); button.addEventListener('pointerup', end); button.addEventListener('pointercancel', end); button.addEventListener('pointerleave', end);
+  const start = (event) => { event.preventDefault(); button.setPointerCapture?.(event.pointerId); on(); };
+  const end = (event) => { event.preventDefault(); off(); };
+  button.addEventListener('pointerdown', start); button.addEventListener('pointerup', end); button.addEventListener('pointercancel', end); button.addEventListener('pointerleave', end); button.addEventListener('lostpointercapture', end);
 }
 
-document.querySelectorAll('[data-jet]').forEach((button) => { const index = Number(button.dataset.jet); bindHold(button, () => { ensureAudio(); if (!state.paused && !state.gameOver) { input.jets[index] = true; vibrate(8); } }, () => { input.jets[index] = false; }); });
+document.querySelectorAll('[data-jet]').forEach((button) => {
+  const index = Number(button.dataset.jet);
+  bindHold(button, () => { ensureAudio(); if (!state.paused && !state.gameOver) { input.pointerJets[index] = true; refreshJetInput(index); vibrate(8); } }, () => { input.pointerJets[index] = false; refreshJetInput(index); });
+});
 document.querySelectorAll('[data-tilt]').forEach((button) => {
   const map = { left: 'ArrowLeft', right: 'ArrowRight', up: 'ArrowUp', down: 'ArrowDown' }; const key = map[button.dataset.tilt];
-  bindHold(button, () => { if (!state.paused && !state.gameOver) input.keys[key] = true; }, () => { input.keys[key] = false; });
+  bindHold(button, () => { if (!state.paused && !state.gameOver) { input.pointerKeys[key] = true; refreshTiltInput(key); } }, () => { input.pointerKeys[key] = false; refreshTiltInput(key); });
 });
+
+let activeGamepadIndex = -1;
+function updateGamepad() {
+  if (!navigator.getGamepads) return;
+  const pads = navigator.getGamepads() || [];
+  let pad = activeGamepadIndex >= 0 ? pads[activeGamepadIndex] : null;
+  if (!pad) {
+    activeGamepadIndex = -1;
+    for (let index = 0; index < pads.length; index++) {
+      if (pads[index]) { activeGamepadIndex = index; pad = pads[index]; break; }
+    }
+  }
+  if (!pad) {
+    for (let index = 0; index < 3; index++) { input.gamepadJets[index] = false; refreshJetInput(index); }
+    Object.keys(input.gamepadKeys).forEach((key) => { input.gamepadKeys[key] = false; refreshTiltInput(key); });
+    return;
+  }
+  const buttonPressed = (index) => Boolean(pad.buttons[index]?.pressed);
+  const axes = pad.axes || [];
+  const jets = [buttonPressed(0), buttonPressed(1), buttonPressed(2)];
+  jets.forEach((pressed, index) => { input.gamepadJets[index] = pressed; refreshJetInput(index); });
+  const directions = {
+    ArrowLeft: buttonPressed(14) || (axes[0] || 0) < -.35,
+    ArrowRight: buttonPressed(15) || (axes[0] || 0) > .35,
+    ArrowUp: buttonPressed(12) || (axes[1] || 0) < -.35,
+    ArrowDown: buttonPressed(13) || (axes[1] || 0) > .35
+  };
+  Object.entries(directions).forEach(([key, pressed]) => { input.gamepadKeys[key] = pressed; refreshTiltInput(key); });
+}
 
 document.addEventListener('keydown', (event) => {
   if ($('tutOv').classList.contains('show')) {
@@ -1100,14 +1195,18 @@ document.addEventListener('keydown', (event) => {
     return;
   }
   const key = event.key.toLowerCase();
-  if (['a', 's', 'd'].includes(key) && !state.paused && !state.gameOver) { input.jets[{ a: 0, s: 1, d: 2 }[key]] = true; document.querySelector(`[data-jet="${{ a: 0, s: 1, d: 2 }[key]}"]`)?.classList.add('pressed'); }
-  if (['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(event.key) && !state.paused && !state.gameOver) { event.preventDefault(); input.keys[event.key] = true; document.querySelector(`[data-tilt="${{ ArrowLeft: 'left', ArrowRight: 'right', ArrowUp: 'up', ArrowDown: 'down' }[event.key]}"]`)?.classList.add('pressed'); }
+  if (['a', 's', 'd'].includes(key) && !state.paused && !state.gameOver) {
+    const index = { a: 0, s: 1, d: 2 }[key]; input.keyboardJets[index] = true; refreshJetInput(index);
+  }
+  if (['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(event.key) && !state.paused && !state.gameOver) {
+    event.preventDefault(); input.keyboardKeys[event.key] = true; refreshTiltInput(event.key);
+  }
   if (key === 'r' && !state.paused && !state.gameOver) { initGame(currentLevel); state.paused = false; }
 });
 document.addEventListener('keyup', (event) => {
   const key = event.key.toLowerCase();
-  if (['a', 's', 'd'].includes(key)) { const index = { a: 0, s: 1, d: 2 }[key]; input.jets[index] = false; document.querySelector(`[data-jet="${index}"]`)?.classList.remove('pressed'); }
-  if (['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(event.key)) { input.keys[event.key] = false; const dir = { ArrowLeft: 'left', ArrowRight: 'right', ArrowUp: 'up', ArrowDown: 'down' }[event.key]; document.querySelector(`[data-tilt="${dir}"]`)?.classList.remove('pressed'); }
+  if (['a', 's', 'd'].includes(key)) { const index = { a: 0, s: 1, d: 2 }[key]; input.keyboardJets[index] = false; refreshJetInput(index); }
+  if (['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(event.key)) { input.keyboardKeys[event.key] = false; refreshTiltInput(event.key); }
 });
 
 $('mPlay').addEventListener('click', () => { ensureAudio(); startGame(); });
