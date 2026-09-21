@@ -1,6 +1,12 @@
 import * as THREE from './vendor/three.module.js';
 
 const $ = (id) => document.getElementById(id);
+const MOBILE_DEVICE = /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent) || window.matchMedia?.('(pointer: coarse)').matches || window.innerWidth < 768;
+const WATER_GRID_X = MOBILE_DEVICE ? 24 : 48;
+const WATER_GRID_Y = MOBILE_DEVICE ? 10 : 18;
+const BACKDROP_GRID_Y = MOBILE_DEVICE ? 12 : 24;
+const BUBBLE_COUNT = MOBILE_DEVICE ? 12 : 28;
+const PARTICLE_CAPACITY = MOBILE_DEVICE ? 220 : 480;
 const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
 const storage = {
   get(key, fallback = null) { try { return window.localStorage.getItem(key) ?? fallback; } catch { return fallback; } },
@@ -23,12 +29,14 @@ const BASE_Y = -2.78;
 // aparición para repartir los aros; WATER_TOP es la superficie real del agua.
 const WATER_Y = -1.72;
 const WATER_TOP = 2.55;
-const RING_STEP = 0.34;
-const RING_RADIUS = 0.34;
-const RING_TUBE = .088;
+const RING_STEP = 0.28;
+const RING_RADIUS = 0.27;
+const RING_TUBE = .065;
 const RING_HOLE_RADIUS = RING_RADIUS - RING_TUBE;
-const RING_CAPTURE_RADIUS = RING_HOLE_RADIUS - .04;
-const POLE_COLLISION_RADIUS = .43;
+const POLE_TIP_RADIUS = .11;
+const RING_CAPTURE_RADIUS = Math.max(.06, RING_HOLE_RADIUS - POLE_TIP_RADIUS - .015);
+const POLE_COLLISION_RADIUS = RING_RADIUS + RING_TUBE + .12;
+const ringUpAxis = new THREE.Vector3(0, 1, 0);
 const GRAVITY = -5.6;
 const NOZZLE_Y = BASE_Y + 0.12;
 const JET_X = [-3.35, 0, 3.35];
@@ -126,6 +134,7 @@ let poles = [];
 let particles = [];
 let bubbles = [];
 let waveTime = 0;
+let waterUpdateFrame = 0;
 let jSoundTimer = 0;
 let toastTimer = 0;
 let playerName = storage.get('wrt_pname') || '';
@@ -141,13 +150,13 @@ let latestOrientation = { gamma: 0, beta: 60 };
 
 const canvas = $('gameCanvas');
 const waterScreen = $('waterScreen');
-const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: false, powerPreference: 'high-performance' });
+const renderer = new THREE.WebGLRenderer({ canvas, antialias: !MOBILE_DEVICE, alpha: false, powerPreference: 'high-performance' });
 renderer.setClearColor(0x061b31, 1);
-renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+renderer.setPixelRatio(MOBILE_DEVICE ? Math.min(window.devicePixelRatio || 1, 1.35) : Math.min(window.devicePixelRatio || 1, 2));
 renderer.outputColorSpace = THREE.SRGBColorSpace;
-renderer.toneMapping = THREE.ACESFilmicToneMapping;
-renderer.toneMappingExposure = 1.18;
-renderer.shadowMap.enabled = true;
+renderer.toneMapping = MOBILE_DEVICE ? THREE.NoToneMapping : THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = MOBILE_DEVICE ? 1 : 1.18;
+renderer.shadowMap.enabled = !MOBILE_DEVICE;
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 
 const scene = new THREE.Scene();
@@ -162,18 +171,20 @@ const ambientLight = new THREE.HemisphereLight(0x9be9ff, 0x061224, 1.65);
 scene.add(ambientLight);
 const keyLight = new THREE.DirectionalLight(0xd7f8ff, 2.7);
 keyLight.position.set(-4, 7, 7);
-keyLight.castShadow = true;
-keyLight.shadow.mapSize.set(1024, 1024);
+keyLight.castShadow = !MOBILE_DEVICE;
+keyLight.shadow.mapSize.set(MOBILE_DEVICE ? 512 : 1024, MOBILE_DEVICE ? 512 : 1024);
 keyLight.shadow.camera.left = -7;
 keyLight.shadow.camera.right = 7;
 keyLight.shadow.camera.top = 7;
 keyLight.shadow.camera.bottom = -5;
 scene.add(keyLight);
-const rimLight = new THREE.PointLight(0x26bbff, 6, 12, 2);
+const rimLight = new THREE.PointLight(0x26bbff, MOBILE_DEVICE ? 3.2 : 6, 12, 2);
 rimLight.position.set(4, 1.6, 3.4);
+rimLight.visible = !MOBILE_DEVICE;
 scene.add(rimLight);
-const warmLight = new THREE.PointLight(0xffa84e, 3.2, 9, 2);
+const warmLight = new THREE.PointLight(0xffa84e, MOBILE_DEVICE ? 1.6 : 3.2, 9, 2);
 warmLight.position.set(-3.8, -2.25, 2.7);
+warmLight.visible = !MOBILE_DEVICE;
 scene.add(warmLight);
 
 const world = new THREE.Group();
@@ -245,8 +256,8 @@ function addSeaweed(x, height, materialIndex, phase = 0) {
     new THREE.Vector3(x + Math.sin(phase + 1.2) * .22, BASE_Y + height, -2.04)
   ];
   const curve = new THREE.CatmullRomCurve3(points);
-  const blade = new THREE.Mesh(new THREE.TubeGeometry(curve, 18, .055, 7, false), seaweedMaterials[materialIndex % seaweedMaterials.length]);
-  blade.castShadow = true;
+  const blade = new THREE.Mesh(new THREE.TubeGeometry(curve, MOBILE_DEVICE ? 10 : 18, .055, MOBILE_DEVICE ? 5 : 7, false), seaweedMaterials[materialIndex % seaweedMaterials.length]);
+  blade.castShadow = !MOBILE_DEVICE;
   marineDecor.add(blade);
 }
 addSeaweed(-5.15, 2.25, 0, .3); addSeaweed(-4.78, 1.65, 1, 1.1); addSeaweed(-4.42, 2.55, 2, 2.2);
@@ -261,30 +272,34 @@ const rockMaterials = [
   rock.position.set(x, BASE_Y + size * .38, -2.08 - z);
   rock.scale.set(1.25, .72 + (index % 2) * .18, .8);
   rock.rotation.set(.12 * index, .4 * index, .2 * index);
+  rock.castShadow = !MOBILE_DEVICE;
   marineDecor.add(rock);
 });
 
 const floorMaterial = new THREE.MeshStandardMaterial({ color: 0x17657b, roughness: .55, metalness: .08 });
 const floor = new THREE.Mesh(new THREE.BoxGeometry(12, .22, 5.7), floorMaterial);
 floor.position.set(0, BASE_Y - .2, .15);
-floor.receiveShadow = true;
+floor.receiveShadow = !MOBILE_DEVICE;
 stageGroup.add(floor);
 const floorTrim = new THREE.Mesh(new THREE.BoxGeometry(12, .035, 5.76), new THREE.MeshStandardMaterial({ color: 0x35d2bd, emissive: 0x063f4a, emissiveIntensity: .32, roughness: .25, metalness: .08 }));
 floorTrim.position.set(0, BASE_Y - .065, .15);
 stageGroup.add(floorTrim);
 
 const tankHeight = WATER_TOP - BASE_Y;
+const waterVolumeMaterial = MOBILE_DEVICE
+  ? new THREE.MeshBasicMaterial({ color: 0x2ad0ef, transparent: true, opacity: .045, depthWrite: false, side: THREE.DoubleSide })
+  : new THREE.MeshPhysicalMaterial({ color: 0x2ad0ef, roughness: .18, metalness: .02, transmission: .08, transparent: true, opacity: .075, depthWrite: false, side: THREE.DoubleSide });
 const waterVolume = new THREE.Mesh(
   new THREE.BoxGeometry(11.7, tankHeight, 4.95),
-  new THREE.MeshPhysicalMaterial({ color: 0x2ad0ef, roughness: .18, metalness: .02, transmission: .08, transparent: true, opacity: .075, depthWrite: false, side: THREE.DoubleSide })
+  waterVolumeMaterial
 );
 waterVolume.position.set(0, BASE_Y + tankHeight / 2, .1);
-waterVolume.receiveShadow = true;
+waterVolume.receiveShadow = !MOBILE_DEVICE;
 stageGroup.add(waterVolume);
 
 function makeWaterTexture() {
   const c = document.createElement('canvas');
-  c.width = 768; c.height = 512;
+  c.width = MOBILE_DEVICE ? 512 : 768; c.height = MOBILE_DEVICE ? 320 : 512;
   const ctx = c.getContext('2d');
   const gradient = ctx.createLinearGradient(0, 0, 0, c.height);
   gradient.addColorStop(0, 'rgba(63, 215, 240, .86)');
@@ -295,8 +310,9 @@ function makeWaterTexture() {
   glow.addColorStop(0, 'rgba(157, 246, 255, .34)');
   glow.addColorStop(1, 'rgba(157, 246, 255, 0)');
   ctx.fillStyle = glow; ctx.fillRect(0, 0, c.width, c.height);
-  for (let row = 0; row < 14; row++) {
-    const y = 28 + row * 38;
+  const waterRows = MOBILE_DEVICE ? 9 : 14;
+  for (let row = 0; row < waterRows; row++) {
+    const y = 24 + row * (MOBILE_DEVICE ? 34 : 38);
     ctx.beginPath();
     for (let x = -30; x <= c.width + 30; x += 18) {
       const wave = Math.sin(x * .024 + row * .8) * 8 + Math.sin(x * .057 - row) * 3;
@@ -317,7 +333,7 @@ function makeWaterTexture() {
 // Lámina de fondo: da color y una distorsión acuática legible sin poner un
 // filtro azul opaco delante de los aros.
 const waterBackdrop = new THREE.Mesh(
-  new THREE.PlaneGeometry(11.7, tankHeight, 48, 24),
+  new THREE.PlaneGeometry(11.7, tankHeight, WATER_GRID_X, BACKDROP_GRID_Y),
   new THREE.MeshBasicMaterial({ map: makeWaterTexture(), transparent: true, opacity: .78, depthWrite: false, side: THREE.DoubleSide })
 );
 waterBackdrop.position.set(0, BASE_Y + tankHeight / 2, -1.88);
@@ -325,16 +341,16 @@ stageGroup.add(waterBackdrop);
 const waterBackdropBaseZ = new Float32Array(waterBackdrop.geometry.attributes.position.count);
 for (let i = 0; i < waterBackdropBaseZ.length; i++) waterBackdropBaseZ[i] = waterBackdrop.geometry.attributes.position.getZ(i);
 
-const waterGeometry = new THREE.PlaneGeometry(11.7, 4.95, 48, 18);
+const waterGeometry = new THREE.PlaneGeometry(11.7, 4.95, WATER_GRID_X, WATER_GRID_Y);
 waterGeometry.rotateX(-Math.PI / 2);
 const waterBaseZ = new Float32Array(waterGeometry.attributes.position.count);
 for (let i = 0; i < waterGeometry.attributes.position.count; i++) waterBaseZ[i] = waterGeometry.attributes.position.getZ(i);
-const waterSurface = new THREE.Mesh(
-  waterGeometry,
-  new THREE.MeshPhysicalMaterial({ color: 0x63e7f4, emissive: 0x0b6d91, emissiveIntensity: .8, roughness: .1, metalness: .12, transparent: true, opacity: .24, depthWrite: false, side: THREE.DoubleSide })
-);
+const waterSurfaceMaterial = MOBILE_DEVICE
+  ? new THREE.MeshBasicMaterial({ color: 0x63e7f4, transparent: true, opacity: .16, depthWrite: false, side: THREE.DoubleSide })
+  : new THREE.MeshPhysicalMaterial({ color: 0x63e7f4, emissive: 0x0b6d91, emissiveIntensity: .8, roughness: .1, metalness: .12, transparent: true, opacity: .24, depthWrite: false, side: THREE.DoubleSide });
+const waterSurface = new THREE.Mesh(waterGeometry, waterSurfaceMaterial);
 waterSurface.position.set(0, WATER_TOP, .1);
-waterSurface.receiveShadow = true;
+waterSurface.receiveShadow = !MOBILE_DEVICE;
 stageGroup.add(waterSurface);
 
 const edgeMaterial = new THREE.MeshStandardMaterial({ color: 0x55e7e0, emissive: 0x0c5f7e, emissiveIntensity: .72, roughness: .18, metalness: .08 });
@@ -353,11 +369,13 @@ topRim.position.set(0, WATER_TOP + .08, .08); topRim.castShadow = true; stageGro
 const bottomRim = new THREE.Mesh(new THREE.BoxGeometry(12.05, .14, 5.18), plasticRimMaterial);
 bottomRim.position.set(0, BASE_Y - .03, .08); bottomRim.castShadow = true; stageGroup.add(bottomRim);
 
-const bubbleMaterial = new THREE.MeshPhysicalMaterial({ color: 0xc8f7ff, transparent: true, opacity: .33, roughness: .02, metalness: .1 });
+const bubbleMaterial = MOBILE_DEVICE
+  ? new THREE.MeshBasicMaterial({ color: 0xc8f7ff, transparent: true, opacity: .24, depthWrite: false })
+  : new THREE.MeshPhysicalMaterial({ color: 0xc8f7ff, transparent: true, opacity: .33, roughness: .02, metalness: .1 });
 const bubbleGroup = new THREE.Group();
 effectGroup.add(bubbleGroup);
-for (let i = 0; i < 28; i++) {
-  const bubble = new THREE.Mesh(new THREE.SphereGeometry(.025 + Math.random() * .045, 8, 8), bubbleMaterial.clone());
+for (let i = 0; i < BUBBLE_COUNT; i++) {
+  const bubble = new THREE.Mesh(new THREE.SphereGeometry(.025 + Math.random() * .045, MOBILE_DEVICE ? 5 : 8, MOBILE_DEVICE ? 5 : 8), bubbleMaterial);
   bubble.position.set((Math.random() - .5) * 10.8, BASE_Y + .16 + Math.random() * (tankHeight - .38), -.8 + Math.random() * 2.1);
   bubble.userData.speed = .05 + Math.random() * .13;
   bubble.userData.phase = Math.random() * TAU;
@@ -365,7 +383,7 @@ for (let i = 0; i < 28; i++) {
   bubbles.push(bubble);
 }
 
-const particlePositions = new Float32Array(480 * 3);
+const particlePositions = new Float32Array(PARTICLE_CAPACITY * 3);
 const particlePoints = new THREE.Points(
   new THREE.BufferGeometry().setAttribute('position', new THREE.BufferAttribute(particlePositions, 3)),
   new THREE.PointsMaterial({ color: 0xa7efff, size: .085, transparent: true, opacity: .88, blending: THREE.AdditiveBlending, depthWrite: false })
@@ -377,16 +395,19 @@ const jetBeams = [];
 const nozzles = [];
 for (let j = 0; j < 3; j++) {
   const nozzleMaterial = new THREE.MeshStandardMaterial({ color: 0x20333d, metalness: .75, roughness: .2, emissive: JET_COLORS[j], emissiveIntensity: .1 });
-  const nozzle = new THREE.Mesh(new THREE.CylinderGeometry(.17, .22, .24, 18), nozzleMaterial);
+  const nozzle = new THREE.Mesh(new THREE.CylinderGeometry(.17, .22, .24, MOBILE_DEVICE ? 10 : 18), nozzleMaterial);
   nozzle.rotation.x = Math.PI / 2;
   nozzle.position.set(JET_X[j], NOZZLE_Y, .72);
   nozzle.castShadow = true;
   effectGroup.add(nozzle);
   nozzles.push(nozzle);
 
+  const beamMaterial = MOBILE_DEVICE
+    ? new THREE.MeshBasicMaterial({ color: JET_COLORS[j], transparent: true, opacity: 0, depthWrite: false, side: THREE.DoubleSide, blending: THREE.AdditiveBlending })
+    : new THREE.MeshPhysicalMaterial({ color: JET_COLORS[j], emissive: JET_COLORS[j], emissiveIntensity: 1.1, transparent: true, opacity: 0, depthWrite: false, side: THREE.DoubleSide, blending: THREE.AdditiveBlending });
   const beam = new THREE.Mesh(
-    new THREE.ConeGeometry(.31, 4.7, 20, 1, true),
-    new THREE.MeshPhysicalMaterial({ color: JET_COLORS[j], emissive: JET_COLORS[j], emissiveIntensity: 1.1, transparent: true, opacity: 0, depthWrite: false, side: THREE.DoubleSide, blending: THREE.AdditiveBlending })
+    new THREE.ConeGeometry(.31, 4.7, MOBILE_DEVICE ? 10 : 20, 1, true),
+    beamMaterial
   );
   beam.position.set(JET_X[j], NOZZLE_Y + 2.35, .58);
   effectGroup.add(beam);
@@ -456,18 +477,18 @@ function createPole(def) {
   const hasRequirement = def.rc !== undefined;
   const reqColor = hasRequirement ? PALETTES[paletteIndex].colors[def.rc].hex : '#b4e6f5';
   const shaftMaterial = new THREE.MeshStandardMaterial({ color: reqColor, emissive: reqColor, emissiveIntensity: hasRequirement ? .52 : .3, roughness: .28, metalness: .08, transparent: true, opacity: .96 });
-  const shaft = new THREE.Mesh(new THREE.CylinderGeometry(.075, .12, def.h, 18), shaftMaterial);
+  const shaft = new THREE.Mesh(new THREE.CylinderGeometry(.075, .12, def.h, MOBILE_DEVICE ? 10 : 18), shaftMaterial);
   shaft.position.y = def.h / 2;
   shaft.castShadow = true;
   group.add(shaft);
   const baseMaterial = new THREE.MeshStandardMaterial({ color: hasRequirement ? reqColor : 0x5bd8e4, emissive: hasRequirement ? reqColor : 0x0c526e, emissiveIntensity: .3, roughness: .22, metalness: .1 });
-  const base = new THREE.Mesh(new THREE.CylinderGeometry(.38, .48, .18, 24), baseMaterial);
+  const base = new THREE.Mesh(new THREE.CylinderGeometry(.38, .48, .18, MOBILE_DEVICE ? 12 : 24), baseMaterial);
   base.position.y = .09; base.castShadow = true; group.add(base);
-  const collar = new THREE.Mesh(new THREE.TorusGeometry(.22, .045, 8, 24), baseMaterial);
+  const collar = new THREE.Mesh(new THREE.TorusGeometry(.22, .045, MOBILE_DEVICE ? 6 : 8, MOBILE_DEVICE ? 14 : 24), baseMaterial);
   collar.rotation.x = Math.PI / 2; collar.position.y = .2; group.add(collar);
-  const top = new THREE.Mesh(new THREE.SphereGeometry(.14, 18, 12), shaftMaterial);
+  const top = new THREE.Mesh(new THREE.SphereGeometry(POLE_TIP_RADIUS, MOBILE_DEVICE ? 10 : 18, MOBILE_DEVICE ? 8 : 12), shaftMaterial);
   top.position.y = def.h; top.castShadow = true; group.add(top);
-  const beacon = new THREE.Mesh(new THREE.SphereGeometry(.055, 12, 8), new THREE.MeshBasicMaterial({ color: hasRequirement ? reqColor : 0x7feaff }));
+  const beacon = new THREE.Mesh(new THREE.SphereGeometry(.055, MOBILE_DEVICE ? 7 : 12, MOBILE_DEVICE ? 5 : 8), new THREE.MeshBasicMaterial({ color: hasRequirement ? reqColor : 0x7feaff }));
   beacon.position.set(0, def.h + .12, 0); group.add(beacon);
   const label = labelSprite('0/5', hasRequirement ? reqColor : '#8deeff');
   label.position.set(0, def.h + .45, .12); group.add(label);
@@ -476,7 +497,7 @@ function createPole(def) {
   poleGroup.add(group);
   return {
     group, shaft, top, beacon, label, reqLabel, x: def.x, baseX: def.x, h: def.h, spd: def.spd || 0, phase: Math.random() * TAU,
-    capacity, reqColor: hasRequirement ? def.rc : -1, reqCount: def.rn || 0, rings: [], stress: 0, rejectCd: 0, lastColor: -1, combo: 0, vX: 0
+    capacity, reqColor: hasRequirement ? def.rc : -1, reqCount: def.rn || 0, rings: [], pending: [], stress: 0, rejectCd: 0, lastColor: -1, combo: 0, vX: 0
   };
 }
 
@@ -484,24 +505,28 @@ function createRing(ci, index) {
   const info = PALETTES[paletteIndex].colors[ci];
   const color = new THREE.Color(info.hex);
   const material = new THREE.MeshStandardMaterial({ color, emissive: color, emissiveIntensity: .62, roughness: .28, metalness: .08 });
-  const mesh = new THREE.Mesh(new THREE.TorusGeometry(RING_RADIUS, RING_TUBE, 16, 36), material);
+  const mesh = new THREE.Mesh(new THREE.TorusGeometry(RING_RADIUS, RING_TUBE, MOBILE_DEVICE ? 10 : 16, MOBILE_DEVICE ? 24 : 36), material);
   mesh.castShadow = true; mesh.receiveShadow = true;
   // Un aro real cae plano sobre un palo vertical: el agujero mira hacia arriba.
   // El eje Z del TorusGeometry se gira al eje Y para que no quede de canto.
   mesh.rotation.set(Math.PI / 2, 0, 0);
   const glyph = new THREE.Sprite(new THREE.SpriteMaterial({ map: glyphTexture(info.glyph, ['#ffffff', '#f3df72', '#fff000'].includes(info.hex.toLowerCase())), transparent: true, depthTest: false }));
   glyph.userData.shared = true;
-  glyph.scale.set(.27, .27, 1); glyph.position.set(0, .12, 0); mesh.add(glyph);
+  glyph.scale.set(.21, .21, 1); glyph.position.set(0, .095, 0); mesh.add(glyph);
   ringGroup.add(mesh);
   return {
     mesh, ci, color: info.hex, glyph: info.glyph, index, x: 0, y: 0, z: 0, vx: 0, vy: 0, vz: 0,
-    scored: false, pole: null, stackIndex: -1, targetY: 0, dropping: false, dropFromY: 0, dropTime: 0, points: 0, spin: (Math.random() - .5) * 2.2,
+    scored: false, threading: false, pole: null, stackIndex: -1, targetY: 0, points: 0, angle: Math.random() * TAU, spin: (Math.random() - .5) * 1.4,
     seed: Math.random() * TAU
   };
 }
 
 function setRingVisualPosition(ring, x, y, z) {
   ring.mesh.position.set(x * visualScaleX, y, z);
+}
+function orientRing(ring) {
+  ring.mesh.rotation.set(Math.PI / 2, 0, 0);
+  ring.mesh.rotateOnWorldAxis(ringUpAxis, ring.angle);
 }
 
 function resetRings() {
@@ -590,21 +615,25 @@ function initGame(level = currentLevel) {
 
 function updateWater(dt) {
   waveTime += dt;
-  const pos = waterGeometry.attributes.position;
-  for (let i = 0; i < pos.count; i++) {
-    const x = pos.getX(i);
-    const z = waterBaseZ[i];
-    const wave = Math.sin(x * 1.25 + waveTime * 2.0) * .035 + Math.cos(z * 1.5 - waveTime * 1.35) * .026 + Math.sin((x + z) * 2.8 + waveTime * 1.1) * .014;
-    pos.setZ(i, z + wave);
+  waterUpdateFrame++;
+  const animateSurface = !MOBILE_DEVICE || waterUpdateFrame % 2 === 0;
+  if (animateSurface) {
+    const pos = waterGeometry.attributes.position;
+    for (let i = 0; i < pos.count; i++) {
+      const x = pos.getX(i);
+      const z = waterBaseZ[i];
+      const wave = Math.sin(x * 1.25 + waveTime * 2.0) * .035 + Math.cos(z * 1.5 - waveTime * 1.35) * .026 + Math.sin((x + z) * 2.8 + waveTime * 1.1) * .014;
+      pos.setZ(i, z + wave);
+    }
+    pos.needsUpdate = true;
+    if (!MOBILE_DEVICE && Math.floor(waveTime * 30) % 2 === 0) waterGeometry.computeVertexNormals();
+    const backPos = waterBackdrop.geometry.attributes.position;
+    for (let i = 0; i < backPos.count; i++) {
+      const x = backPos.getX(i); const y = backPos.getY(i);
+      backPos.setZ(i, waterBackdropBaseZ[i] + Math.sin(x * .8 + waveTime * 1.4) * .018 + Math.cos(y * 1.3 - waveTime) * .012);
+    }
+    backPos.needsUpdate = true;
   }
-  pos.needsUpdate = true;
-  if (Math.floor(waveTime * 30) % 2 === 0) waterGeometry.computeVertexNormals();
-  const backPos = waterBackdrop.geometry.attributes.position;
-  for (let i = 0; i < backPos.count; i++) {
-    const x = backPos.getX(i); const y = backPos.getY(i);
-    backPos.setZ(i, waterBackdropBaseZ[i] + Math.sin(x * .8 + waveTime * 1.4) * .018 + Math.cos(y * 1.3 - waveTime) * .012);
-  }
-  backPos.needsUpdate = true;
   stars.rotation.z = Math.sin(waveTime * .08) * .012;
   bubbles.forEach((bubble, index) => {
     bubble.position.y += bubble.userData.speed * dt;
@@ -643,7 +672,7 @@ function updateJetVisuals(dt) {
 
 function spawnJetParticles(index) {
   const direction = jetDirection(index);
-  for (let i = 0; i < 5; i++) {
+  for (let i = 0; i < (MOBILE_DEVICE ? 3 : 5); i++) {
     const spread = (Math.random() - .5) * .22;
     particles.push({
       x: JET_X[index] + spread, y: NOZZLE_Y + .16, z: .55 + (Math.random() - .5) * .16,
@@ -652,7 +681,7 @@ function spawnJetParticles(index) {
       life: .46 + Math.random() * .5, maxLife: .9, size: .6 + Math.random() * .6
     });
   }
-  if (particles.length > 460) particles.splice(0, particles.length - 460);
+  if (particles.length > PARTICLE_CAPACITY) particles.splice(0, particles.length - PARTICLE_CAPACITY);
 }
 
 function updateParticles(dt) {
@@ -662,7 +691,7 @@ function updateParticles(dt) {
     if (p.life <= 0 || p.y < BASE_Y - .2) particles.splice(i, 1);
   }
   const positions = particlePoints.geometry.attributes.position.array;
-  for (let i = 0; i < 480; i++) {
+  for (let i = 0; i < PARTICLE_CAPACITY; i++) {
     const p = particles[i];
     positions[i * 3] = p ? p.x : -100;
     positions[i * 3 + 1] = p ? p.y : -100;
@@ -736,22 +765,13 @@ function updatePoles(dt) {
     if (pole._labelKey !== labelKey) { updateLabel(pole.label, labelText, labelColor); pole._labelKey = labelKey; }
     for (const ring of pole.rings) {
       const dangerShake = danger * danger * .045;
-      ring.x = pole.x; ring.z = .04;
-      if (ring.dropping) {
-        ring.dropTime = Math.min(.22, ring.dropTime + dt);
-        const progress = ring.dropTime / .22;
-        const eased = 1 - Math.pow(1 - progress, 3);
-        ring.y = lerp(ring.dropFromY, ring.targetY, eased);
-        if (progress >= 1) ring.dropping = false;
-      } else {
-        ring.y = ring.targetY;
-      }
-      const visualX = pole.x + (ring.dropping ? 0 : (Math.random() - .5) * dangerShake);
-      const visualY = ring.y + (ring.dropping ? 0 : (Math.random() - .5) * dangerShake);
+      ring.x = pole.x; ring.y = ring.targetY; ring.z = .04;
+      const visualX = pole.x + (Math.random() - .5) * dangerShake;
+      const visualY = ring.targetY + (Math.random() - .5) * dangerShake;
       const visualZ = .04 + Math.sin(state.elapsed * 2 + ring.seed) * danger * .035;
       setRingVisualPosition(ring, visualX, visualY, visualZ);
       // El aro es plano y conserva su círculo: solo puede bajar por el eje del palo.
-      ring.mesh.rotation.set(Math.PI / 2, 0, 0);
+      orientRing(ring);
     }
     if (pole.reqLabel) {
       const req = PALETTES[paletteIndex].colors[pole.reqColor];
@@ -771,7 +791,7 @@ function applyJets(dt) {
     if (jSoundTimer > .11) { sfxJet(); jSoundTimer = 0; }
     const direction = jetDirection(j);
     for (const ring of rings) {
-      if (ring.scored) continue;
+      if (ring.scored || ring.threading) continue;
       const dx = ring.x - JET_X[j];
       const dy = Math.max(0, ring.y - NOZZLE_Y);
       // Un chorro de juguete actúa como una columna de agua, no solo como un
@@ -784,13 +804,18 @@ function applyJets(dt) {
       ring.vx += direction.x * falloff * 10.5 * dt;
       ring.vy += direction.y * falloff * 15.5 * dt;
       ring.vz += (0 - ring.z) * falloff * 1.1 * dt;
-      ring.spin += (Math.random() - .5) * falloff * .04;
+      // La corriente no solo eleva: el chorro descentrado aplica un par y
+      // hace que el aro gire mientras busca la vertical del palo.
+      ring.spin += (direction.x * 2.8 + (JET_X[j] - ring.x) * .55) * falloff * dt;
+      ring.spin += (Math.random() - .5) * falloff * .012;
+      ring.spin = clamp(ring.spin, -7, 7);
     }
     spawnJetParticles(j);
   }
 }
 
 function updateFreeRing(ring, dt) {
+  if (ring.threading) { updateThreading(ring, dt); return; }
   // El agua ocupa el tanque completo; la superficie superior solo marca el
   // límite visual. Así los aros mantienen flotación también a la altura de
   // los palos y vuelven a caer sobre ellos al soltar el chorro.
@@ -810,15 +835,17 @@ function updateFreeRing(ring, dt) {
   if (ring.x > 4.72) { ring.x = 4.72; ring.vx = -Math.abs(ring.vx) * .45; }
   if (ring.y < BASE_Y + .27) { ring.y = BASE_Y + .27; ring.vy = Math.abs(ring.vy) * .34; ring.vx *= .72; }
   if (ring.y > 2.62) { ring.y = 2.62; ring.vy = -Math.abs(ring.vy) * .45; }
+  ring.spin *= Math.exp(-dt * (inWater ? .24 : .08));
+  ring.angle += ring.spin * dt;
   setRingVisualPosition(ring, ring.x, ring.y, ring.z);
-  ring.mesh.rotation.set(Math.PI / 2, 0, 0);
+  orientRing(ring);
 }
 
 function updateScoring(dt) {
   for (const ring of rings) {
-    if (ring.scored) continue;
+    if (ring.scored || ring.threading) continue;
     for (const pole of poles) {
-      if (pole.rejectCd > 0 || pole.rings.length >= pole.capacity) continue;
+      if (pole.rejectCd > 0 || pole.rings.length + pole.pending.length >= pole.capacity) continue;
       const topY = BASE_Y + pole.h;
       const dx = ring.x - pole.x;
       const dz = ring.z;
@@ -829,7 +856,7 @@ function updateScoring(dt) {
       // El hueco del aro debe estar realmente encima del palo. Si solo roza
       // el cilindro, rebota y se aparta en vez de teletransportarse al stack.
       if (radialDistance <= RING_CAPTURE_RADIUS) {
-        scoreRing(ring, pole, topY);
+        beginThreading(ring, pole);
         break;
       }
       if (radialDistance < POLE_COLLISION_RADIUS) {
@@ -852,11 +879,23 @@ function countColorCombos(pole) {
   return { combos, counts };
 }
 
-function scoreRing(ring, pole, topY) {
-  ring.scored = true; ring.pole = pole; ring.stackIndex = pole.rings.length;
+function beginThreading(ring, pole) {
+  ring.threading = true;
+  ring.pole = pole;
+  ring.stackIndex = pole.rings.length + pole.pending.length;
   ring.targetY = BASE_Y + .23 + ring.stackIndex * RING_STEP;
-  ring.x = pole.x; ring.y = topY + .16; ring.z = .04;
-  ring.dropFromY = ring.y; ring.dropTime = 0; ring.dropping = true;
+  // Conserva la posición y velocidad de entrada. No hay snap: el aro sigue
+  // cayendo y se centra con una pequeña fuerza de guía, como dentro del agua.
+  ring.vx *= .35; ring.vz *= .35;
+  ring.vy = Math.min(ring.vy, -.32);
+  pole.pending.push(ring);
+}
+
+function completeThreading(ring, pole) {
+  const pendingIndex = pole.pending.indexOf(ring);
+  if (pendingIndex >= 0) pole.pending.splice(pendingIndex, 1);
+  ring.threading = false; ring.scored = true; ring.pole = pole;
+  ring.x = pole.x; ring.y = ring.targetY; ring.z = 0;
   ring.vx = 0; ring.vy = 0; ring.vz = 0;
   setRingVisualPosition(ring, ring.x, ring.y, ring.z);
   pole.rings.push(ring);
@@ -872,9 +911,29 @@ function scoreRing(ring, pole, topY) {
   }
 }
 
+function updateThreading(ring, dt) {
+  const pole = ring.pole;
+  if (!pole) { ring.threading = false; return; }
+  const offsetX = pole.x - ring.x;
+  ring.vx += offsetX * 12 * dt;
+  ring.vz += -ring.z * 12 * dt;
+  ring.vx *= Math.exp(-dt * 3.2);
+  ring.vz *= Math.exp(-dt * 3.2);
+  ring.vy += GRAVITY * .78 * dt;
+  ring.x += ring.vx * dt; ring.y += ring.vy * dt; ring.z += ring.vz * dt;
+  ring.spin *= Math.exp(-dt * .4);
+  ring.angle += ring.spin * dt;
+  if (ring.y <= ring.targetY) {
+    ring.y = ring.targetY;
+    completeThreading(ring, pole);
+  }
+  setRingVisualPosition(ring, ring.x, ring.y, ring.z);
+  orientRing(ring);
+}
+
 function recalculatePole(pole) {
   pole.rings.forEach((ring, index) => {
-    ring.stackIndex = index; ring.targetY = BASE_Y + .23 + index * RING_STEP; ring.x = pole.x; ring.y = ring.targetY; ring.dropping = false; setRingVisualPosition(ring, ring.x, ring.y, .04);
+    ring.stackIndex = index; ring.targetY = BASE_Y + .23 + index * RING_STEP; ring.x = pole.x; ring.y = ring.targetY; ring.threading = false; setRingVisualPosition(ring, ring.x, ring.y, .04);
   });
   const last = pole.rings[pole.rings.length - 1];
   pole.lastColor = last ? last.ci : -1;
@@ -893,7 +952,7 @@ function ejectRing(ring, fromStress = false) {
   ring.scored = false; ring.pole = null; ring.stackIndex = -1; ring.points = 0;
   ring.x = pole.x + (Math.random() - .5) * .25; ring.y = ring.targetY + .08; ring.z = .18;
   ring.vx = (Math.random() - .5) * 2.1 + pole.vX * .035; ring.vy = 1.0 + Math.random() * .8; ring.vz = (Math.random() - .5) * .5;
-  ring.dropping = false;
+  ring.threading = false;
   setRingVisualPosition(ring, ring.x, ring.y, ring.z);
   recalculatePole(pole);
   if (fromStress) { sfxFail(); showToast('TENSIÓN · ARO EXPULSADO'); vibrate(35); }

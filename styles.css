@@ -555,6 +555,10 @@ input { -webkit-user-select: text; user-select: text; touch-action: auto; }
 }
 @keyframes scorePop { 0% { opacity: 0; transform: translate(-50%, 8px) scale(.7); } 15% { opacity: 1; transform: translate(-50%, 0) scale(1.13); } 100% { opacity: 0; transform: translate(-50%, -42px) scale(.84); } }
 
+@media (pointer: coarse) {
+  #gameCanvas { filter: none; }
+}
+
 @media (min-width: 720px) {
   .app-shell { padding: 22px 24px 18px; }
   .arcade { width: min(100%, 860px); }
