@@ -40,9 +40,14 @@ const RING_BUOYANCY_FORCE = 3.5;
 const RING_COLLISION_DISTANCE = RING_OUTER_RADIUS * 1.9;
 const RING_COLLISION_HEIGHT = RING_TUBE * 2.35;
 const POLE_TIP_RADIUS = .11;
+const POLE_GUIDE_RADIUS = .68;
 const RING_CAPTURE_RADIUS = Math.max(.06, RING_HOLE_RADIUS - POLE_TIP_RADIUS - .015);
 const POLE_COLLISION_RADIUS = RING_RADIUS + RING_TUBE + .12;
 const ringUpAxis = new THREE.Vector3(0, 1, 0);
+const ringFlatQuaternion = new THREE.Quaternion().setFromEuler(new THREE.Euler(Math.PI / 2, 0, 0));
+const ringTiltQuaternion = new THREE.Quaternion();
+const ringYawQuaternion = new THREE.Quaternion();
+const ringTiltEuler = new THREE.Euler();
 const GRAVITY = -5.6;
 const NOZZLE_Y = BASE_Y + 0.12;
 const JET_X = [-3.35, 0, 3.35];
@@ -519,11 +524,15 @@ function createRing(ci, index) {
   const glyph = new THREE.Sprite(new THREE.SpriteMaterial({ map: glyphTexture(info.glyph, ['#ffffff', '#f3df72', '#fff000'].includes(info.hex.toLowerCase())), transparent: true, depthTest: false }));
   glyph.userData.shared = true;
   glyph.scale.set(.21, .21, 1); glyph.position.set(0, .095, 0); mesh.add(glyph);
+  const marker = new THREE.Mesh(new THREE.SphereGeometry(.045, MOBILE_DEVICE ? 5 : 8, MOBILE_DEVICE ? 4 : 6), new THREE.MeshBasicMaterial({ color: 0xffffff }));
+  marker.position.set(RING_RADIUS * .78, 0, 0); mesh.add(marker);
   ringGroup.add(mesh);
   return {
-    mesh, ci, color: info.hex, glyph: info.glyph, index, x: 0, y: 0, z: 0, vx: 0, vy: 0, vz: 0,
-    scored: false, threading: false, pole: null, stackIndex: -1, targetY: 0, points: 0, angle: Math.random() * TAU, spin: (Math.random() - .5) * 1.4,
-    seed: Math.random() * TAU
+    mesh, marker, ci, color: info.hex, glyph: info.glyph, index, x: 0, y: 0, z: 0, vx: 0, vy: 0, vz: 0,
+    scored: false, threading: false, pole: null, stackIndex: -1, targetY: 0, points: 0,
+    angle: Math.random() * TAU, spin: (Math.random() - .5) * 1.4,
+    pitch: (Math.random() - .5) * .12, roll: (Math.random() - .5) * .12,
+    pitchVelocity: 0, rollVelocity: 0, seed: Math.random() * TAU
   };
 }
 
@@ -531,8 +540,12 @@ function setRingVisualPosition(ring, x, y, z) {
   ring.mesh.position.set(x * visualScaleX, y, z);
 }
 function orientRing(ring) {
-  ring.mesh.rotation.set(Math.PI / 2, 0, 0);
-  ring.mesh.rotateOnWorldAxis(ringUpAxis, ring.angle);
+  // Primero inclinación física, después giro alrededor del eje vertical. Así
+  // el aro puede cabecear y balancearse sin perder el agujero horizontal.
+  ringTiltEuler.set(ring.pitch, 0, ring.roll);
+  ringTiltQuaternion.setFromEuler(ringTiltEuler);
+  ringYawQuaternion.setFromAxisAngle(ringUpAxis, ring.angle);
+  ring.mesh.quaternion.copy(ringYawQuaternion).multiply(ringTiltQuaternion).multiply(ringFlatQuaternion);
 }
 
 function resetRings() {
@@ -776,7 +789,8 @@ function updatePoles(dt) {
       const visualY = ring.targetY + (Math.random() - .5) * dangerShake;
       const visualZ = .04 + Math.sin(state.elapsed * 2 + ring.seed) * danger * .035;
       setRingVisualPosition(ring, visualX, visualY, visualZ);
-      // El aro es plano y conserva su círculo: solo puede bajar por el eje del palo.
+      updateRingAttitude(ring, dt, 1, true);
+      // El aro se asienta plano sobre el palo, pero su giro se amortigua.
       orientRing(ring);
     }
     if (pole.reqLabel) {
@@ -815,11 +829,28 @@ function applyJets(dt) {
       // La corriente no solo eleva: el chorro descentrado aplica un par y
       // hace que el aro gire mientras busca la vertical del palo.
       ring.spin += (direction.x * 1.6 + (JET_X[j] - ring.x) * .45) * falloff / RING_INERTIA * dt;
+      ring.rollVelocity += (ring.x - JET_X[j]) * direction.y * 1.15 * falloff / RING_INERTIA * dt;
+      ring.pitchVelocity -= ring.z * direction.y * 1.15 * falloff / RING_INERTIA * dt;
       ring.spin += (Math.random() - .5) * falloff * .012;
       ring.spin = clamp(ring.spin, -9, 9);
     }
     spawnJetParticles(j);
   }
+}
+
+function updateRingAttitude(ring, dt, submerged = 1, constrained = false) {
+  const restoring = constrained ? 11 : .8 + submerged * 1.8;
+  const angularDamping = constrained ? 5.5 : .45 + submerged * 1.45;
+  ring.pitchVelocity += -ring.pitch * restoring * dt;
+  ring.rollVelocity += -ring.roll * restoring * dt;
+  ring.pitchVelocity *= Math.exp(-angularDamping * dt);
+  ring.rollVelocity *= Math.exp(-angularDamping * dt);
+  ring.pitch += ring.pitchVelocity * dt;
+  ring.roll += ring.rollVelocity * dt;
+  ring.pitch = clamp(ring.pitch, -.72, .72);
+  ring.roll = clamp(ring.roll, -.72, .72);
+  ring.spin *= Math.exp(-dt * (constrained ? .9 : submerged ? .24 : .08));
+  ring.angle += ring.spin * dt;
 }
 
 function updateFreeRing(ring, dt) {
@@ -851,8 +882,7 @@ function updateFreeRing(ring, dt) {
   if (ring.x > 4.72) { ring.x = 4.72; ring.vx = -Math.abs(ring.vx) * .45; }
   if (ring.y < BASE_Y + .27) { ring.y = BASE_Y + .27; ring.vy = Math.abs(ring.vy) * .34; ring.vx *= .72; }
   if (ring.y > 2.62) { ring.y = 2.62; ring.vy = -Math.abs(ring.vy) * .45; }
-  ring.spin *= Math.exp(-dt * (inWater ? .24 : .08));
-  ring.angle += ring.spin * dt;
+  updateRingAttitude(ring, dt, submerged);
   setRingVisualPosition(ring, ring.x, ring.y, ring.z);
   orientRing(ring);
 }
@@ -893,8 +923,16 @@ function resolveRingCollisions(dt) {
         const impulse = -(1.0 + .34) * relativeVelocity / inverseTotal;
         if (!a.scored) { a.vx -= impulse * inverseA * normalX; a.vy -= impulse * inverseA * normalY; a.vz -= impulse * inverseA * normalZ; }
         if (!b.scored) { b.vx += impulse * inverseB * normalX; b.vy += impulse * inverseB * normalY; b.vz += impulse * inverseB * normalZ; }
-        if (!a.scored) a.spin -= impulse * .035;
-        if (!b.scored) b.spin += impulse * .035;
+        if (!a.scored) {
+          a.spin -= impulse * .035;
+          a.rollVelocity -= impulse * normalX * .08;
+          a.pitchVelocity += impulse * normalZ * .08;
+        }
+        if (!b.scored) {
+          b.spin += impulse * .035;
+          b.rollVelocity += impulse * normalX * .08;
+          b.pitchVelocity -= impulse * normalZ * .08;
+        }
       }
     }
   }
@@ -915,8 +953,19 @@ function updateScoring(dt) {
       const dx = ring.x - pole.x;
       const dz = ring.z;
       const radialDistance = Math.hypot(dx, dz);
+      const descending = ring.vy < -.02;
+      const inApproach = ring.y > topY - .38 && ring.y < topY + .72;
+      if (descending && inApproach && radialDistance < POLE_GUIDE_RADIUS) {
+        // No recoloca el aro: es una corriente suave alrededor de la punta
+        // que le permite corregir el centro antes de tocar el cilindro.
+        const guide = Math.pow(1 - radialDistance / POLE_GUIDE_RADIUS, 1.35);
+        ring.vx += -dx * guide * 4.8 * dt;
+        ring.vz += -dz * guide * 4.8 * dt;
+        ring.rollVelocity += dx * guide * 1.8 * dt;
+        ring.pitchVelocity -= dz * guide * 1.8 * dt;
+      }
       const inPoleHeight = ring.y > topY - .12 && ring.y < topY + .32;
-      if (!inPoleHeight || ring.vy >= -.02) continue;
+      if (!inPoleHeight || !descending) continue;
 
       // El hueco del aro debe estar realmente encima del palo. Si solo roza
       // el cilindro, rebota y se aparta en vez de teletransportarse al stack.
@@ -987,8 +1036,7 @@ function updateThreading(ring, dt) {
   const submerged = clamp((WATER_TOP - ring.y + RING_TUBE) / (RING_TUBE * 2.2), 0, 1);
   ring.vy += (GRAVITY + submerged * RING_BUOYANCY_FORCE / RING_MASS - 1.25) * dt;
   ring.x += ring.vx * dt; ring.y += ring.vy * dt; ring.z += ring.vz * dt;
-  ring.spin *= Math.exp(-dt * .4);
-  ring.angle += ring.spin * dt;
+  updateRingAttitude(ring, dt, submerged, true);
   if (ring.y <= ring.targetY) {
     ring.y = ring.targetY;
     completeThreading(ring, pole);
