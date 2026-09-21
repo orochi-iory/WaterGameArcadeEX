@@ -193,13 +193,19 @@ for (const x of [-5.85, 5.85]) {
   wall.addShape(new CANNON.Box(new CANNON.Vec3(.08, 3.1, 2.7)));
   wall.position.set(x, -.1, .15); physicsWorld.addBody(wall); physicsSideWalls.push(wall);
 }
-// La profundidad sigue existiendo en Cannon-es, pero se limita a un carril
-// cercano al diámetro de las bases: el jugador puede concentrarse en X/Y.
-for (const z of [-.84, .84]) {
+// La profundidad se limita al mismo orden de magnitud que la base: las
+// caras interiores quedan a Z = ±.48, justo alrededor del radio de .48.
+for (const z of [-.56, .56]) {
   const wall = new CANNON.Body({ mass: 0, material: tankPhysicsMaterial });
   wall.addShape(new CANNON.Box(new CANNON.Vec3(6, 3.1, .08)));
   wall.position.set(0, -.1, z); physicsWorld.addBody(wall); physicsSideWalls.push(wall);
 }
+// Techo físico por encima del palo más alto. Impide que un chorro saque los
+// aros del encuadre sin bloquear la entrada por la punta superior.
+const physicsCeiling = new CANNON.Body({ mass: 0, material: tankPhysicsMaterial });
+physicsCeiling.addShape(new CANNON.Box(new CANNON.Vec3(6, .08, .56)));
+physicsCeiling.position.set(0, 3.55, 0);
+physicsWorld.addBody(physicsCeiling);
 const physicsFixedStep = 1 / 60;
 let physicsAccumulator = 0;
 const camera = new THREE.PerspectiveCamera(48, 1, .1, 100);
@@ -628,7 +634,7 @@ function resetRings() {
       const side = Math.random() < .5 ? -1 : 1;
       ring.x = spawnPole.baseX + side * (.84 + Math.random() * .14);
       ring.y = BASE_Y + .35 + Math.random() * (WATER_TOP - BASE_Y - 1.05);
-      ring.z = (Math.random() - .5) * .56;
+      ring.z = (Math.random() - .5) * .16;
       while (poles.some((pole) => Math.hypot(ring.x - pole.baseX, ring.z) < .84)) {
         ring.x += side * .08;
       }
@@ -1551,7 +1557,7 @@ function resizeRenderer() {
   // Así la cámara no tiene que alejarse para encajar un tanque panorámico y
   // desaparecen las franjas negras que dejaban el juego como una miniatura.
   const fieldWidth = 12.8 * visualScaleX;
-  const fieldHeight = 6.2;
+  const fieldHeight = 7.4;
   const verticalFov = THREE.MathUtils.degToRad(camera.fov);
   const horizontalFov = 2 * Math.atan(Math.tan(verticalFov / 2) * aspect);
   const fitVertical = (fieldHeight / 2) / Math.tan(verticalFov / 2);
