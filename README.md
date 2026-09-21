@@ -22,11 +22,11 @@ Water Game Arcade EX ya no es un canvas 2D: el tablero completo se renderiza con
 - 💨 Chorros con conos de agua, oscilación, partículas y fuerzas físicas.
 - ⚙️ Física 3D con cuerpos rígidos Cannon-es: gravedad, flotación, drag, orientación, velocidad angular y colisiones.
 - 🎮 Diez niveles: cinco clásicos y cinco niveles con requisitos de color.
-- 🔥 Combos, bonus de tiempo y bonus de color perfecto.
+- 🔥 Combos, bonus de tiempo, bonus de color perfecto y penalización por tensión.
 - 📱 Controles táctiles, teclado, giroscopio, vibración y pantalla completa.
 - 👁️ Cinco paletas accesibles con formas para diferenciar los colores.
 - 💾 Ranking local y sincronización global opcional con Firebase.
-- 🔊 Audio procedural para chorros, combos, victoria y música ambiental.
+- 🔊 Audio procedural para chorros, combos, tensión, expulsión, victoria y música ambiental.
 
 ## 🎯 Cómo jugar
 
@@ -38,11 +38,11 @@ Ensarta los **20 aros** en los tres palos. Para completar un nivel necesitas al 
 | Chorro central | `S` | Botón verde | Botón frontal 2 |
 | Chorro derecho | `D` | Botón azul | Botón frontal 3 |
 | Inclinar izquierda/derecha | `←` / `→` | Botones laterales | Cruceta / stick izquierdo |
-| Mover profundidad delante/fondo | `↑` / `↓` | Botones dorados | Cruceta / stick izquierdo |
+| Mover arriba/abajo | `↑` / `↓` | Botones dorados | Cruceta / stick izquierdo |
 | Reiniciar | `R` | `↺` | — |
 | Menú | — | `☰` | — |
 
-La profundidad es física: un aro delante o detrás del palo no entra aunque parezca alineado en pantalla. Ajusta `↑` / `↓`, usa los chorros para darle altura y deja que las colisiones naturales lo guíen hasta la base.
+El eje de profundidad sigue siendo físico, pero está limitado a un carril estrecho alrededor de las bases. La jugabilidad principal vuelve a ser mover los aros en X/Y y hacer que crucen la punta del palo; mantén el sensor y los chorros suaves para no activar la penalización de tensión.
 
 ## 🏆 Puntuación
 
