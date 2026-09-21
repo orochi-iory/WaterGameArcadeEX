@@ -1,319 +1,111 @@
-# 💧 Water Game Arcade EX
+# 💧 Water Game Arcade EX · 3D
 
 <div align="center">
 
-![Water Game Arcade EX](https://img.shields.io/badge/Water_Game-Arcade_EX-blue?style=for-the-badge&logo=data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCI+PHBhdGggZmlsbD0id2hpdGUiIGQ9Ik0xMiwyQTEwLDEwIDAgMCwwIDIsMTJBMTAsMTAgMCAwLDAgMTIsMjJBMTAsMTAgMCAwLDAgMjIsMTJBMTAsMTAgMCAwLDAgMTIsMloiLz48L3N2Zz4=)
-![Versión](https://img.shields.io/badge/versión-2.0-green?style=for-the-badge)
-![HTML5](https://img.shields.io/badge/HTML5-E34F26?style=for-the-badge&logo=html5&logoColor=white)
-![JavaScript](https://img.shields.io/badge/JavaScript-F7DF1E?style=for-the-badge&logo=javascript&logoColor=black)
-![CSS3](https://img.shields.io/badge/CSS3-1572B6?style=for-the-badge&logo=css3&logoColor=white)
+![Water Game Arcade EX](https://img.shields.io/badge/Water_Game-Arcade_EX-blue?style=for-the-badge)
+![Three.js](https://img.shields.io/badge/Three.js-0.160-black?style=for-the-badge&logo=threedotjs)
+![WebGL](https://img.shields.io/badge/WebGL-2.0-orange?style=for-the-badge)
 
-**El clásico juguete de aros acuáticos, ahora en tu pantalla**
-
-[🎮 Jugar Ahora](#instalación) · [📖 Tutorial](#cómo-jugar) · [🤝 Contribuir](#contribuir)
+**El clásico juguete de aros acuáticos, convertido en una experiencia 3D para navegador.**
 
 </div>
 
 ---
 
-## 📋 Descripción
+## ✨ Qué cambió
 
-**Water Game Arcade EX** es una recreación digital del clásico juguete de agua con aros que todos recordamos de nuestra infancia. Usa chorros de agua para impulsar los aros de colores y ensártarlos en los palos. 
+Water Game Arcade EX ya no es un canvas 2D: el tablero completo se renderiza con **Three.js y WebGL** dentro de una carcasa arcade responsive.
 
-Desarrollado completamente en **HTML5, CSS3 y JavaScript vanilla** - sin dependencias externas. Funciona en cualquier navegador moderno, tanto en ordenador como en dispositivos móviles.
+- 🌊 Agua con superficie animada, volumen, burbujas, reflejos y niebla.
+- 💍 Aros como mallas 3D reales, con volumen, materiales, brillo, glyphs y rotación.
+- 🪄 Palos, soportes, luces, balizas y etiquetas de capacidad en el espacio 3D.
+- 💨 Chorros con conos de agua, oscilación, partículas y fuerzas físicas.
+- ⚙️ Física personalizada 2.5D: gravedad, flotación, inclinación, impulsos, colisiones y tensión.
+- 🎮 Diez niveles: cinco clásicos y cinco niveles con requisitos de color.
+- 🔥 Combos, bonus de tiempo, bonus de color perfecto y expulsión por tensión.
+- 📱 Controles táctiles, teclado, giroscopio, vibración y pantalla completa.
+- 👁️ Cinco paletas accesibles con formas para diferenciar los colores.
+- 💾 Ranking local y sincronización global opcional con Firebase.
+- 🔊 Audio procedural para chorros, combos, tensión, victoria y música ambiental.
 
-### ✨ Características principales
+## 🎯 Cómo jugar
 
-- 🎮 **5 niveles de dificultad** - Desde el clásico hasta el caos con palos móviles
-- 📱 **Controles táctiles y giroscopio** - Inclina tu dispositivo para guiar los aros
-- 🎨 **5 paletas de accesibilidad** - Incluyendo modos para daltonismo
-- 🔥 **Sistema de combos** - Encadena colores para multiplicar puntos
-- 🌈 **Bonus de color perfecto** - 5+ aros del mismo color = +500 puntos
-- ⏱️ **Bonus de tiempo** - Cuanto más rápido, más puntos
-- 🔊 **Efectos de sonido** - Audio generado proceduralmente
-- 📳 **Retroalimentación háptica** - Vibración en dispositivos compatibles
-- 💾 **Puntuaciones locales** - Guarda tus mejores resultados
-- 📤 **Compartir resultados** - Comparte tu puntuación con amigos
+Ensarta los **20 aros** en los tres palos. Para completar un nivel necesitas al menos **5 aros en cada palo**. En los niveles 6–10, cada palo también pide una cantidad mínima de un color concreto.
 
----
+| Acción | Teclado | Pantalla táctil |
+| --- | --- | --- |
+| Chorro izquierdo | `A` | Botón rojo |
+| Chorro central | `S` | Botón verde |
+| Chorro derecho | `D` | Botón azul |
+| Inclinar izquierda/derecha | `←` / `→` | Botones laterales |
+| Inclinar arriba/abajo | `↑` / `↓` | Botones dorados |
+| Reiniciar | `R` | `↺` |
+| Menú | — | `☰` |
 
-## 🎯 Cómo Jugar
+Mantener un chorro cerca de un palo durante demasiado tiempo aumenta la tensión. Los aros superiores vibran primero y el palo se ilumina en rojo antes de expulsarlos.
 
-### Objetivo
-Ensarta los **20 aros** en los 3 palos. Cada palo necesita un **mínimo de 5 aros** para poder completar el nivel.
+## 🏆 Puntuación
 
-### Controles
+- Aro base: **100 puntos**.
+- Combo x2, x3, x4…: multiplica los puntos del siguiente aro del mismo color.
+- Cinco aros del mismo color en un palo: **+500**.
+- Dos combos de color en un palo: **+1500**.
+- Bonus de tiempo: hasta **+2000**.
+- Requisitos de color de los niveles 6–10: bonus adicional.
 
-| Acción | Teclado | Móvil |
-|--------|---------|-------|
-| Chorro izquierdo | `A` | Botón rojo 💨 |
-| Chorro central | `S` | Botón verde 💨 |
-| Chorro derecho | `D` | Botón azul 💨 |
-| Inclinar izquierda | `←` | Inclinar dispositivo |
-| Inclinar derecha | `→` | Inclinar dispositivo |
-| Inclinar arriba | `↑` | Inclinar dispositivo |
-| Inclinar abajo | `↓` | Inclinar dispositivo |
-| Reiniciar nivel | `R` | Botón ↺ |
+## ▶️ Ejecutar
 
-### Indicadores de los Palos
+Es un proyecto estático. No hay bundler ni instalación obligatoria: Three.js está incluido localmente como módulo ES en `vendor/three.module.js`, por lo que el juego puede arrancar aunque el CDN esté bloqueado.
 
-Encima de cada palo verás números que indican su estado:
-
-- **`3/5`** (naranja) → Necesitas 5 mínimo, te faltan 2
-- **`6/8`** (verde) → Ya tienes el mínimo, caben hasta 8
-- **`✓8`** (verde brillante) → ¡Palo completamente lleno!
-
-### Sistema de Puntuación
-
-| Tipo | Puntos |
-|------|--------|
-| Aro base | 100 pts |
-| Combo x2 | 200 pts |
-| Combo x3 | 300 pts |
-| Combo x4 | 400 pts |
-| Combo x5 | 500 pts |
-| Color perfecto (5+ mismo color en palo) | +500 pts |
-| Bonus tiempo (<2 min) | +2000 pts |
-| Bonus tiempo (<3 min) | +1500 pts |
-| Bonus tiempo (<5 min) | +1000 pts |
-| Bonus tiempo (<10 min) | +500 pts |
-
-### Sistema de Tensión ⚠️
-
-Los aros ensartados pueden caerse si hay demasiada tensión:
-
-- 💨 **Chorros cercanos** generan tensión leve
-- 📐 **Inclinación excesiva** genera tensión
-- ⏱️ **Mantener un chorro activo** mucho tiempo aumenta la tensión
-- 🔝 **El aro de la punta** es el más inestable y cae primero
-
-Cuando hay tensión:
-1. Los aros empiezan a **vibrar** como advertencia
-2. Si continúas, el aro superior **se cae**
-3. El palo se pone **ROJO** temporalmente y no acepta aros
-4. ¡Tensión máxima = **TODOS los aros fuera**!
-
----
-
-## 🎮 Niveles
-
-| Nivel | Nombre | Descripción |
-|-------|--------|-------------|
-| 1 | **Clásico** | 3 palos estáticos de diferentes alturas |
-| 2 | **Alturas** | Palos a diferentes elevaciones |
-| 3 | **Escalera** | Palos en formación escalonada |
-| 4 | **Movimiento** | Un palo se mueve lateralmente |
-| 5 | **Caos** | ¡Todos los palos se mueven! |
-
----
-
-## 🛠️ Instalación
-
-### Opción 1: Jugar directamente
-Simplemente abre el archivo `index.html` en cualquier navegador moderno.
-
-### Opción 2: Servidor local
 ```bash
-# Clona el repositorio
-git clone https://github.com/tu-usuario/water-game-arcade-ex.git
+# Opción recomendada
+python3 -m http.server 8080
 
-# Entra en el directorio
-cd water-game-arcade-ex
-
-# Opción A: Python 3
-python -m http.server 8080
-
-# Opción B: Node.js
-npx serve
-
-# Opción C: PHP
-php -S localhost:8080
+# después abre http://localhost:8080
 ```
 
-Luego abre `http://localhost:8080` en tu navegador.
+También puedes usar cualquier servidor estático compatible con módulos ES. Abrir `index.html` directamente con `file://` puede bloquear los imports por las políticas CORS del navegador.
 
-### Opción 3: PWA (Progressive Web App)
-En dispositivos móviles, puedes "instalar" el juego:
-- **Android**: Menú del navegador → "Añadir a pantalla de inicio"
-- **iOS**: Botón compartir → "Añadir a pantalla de inicio"
+## ☁️ Firebase opcional
 
----
+El ranking funciona en local sin configuración adicional. El archivo `game3d.js` conserva la integración opcional con Firebase para autenticación anónima, progreso y ranking global. Si Firebase no está disponible, la interfaz cambia automáticamente a **Solo local** sin impedir jugar.
+
+Para usar otro proyecto, sustituye `FIREBASE_CONFIG` en `game3d.js` y habilita:
+
+1. Authentication → Anonymous.
+2. Firestore Database.
+3. Lectura pública del leaderboard y escritura autenticada para usuarios anónimos.
+
+## 🧱 Arquitectura
+
+```text
+index.html          → carcasa arcade, HUD, menús, tutorial y controles
+styles.css          → diseño responsive, overlays y estética de hardware acuático
+game3d.js           → escena Three.js, física, audio, persistencia y Firebase opcional
+vendor/three.module.js → runtime local de Three.js 0.160.0
+vendor/THREE-LICENSE   → licencia MIT de Three.js
+```
+
+La escena utiliza materiales y geometría procedurales, por lo que no necesita modelos 3D ni imágenes externas. El canvas WebGL se adapta al tamaño real de la pantalla del juguete mediante `ResizeObserver`.
 
 ## ♿ Accesibilidad
 
-El juego incluye **5 paletas de colores** diseñadas para diferentes tipos de visión:
+Desde **Accesibilidad** puedes cambiar entre Normal, Deuteranopia, Protanopia, Tritanopia y Alto contraste. Cada aro incluye además una forma visual: círculo, cuadrado, triángulo o rombo.
 
-| Paleta | Descripción |
-|--------|-------------|
-| **Normal** | Colores estándar optimizados |
-| **Deuteranopia** | Para ceguera rojo-verde |
-| **Protanopia** | Para ceguera al rojo |
-| **Tritanopia** | Para ceguera azul-amarillo |
-| **Alto Contraste** | Máxima diferenciación |
+## 📱 Giroscopio
 
-Además, cada color tiene una **forma única** (●, ■, ▲, ◆) para facilitar la identificación sin depender del color.
+En un dispositivo compatible:
 
----
-
-## 📐 Calibración del Giroscopio
-
-En dispositivos móviles con giroscopio:
-
-1. El indicador **GYRO ⊙** aparece en la esquina superior izquierda
-2. Sostén el dispositivo en tu posición cómoda de juego
-3. **Toca el indicador** para establecer esa posición como "centro neutro"
-4. Ahora los movimientos desde esa posición inclinarán los aros
-5. Puedes recalibrar en cualquier momento tocando de nuevo
-
----
-
-## 🏗️ Arquitectura Técnica
-
-```
-index.html (archivo único)
-├── HTML5 - Estructura y UI
-├── CSS3 - Estilos y animaciones
-│   ├── Variables CSS para temas
-│   ├── Animaciones @keyframes
-│   └── Media queries responsive
-└── JavaScript - Lógica del juego
-    ├── Motor de física 2D
-    ├── Sistema de partículas
-    ├── Audio procedural (Web Audio API)
-    ├── Gestión de estados
-    ├── LocalStorage para puntuaciones
-    └── DeviceOrientation API (giroscopio)
-```
-
-### Características técnicas
-
-- **Sin dependencias** - Todo en un solo archivo HTML
-- **Canvas 2D** - Renderizado eficiente a 60 FPS
-- **Física personalizada** - Gravedad, flotación, colisiones
-- **Audio procedural** - Tonos generados con Web Audio API
-- **Responsive** - Se adapta a cualquier tamaño de pantalla
-- **Touch optimizado** - Gestos táctiles sin delay
-
----
-
-## 🔥 Configuración de Firebase (Puntuaciones Online)
-
-El juego incluye soporte para **puntuaciones globales** usando Firebase Firestore. Para habilitarlo:
-
-### Paso 1: Crear proyecto en Firebase
-
-1. Ve a [Firebase Console](https://console.firebase.google.com/)
-2. Crea un nuevo proyecto
-3. En "Build" → "Firestore Database", crea una base de datos
-4. Selecciona "Start in **test mode**" (para desarrollo)
-
-### Paso 2: Obtener configuración
-
-1. En la configuración del proyecto (⚙️), ve a "General"
-2. En "Tus apps", añade una app web (icono `</>`)
-3. Copia el objeto `firebaseConfig`
-
-### Paso 3: Configurar en el juego
-
-El juego ya viene configurado con Firebase. Si quieres usar tu propio proyecto, abre `index.html` y busca `FIREBASE_CONFIG`:
-
-```javascript
-const FIREBASE_CONFIG = {
-  apiKey: "TU_API_KEY",
-  authDomain: "tu-proyecto.firebaseapp.com",
-  projectId: "tu-proyecto",
-  storageBucket: "tu-proyecto.appspot.com",
-  messagingSenderId: "123456789",
-  appId: "1:123456789:web:abcdef"
-};
-```
-
-### Paso 4: Habilitar Auth Anónimo
-
-1. En Firebase Console → **Authentication** → **Sign-in method**
-2. Habilita **"Anonymous"** (Anónimo)
-3. ¡Listo! Los usuarios se autentican automáticamente sin registro
-
-### Paso 5: Reglas de Firestore (Producción)
-
-Para producción, configura reglas más seguras en Firestore:
-
-```javascript
-rules_version = '2';
-service cloud.firestore {
-  match /databases/{database}/documents {
-    match /leaderboard/{document} {
-      allow read: if true;
-      allow create: if request.auth != null
-                    && request.resource.data.score is number
-                    && request.resource.data.score > 0
-                    && request.resource.data.name is string
-                    && request.resource.data.name.size() <= 15;
-      allow update, delete: if false;
-    }
-    match /users/{userId} {
-      allow read: if request.auth != null && request.auth.uid == userId;
-      allow write: if request.auth != null && request.auth.uid == userId;
-    }
-  }
-}
-```
-
-### Sistema de usuarios
-
-El juego usa **autenticación anónima** de Firebase:
-
-- 🆔 Cada dispositivo recibe un **ID único** automáticamente
-- ☁️ El progreso (niveles desbloqueados) se **guarda en la nube**
-- 📱 Si juegas en otro dispositivo con la misma cuenta, recuperas tu progreso
-- 🏆 Las puntuaciones globales se vinculan a tu usuario
-
-### Sin Firebase
-
-Si no configuras Firebase, el juego funciona perfectamente con **puntuaciones locales** guardadas en el navegador.
-
----
-
-## 🤝 Contribuir
-
-¡Las contribuciones son bienvenidas! 
-
-1. Haz fork del proyecto
-2. Crea una rama para tu feature (`git checkout -b feature/nueva-caracteristica`)
-3. Commit de tus cambios (`git commit -m 'Añade nueva característica'`)
-4. Push a la rama (`git push origin feature/nueva-caracteristica`)
-5. Abre un Pull Request
-
-### Ideas para contribuir
-
-- [x] ~~Sistema de puntuaciones online (Firebase)~~ ✅
-- [ ] Nuevos niveles y desafíos
-- [ ] Más modos de juego
-- [ ] Logros y achievements
-- [ ] Modo multijugador local
-- [ ] Temas visuales adicionales
-- [ ] Soporte para más idiomas
-
----
+1. Pulsa **Activar giroscopio** desde el menú.
+2. Mantén el teléfono en tu posición de juego.
+3. Toca **GYRO ⊙** para calibrar el centro.
 
 ## 📜 Licencia
 
-Este proyecto está bajo la licencia MIT. Ver el archivo [LICENSE](LICENSE) para más detalles.
-
----
+El proyecto se distribuye bajo la licencia indicada en [LICENSE](LICENSE).
 
 ## 👤 Créditos
 
-**Creado por:** [orochi_iory](https://github.com/orochi_iory)
+**Creado por:** [orochi_iory](https://github.com/orochi-iory)
 
-**Desarrollado con:** 🤖 Asistencia de IA
-
----
-
-<div align="center">
-
-### ⭐ Si te gusta el proyecto, ¡dale una estrella!
-
-**[🎮 Jugar Water Game Arcade EX](#instalación)**
-
-</div>
+**Desarrollado con:** asistencia de IA y Three.js.
