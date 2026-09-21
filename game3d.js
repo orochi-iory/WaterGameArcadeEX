@@ -204,12 +204,49 @@ const stars = new THREE.Points(
 );
 backgroundGroup.add(stars);
 
-const floorMaterial = new THREE.MeshStandardMaterial({ color: 0x382a27, roughness: .78, metalness: .05 });
+// Decoración marina fuera de la zona de juego. Está en el grupo de fondo y
+// nunca participa en las colisiones: solo aporta la sensación de juguete
+// acuático lleno de algas, rocas y pequeños detalles de acuario.
+const marineDecor = new THREE.Group();
+backgroundGroup.add(marineDecor);
+const seaweedMaterials = [
+  new THREE.MeshStandardMaterial({ color: 0x1d9c78, emissive: 0x063d38, emissiveIntensity: .45, roughness: .72 }),
+  new THREE.MeshStandardMaterial({ color: 0x42c48c, emissive: 0x075442, emissiveIntensity: .35, roughness: .68 }),
+  new THREE.MeshStandardMaterial({ color: 0x75c765, emissive: 0x174a27, emissiveIntensity: .28, roughness: .74 })
+];
+function addSeaweed(x, height, materialIndex, phase = 0) {
+  const points = [
+    new THREE.Vector3(x, BASE_Y - .08, -2.04),
+    new THREE.Vector3(x + Math.sin(phase) * .18, BASE_Y + height * .32, -2.04),
+    new THREE.Vector3(x - Math.cos(phase) * .17, BASE_Y + height * .68, -2.04),
+    new THREE.Vector3(x + Math.sin(phase + 1.2) * .22, BASE_Y + height, -2.04)
+  ];
+  const curve = new THREE.CatmullRomCurve3(points);
+  const blade = new THREE.Mesh(new THREE.TubeGeometry(curve, 18, .055, 7, false), seaweedMaterials[materialIndex % seaweedMaterials.length]);
+  blade.castShadow = true;
+  marineDecor.add(blade);
+}
+addSeaweed(-5.15, 2.25, 0, .3); addSeaweed(-4.78, 1.65, 1, 1.1); addSeaweed(-4.42, 2.55, 2, 2.2);
+addSeaweed(5.12, 2.05, 1, 2.8); addSeaweed(4.76, 1.55, 0, 1.7); addSeaweed(4.42, 2.4, 2, .5);
+const rockMaterials = [
+  new THREE.MeshStandardMaterial({ color: 0x5d7380, roughness: .88, metalness: .05, flatShading: true }),
+  new THREE.MeshStandardMaterial({ color: 0x806a65, roughness: .9, metalness: .04, flatShading: true }),
+  new THREE.MeshStandardMaterial({ color: 0x466d72, roughness: .85, metalness: .04, flatShading: true })
+];
+[[-5.35, .48, .2, 0], [-4.55, .34, .16, 1], [5.3, .44, .2, 2], [4.58, .3, .15, 0]].forEach(([x, size, z, materialIndex], index) => {
+  const rock = new THREE.Mesh(new THREE.DodecahedronGeometry(size, 0), rockMaterials[materialIndex]);
+  rock.position.set(x, BASE_Y + size * .38, -2.08 - z);
+  rock.scale.set(1.25, .72 + (index % 2) * .18, .8);
+  rock.rotation.set(.12 * index, .4 * index, .2 * index);
+  marineDecor.add(rock);
+});
+
+const floorMaterial = new THREE.MeshStandardMaterial({ color: 0x17657b, roughness: .55, metalness: .08 });
 const floor = new THREE.Mesh(new THREE.BoxGeometry(12, .22, 5.7), floorMaterial);
 floor.position.set(0, BASE_Y - .2, .15);
 floor.receiveShadow = true;
 stageGroup.add(floor);
-const floorTrim = new THREE.Mesh(new THREE.BoxGeometry(12, .035, 5.76), new THREE.MeshStandardMaterial({ color: 0x9c7a5b, roughness: .5, metalness: .12 }));
+const floorTrim = new THREE.Mesh(new THREE.BoxGeometry(12, .035, 5.76), new THREE.MeshStandardMaterial({ color: 0x35d2bd, emissive: 0x063f4a, emissiveIntensity: .32, roughness: .25, metalness: .08 }));
 floorTrim.position.set(0, BASE_Y - .065, .15);
 stageGroup.add(floorTrim);
 
@@ -243,7 +280,7 @@ waterSurface.position.set(0, WATER_TOP, .1);
 waterSurface.receiveShadow = true;
 stageGroup.add(waterSurface);
 
-const edgeMaterial = new THREE.MeshStandardMaterial({ color: 0x89eaff, emissive: 0x0c5f7e, emissiveIntensity: .75, roughness: .28, metalness: .48 });
+const edgeMaterial = new THREE.MeshStandardMaterial({ color: 0x55e7e0, emissive: 0x0c5f7e, emissiveIntensity: .72, roughness: .18, metalness: .08 });
 for (const x of [-5.98, 5.98]) {
   const edge = new THREE.Mesh(new THREE.BoxGeometry(.08, tankHeight + .28, 5.1), edgeMaterial);
   edge.position.set(x, BASE_Y + tankHeight / 2, .08);
@@ -253,6 +290,11 @@ for (const x of [-5.98, 5.98]) {
 const backRail = new THREE.Mesh(new THREE.BoxGeometry(11.95, .055, .055), edgeMaterial);
 backRail.position.set(0, WATER_TOP, -1.95);
 stageGroup.add(backRail);
+const plasticRimMaterial = new THREE.MeshStandardMaterial({ color: 0x2bd6bd, emissive: 0x07534e, emissiveIntensity: .38, roughness: .2, metalness: .06 });
+const topRim = new THREE.Mesh(new THREE.BoxGeometry(12.05, .16, 5.18), plasticRimMaterial);
+topRim.position.set(0, WATER_TOP + .08, .08); topRim.castShadow = true; stageGroup.add(topRim);
+const bottomRim = new THREE.Mesh(new THREE.BoxGeometry(12.05, .14, 5.18), plasticRimMaterial);
+bottomRim.position.set(0, BASE_Y - .03, .08); bottomRim.castShadow = true; stageGroup.add(bottomRim);
 
 const bubbleMaterial = new THREE.MeshPhysicalMaterial({ color: 0xc8f7ff, transparent: true, opacity: .33, roughness: .02, metalness: .1 });
 const bubbleGroup = new THREE.Group();
@@ -286,10 +328,10 @@ for (let j = 0; j < 3; j++) {
   nozzles.push(nozzle);
 
   const beam = new THREE.Mesh(
-    new THREE.ConeGeometry(.31, 2.8, 20, 1, true),
+    new THREE.ConeGeometry(.31, 4.7, 20, 1, true),
     new THREE.MeshPhysicalMaterial({ color: JET_COLORS[j], emissive: JET_COLORS[j], emissiveIntensity: 1.1, transparent: true, opacity: 0, depthWrite: false, side: THREE.DoubleSide, blending: THREE.AdditiveBlending })
   );
-  beam.position.set(JET_X[j], NOZZLE_Y + 1.38, .58);
+  beam.position.set(JET_X[j], NOZZLE_Y + 2.35, .58);
   effectGroup.add(beam);
   jetBeams.push(beam);
 }
@@ -387,10 +429,12 @@ function createRing(ci, index) {
   const material = new THREE.MeshStandardMaterial({ color, emissive: color, emissiveIntensity: .28, roughness: .2, metalness: .32 });
   const mesh = new THREE.Mesh(new THREE.TorusGeometry(RING_RADIUS, .088, 16, 36), material);
   mesh.castShadow = true; mesh.receiveShadow = true;
-  mesh.rotation.set(Math.random() * .35, Math.random() * .35, Math.random() * TAU);
+  // Un aro real cae plano sobre un palo vertical: el agujero mira hacia arriba.
+  // El eje Z del TorusGeometry se gira al eje Y para que no quede de canto.
+  mesh.rotation.set(Math.PI / 2 + (Math.random() - .5) * .08, (Math.random() - .5) * .12, Math.random() * TAU);
   const glyph = new THREE.Sprite(new THREE.SpriteMaterial({ map: glyphTexture(info.glyph, ['#ffffff', '#f3df72', '#fff000'].includes(info.hex.toLowerCase())), transparent: true, depthTest: false }));
   glyph.userData.shared = true;
-  glyph.scale.set(.27, .27, 1); glyph.position.z = .12; mesh.add(glyph);
+  glyph.scale.set(.27, .27, 1); glyph.position.set(0, .12, 0); mesh.add(glyph);
   ringGroup.add(mesh);
   return {
     mesh, ci, color: info.hex, glyph: info.glyph, index, x: 0, y: 0, z: 0, vx: 0, vy: 0, vz: 0,
@@ -497,7 +541,7 @@ function updateJetVisuals(dt) {
     const beam = jetBeams[j];
     const nozzle = nozzles[j];
     const direction = jetDirection(j);
-    const length = 2.8;
+    const length = 4.7;
     beam.position.set(JET_X[j] + direction.x * length / 2, NOZZLE_Y + direction.y * length / 2, .58);
     beam.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), direction);
     beam.material.opacity = lerp(beam.material.opacity, active ? .24 : 0, Math.min(1, dt * 13));
@@ -607,7 +651,7 @@ function updatePoles(dt) {
       ring.mesh.position.y = ring.targetY + (Math.random() - .5) * dangerShake;
       ring.mesh.position.z = .04 + Math.sin(state.elapsed * 2 + ring.seed) * danger * .035;
       ring.mesh.rotation.z += ring.spin * dt * .15;
-      ring.mesh.rotation.x = Math.sin(state.elapsed * 1.7 + ring.seed) * danger * .06;
+      ring.mesh.rotation.x = Math.PI / 2 + Math.sin(state.elapsed * 1.7 + ring.seed) * danger * .06;
     }
     if (pole.reqLabel) {
       const req = PALETTES[paletteIndex].colors[pole.reqColor];
@@ -628,14 +672,19 @@ function applyJets(dt) {
     const direction = jetDirection(j);
     for (const ring of rings) {
       if (ring.scored) continue;
-      const dx = ring.x - JET_X[j]; const dy = ring.y - NOZZLE_Y;
-      const distance = Math.sqrt(dx * dx + dy * dy);
-      if (distance > 2.9 || Math.abs(dx) > 1.18) continue;
-      const falloff = Math.pow(1 - distance / 2.9, 1.25) * (1 - Math.abs(dx) / 1.18);
-      ring.vx += direction.x * falloff * 7.1 * dt;
-      ring.vy += direction.y * falloff * 8.2 * dt;
-      ring.vz += (0 - ring.z) * falloff * .7 * dt;
-      ring.spin += (Math.random() - .5) * falloff * .025;
+      const dx = ring.x - JET_X[j];
+      const dy = Math.max(0, ring.y - NOZZLE_Y);
+      // Un chorro de juguete actúa como una columna de agua, no solo como un
+      // impulso en el fondo. La fuerza cae suavemente al subir para que los
+      // aros sigan alcanzando los palos altos.
+      const widthFalloff = clamp(1 - Math.abs(dx) / 1.55, 0, 1);
+      if (widthFalloff <= 0 || ring.y < NOZZLE_Y - .25) continue;
+      const heightFalloff = clamp(1 - dy / 5.25, .16, 1);
+      const falloff = Math.pow(widthFalloff * heightFalloff, .82);
+      ring.vx += direction.x * falloff * 10.5 * dt;
+      ring.vy += direction.y * falloff * 15.5 * dt;
+      ring.vz += (0 - ring.z) * falloff * 1.1 * dt;
+      ring.spin += (Math.random() - .5) * falloff * .04;
     }
     spawnJetParticles(j);
   }
@@ -663,7 +712,7 @@ function updateFreeRing(ring, dt) {
   if (ring.y > 2.62) { ring.y = 2.62; ring.vy = -Math.abs(ring.vy) * .45; }
   ring.mesh.position.set(ring.x, ring.y, ring.z);
   ring.mesh.rotation.z += ring.spin * dt + ring.vx * dt * .08;
-  ring.mesh.rotation.x = Math.sin(state.elapsed * .8 + ring.seed) * .12 + ring.vz * .08;
+  ring.mesh.rotation.x = Math.PI / 2 + Math.sin(state.elapsed * .8 + ring.seed) * .12 + ring.vz * .08;
   ring.mesh.rotation.y += dt * .2;
 }
 
