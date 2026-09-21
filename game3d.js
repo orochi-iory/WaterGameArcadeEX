@@ -33,6 +33,12 @@ const RING_STEP = 0.28;
 const RING_RADIUS = 0.27;
 const RING_TUBE = .065;
 const RING_HOLE_RADIUS = RING_RADIUS - RING_TUBE;
+const RING_OUTER_RADIUS = RING_RADIUS + RING_TUBE;
+const RING_MASS = .72;
+const RING_INERTIA = .18;
+const RING_BUOYANCY_FORCE = 3.5;
+const RING_COLLISION_DISTANCE = RING_OUTER_RADIUS * 1.9;
+const RING_COLLISION_HEIGHT = RING_TUBE * 2.35;
 const POLE_TIP_RADIUS = .11;
 const RING_CAPTURE_RADIUS = Math.max(.06, RING_HOLE_RADIUS - POLE_TIP_RADIUS - .015);
 const POLE_COLLISION_RADIUS = RING_RADIUS + RING_TUBE + .12;
@@ -801,14 +807,16 @@ function applyJets(dt) {
       if (widthFalloff <= 0 || ring.y < NOZZLE_Y - .25) continue;
       const heightFalloff = clamp(1 - dy / 5.25, .16, 1);
       const falloff = Math.pow(widthFalloff * heightFalloff, .82);
-      ring.vx += direction.x * falloff * 10.5 * dt;
-      ring.vy += direction.y * falloff * 15.5 * dt;
-      ring.vz += (0 - ring.z) * falloff * 1.1 * dt;
+      // La masa del aro hace que un mismo chorro no lo acelere como si fuera
+      // una partícula sin peso: el agua necesita tiempo para levantarlo.
+      ring.vx += direction.x * falloff * 7.8 / RING_MASS * dt;
+      ring.vy += direction.y * falloff * 10.8 / RING_MASS * dt;
+      ring.vz += (0 - ring.z) * falloff * 1.1 / RING_MASS * dt;
       // La corriente no solo eleva: el chorro descentrado aplica un par y
       // hace que el aro gire mientras busca la vertical del palo.
-      ring.spin += (direction.x * 2.8 + (JET_X[j] - ring.x) * .55) * falloff * dt;
+      ring.spin += (direction.x * 1.6 + (JET_X[j] - ring.x) * .45) * falloff / RING_INERTIA * dt;
       ring.spin += (Math.random() - .5) * falloff * .012;
-      ring.spin = clamp(ring.spin, -7, 7);
+      ring.spin = clamp(ring.spin, -9, 9);
     }
     spawnJetParticles(j);
   }
@@ -819,14 +827,22 @@ function updateFreeRing(ring, dt) {
   // El agua ocupa el tanque completo; la superficie superior solo marca el
   // límite visual. Así los aros mantienen flotación también a la altura de
   // los palos y vuelven a caer sobre ellos al soltar el chorro.
-  const inWater = ring.y < WATER_TOP;
-  ring.vy += (inWater ? GRAVITY * .52 : GRAVITY) * dt;
+  const submerged = clamp((WATER_TOP - ring.y + RING_TUBE) / (RING_TUBE * 2.2), 0, 1);
+  const inWater = submerged > 0;
+  // Peso, flotación y arrastre separados: el aro no queda pegado a una
+  // altura artificial, sino que sube y baja según la parte sumergida.
+  ring.vy += (GRAVITY + submerged * RING_BUOYANCY_FORCE / RING_MASS) * dt;
   if (inWater) {
-    ring.vy += 1.35 * dt;
-    ring.vx *= Math.exp(-dt * 1.25);
-    ring.vz *= Math.exp(-dt * 1.8);
+    const drag = Math.exp(-dt * (1.1 + submerged * 2.5));
+    ring.vx *= drag; ring.vz *= drag;
+    const currentX = Math.sin(waveTime * .9 + ring.y * .8 + ring.z * 1.7) * .22 + Math.cos(waveTime * .55 + ring.x * .35) * .1;
+    const currentZ = Math.cos(waveTime * .8 + ring.x * .6) * .16 + Math.sin(waveTime * .47 + ring.y) * .08;
+    ring.vx += (currentX - ring.vx) * submerged * .42 * dt;
+    ring.vz += (currentZ - ring.vz) * submerged * .42 * dt;
+    ring.spin += (currentX * 1.4 - currentZ * .8) * submerged / RING_INERTIA * dt;
   } else {
     ring.vx *= Math.exp(-dt * .08);
+    ring.vz *= Math.exp(-dt * .08);
   }
   ring.vx += state.tiltX * 1.85 * dt;
   ring.vy += -state.tiltY * 1.1 * dt;
@@ -839,6 +855,55 @@ function updateFreeRing(ring, dt) {
   ring.angle += ring.spin * dt;
   setRingVisualPosition(ring, ring.x, ring.y, ring.z);
   orientRing(ring);
+}
+
+function resolveRingCollisions(dt) {
+  const dynamicMass = RING_MASS;
+  for (let i = 0; i < rings.length; i++) {
+    const a = rings[i];
+    for (let j = i + 1; j < rings.length; j++) {
+      const b = rings[j];
+      if (a.scored && b.scored) continue;
+      const dx = b.x - a.x;
+      const dz = b.z - a.z;
+      const horizontal = Math.hypot(dx, dz);
+      const vertical = Math.abs(b.y - a.y);
+      if (horizontal >= RING_COLLISION_DISTANCE || vertical >= RING_COLLISION_HEIGHT) continue;
+
+      const distance = Math.max(horizontal, .0001);
+      const nx = horizontal > .0001 ? dx / distance : (Math.random() > .5 ? 1 : -1);
+      const nz = horizontal > .0001 ? dz / distance : 0;
+      const ny = b.y >= a.y ? .22 : -.22;
+      const normalLength = Math.hypot(nx, ny, nz);
+      const normalX = nx / normalLength; const normalY = ny / normalLength; const normalZ = nz / normalLength;
+      const overlap = RING_COLLISION_DISTANCE - horizontal;
+      const inverseA = a.scored ? 0 : 1 / dynamicMass;
+      const inverseB = b.scored ? 0 : 1 / dynamicMass;
+      const inverseTotal = inverseA + inverseB;
+      if (!inverseTotal) continue;
+
+      // Corrección de posición: permite que los aros se apilen y se separen
+      // en vez de atravesarse cuando llegan juntos al mismo chorro.
+      const correction = overlap * .72 / inverseTotal;
+      if (!a.scored) { a.x -= normalX * correction * inverseA; a.y -= normalY * correction * inverseA; a.z -= normalZ * correction * inverseA; }
+      if (!b.scored) { b.x += normalX * correction * inverseB; b.y += normalY * correction * inverseB; b.z += normalZ * correction * inverseB; }
+
+      const relativeVelocity = (b.vx - a.vx) * normalX + (b.vy - a.vy) * normalY + (b.vz - a.vz) * normalZ;
+      if (relativeVelocity < 0) {
+        const impulse = -(1.0 + .34) * relativeVelocity / inverseTotal;
+        if (!a.scored) { a.vx -= impulse * inverseA * normalX; a.vy -= impulse * inverseA * normalY; a.vz -= impulse * inverseA * normalZ; }
+        if (!b.scored) { b.vx += impulse * inverseB * normalX; b.vy += impulse * inverseB * normalY; b.vz += impulse * inverseB * normalZ; }
+        if (!a.scored) a.spin -= impulse * .035;
+        if (!b.scored) b.spin += impulse * .035;
+      }
+    }
+  }
+  for (const ring of rings) {
+    if (!ring.scored) {
+      setRingVisualPosition(ring, ring.x, ring.y, ring.z);
+      orientRing(ring);
+    }
+  }
 }
 
 function updateScoring(dt) {
@@ -919,7 +984,8 @@ function updateThreading(ring, dt) {
   ring.vz += -ring.z * 12 * dt;
   ring.vx *= Math.exp(-dt * 3.2);
   ring.vz *= Math.exp(-dt * 3.2);
-  ring.vy += GRAVITY * .78 * dt;
+  const submerged = clamp((WATER_TOP - ring.y + RING_TUBE) / (RING_TUBE * 2.2), 0, 1);
+  ring.vy += (GRAVITY + submerged * RING_BUOYANCY_FORCE / RING_MASS - 1.25) * dt;
   ring.x += ring.vx * dt; ring.y += ring.vy * dt; ring.z += ring.vz * dt;
   ring.spin *= Math.exp(-dt * .4);
   ring.angle += ring.spin * dt;
@@ -997,6 +1063,7 @@ function updateGame(dt) {
   for (const ring of rings) {
     if (!ring.scored) updateFreeRing(ring, dt);
   }
+  resolveRingCollisions(dt);
   updateScoring(dt);
   updateParticles(dt);
   updateUI();
