@@ -1,7 +1,11 @@
-import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js';
+import * as THREE from './vendor/three.module.js';
 
 const $ = (id) => document.getElementById(id);
 const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
+const storage = {
+  get(key, fallback = null) { try { return window.localStorage.getItem(key) ?? fallback; } catch { return fallback; } },
+  set(key, value) { try { window.localStorage.setItem(key, value); } catch { /* storage can be blocked in private iframes */ } }
+};
 const lerp = (a, b, amount) => a + (b - a) * amount;
 const TAU = Math.PI * 2;
 
@@ -72,10 +76,10 @@ const LEVELS = [
 ];
 const TOTAL_LEVELS = LEVELS.length - 1;
 
-let paletteIndex = Number(localStorage.getItem('wrt_pal') || 0);
+let paletteIndex = Number(storage.get('wrt_pal') || 0);
 if (!Number.isFinite(paletteIndex) || paletteIndex < 0 || paletteIndex >= PALETTES.length) paletteIndex = 0;
-let currentLevel = Number(localStorage.getItem('wrt_current_level') || 1);
-let maxLevel = Number(localStorage.getItem('wrt_mlv') || 1);
+let currentLevel = Number(storage.get('wrt_current_level') || 1);
+let maxLevel = Number(storage.get('wrt_mlv') || 1);
 maxLevel = clamp(Number.isFinite(maxLevel) ? maxLevel : 1, 1, TOTAL_LEVELS);
 currentLevel = clamp(Number.isFinite(currentLevel) ? currentLevel : 1, 1, maxLevel);
 
@@ -99,7 +103,7 @@ let bubbles = [];
 let waveTime = 0;
 let jSoundTimer = 0;
 let toastTimer = 0;
-let playerName = localStorage.getItem('wrt_pname') || '';
+let playerName = storage.get('wrt_pname') || '';
 let scoreTab = 'local';
 let globalMode = 'today';
 let globalLevel = 1;
@@ -290,12 +294,18 @@ function glyphTexture(text, dark = false) {
   return texture;
 }
 
+function roundedRect(ctx, x, y, width, height, radius) {
+  if (typeof ctx.roundRect === 'function') { ctx.roundRect(x, y, width, height, radius); return; }
+  const r = Math.min(radius, width / 2, height / 2);
+  ctx.beginPath(); ctx.moveTo(x + r, y); ctx.arcTo(x + width, y, x + width, y + height, r); ctx.arcTo(x + width, y + height, x, y + height, r); ctx.arcTo(x, y + height, x, y, r); ctx.arcTo(x, y, x + width, y, r); ctx.closePath();
+}
+
 function labelSprite(text, color = '#8deeff') {
   const c = document.createElement('canvas'); c.width = 256; c.height = 64;
   const ctx = c.getContext('2d');
   ctx.clearRect(0, 0, c.width, c.height);
   ctx.fillStyle = 'rgba(3,16,28,.78)';
-  ctx.roundRect(8, 9, 240, 46, 14); ctx.fill();
+  roundedRect(ctx, 8, 9, 240, 46, 14); ctx.fill();
   ctx.strokeStyle = color; ctx.globalAlpha = .65; ctx.lineWidth = 2; ctx.stroke(); ctx.globalAlpha = 1;
   ctx.fillStyle = color; ctx.font = '700 25px monospace'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(text, 128, 33);
   const texture = new THREE.CanvasTexture(c); texture.colorSpace = THREE.SRGBColorSpace;
@@ -309,7 +319,7 @@ function updateLabel(sprite, text, color = '#8deeff') {
   const c = sprite.userData.canvas;
   const ctx = c.getContext('2d');
   ctx.clearRect(0, 0, c.width, c.height);
-  ctx.fillStyle = 'rgba(3,16,28,.78)'; ctx.roundRect(8, 9, 240, 46, 14); ctx.fill();
+  ctx.fillStyle = 'rgba(3,16,28,.78)'; roundedRect(ctx, 8, 9, 240, 46, 14); ctx.fill();
   ctx.strokeStyle = color; ctx.globalAlpha = .65; ctx.lineWidth = 2; ctx.stroke(); ctx.globalAlpha = 1;
   ctx.fillStyle = color; ctx.font = '700 25px monospace'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(text, 128, 33);
   sprite.userData.texture.needsUpdate = true;
@@ -422,7 +432,7 @@ function updatePoleLabel(pole) {
 
 function initGame(level = currentLevel) {
   currentLevel = clamp(level, 1, maxLevel);
-  localStorage.setItem('wrt_current_level', String(currentLevel));
+  storage.set('wrt_current_level', String(currentLevel));
   state.score = 0; state.elapsed = 0; state.tiltX = 0; state.tiltY = 0; state.gameOver = false; state.winQueued = false; state.currentCombo = 1;
   input.jets.fill(false); input.keys = {};
   clearGroup(poleGroup);
@@ -828,7 +838,7 @@ function showEnd() {
   const total = state.score + time + colors.total + requirements.total;
   if (currentLevel >= maxLevel) {
     maxLevel = currentLevel >= TOTAL_LEVELS ? TOTAL_LEVELS : currentLevel + 1;
-    localStorage.setItem('wrt_mlv', String(maxLevel));
+    storage.set('wrt_mlv', String(maxLevel));
   }
   saveScore(total, state.elapsed, currentLevel);
   const last = currentLevel >= TOTAL_LEVELS;
@@ -849,13 +859,13 @@ function showEnd() {
 }
 
 function getLocalScores() {
-  try { return JSON.parse(localStorage.getItem('wrt_s6') || '[]'); } catch { return []; }
+  try { return JSON.parse(storage.get('wrt_s6') || '[]'); } catch { return []; }
 }
 function saveScore(points, time, level) {
   const now = new Date(); const scores = getLocalScores();
   scores.push({ p: points, t: time, lv: level, ts: Date.now(), d: `${now.getDate()}/${now.getMonth() + 1}/${now.getFullYear()}`, name: playerName || 'Anónimo' });
   scores.sort((a, b) => b.p - a.p); scores.splice(20);
-  localStorage.setItem('wrt_s6', JSON.stringify(scores));
+  storage.set('wrt_s6', JSON.stringify(scores));
   window.saveGlobalScore?.({ name: playerName || 'Anónimo', score: points, time, level, date: `${now.getDate()}/${now.getMonth() + 1}/${now.getFullYear()}` });
   window.saveUserProgress?.({ name: playerName || 'Anónimo', maxLevel });
 }
@@ -909,7 +919,7 @@ function buildLevelSelector() {
     const button = document.createElement('button'); const hasColor = LEVELS[i].poles.some((pole) => pole.rc !== undefined);
     button.className = `level-btn${i === currentLevel ? ' current' : ''}${i > maxLevel ? ' locked' : ''}${hasColor ? ' color-mode' : ''}`;
     button.innerHTML = `${i}<span>${LEVELS[i].name}</span>`; button.disabled = i > maxLevel;
-    if (i <= maxLevel) button.addEventListener('click', () => { currentLevel = i; localStorage.setItem('wrt_current_level', String(i)); buildLevelSelector(); $('menuLevel').textContent = i; initGame(currentLevel); state.paused = true; });
+    if (i <= maxLevel) button.addEventListener('click', () => { currentLevel = i; storage.set('wrt_current_level', String(i)); buildLevelSelector(); $('menuLevel').textContent = i; initGame(currentLevel); state.paused = true; });
     target.appendChild(button);
   }
 }
@@ -986,7 +996,7 @@ $('tabGlobal').addEventListener('click', () => { scoreTab = 'global'; renderScor
 document.querySelectorAll('[data-gmode]').forEach((button) => button.addEventListener('click', () => { globalMode = button.dataset.gmode; renderScores(); }));
 $('mProfile').addEventListener('click', () => { updateProfile(); setPanel('pProfile'); });
 $('profBack').addEventListener('click', () => setPanel('pMain'));
-$('saveNameBtn').addEventListener('click', () => { playerName = $('playerNameInput').value.trim().slice(0, 15); localStorage.setItem('wrt_pname', playerName); window.saveUserProgress?.({ name: playerName, maxLevel }); updateOnlineStatus(); $('saveNameBtn').textContent = '✓'; window.setTimeout(() => $('saveNameBtn').textContent = '✓', 800); });
+$('saveNameBtn').addEventListener('click', () => { playerName = $('playerNameInput').value.trim().slice(0, 15); storage.set('wrt_pname', playerName); window.saveUserProgress?.({ name: playerName, maxLevel }); updateOnlineStatus(); $('saveNameBtn').textContent = '✓'; window.setTimeout(() => $('saveNameBtn').textContent = '✓', 800); });
 $('playerNameInput').addEventListener('keydown', (event) => { if (event.key === 'Enter') $('saveNameBtn').click(); });
 $('mFS').addEventListener('click', () => { showFullscreenInfo(); setPanel('pFS'); });
 $('fBack').addEventListener('click', () => setPanel('pMain'));
@@ -1002,7 +1012,7 @@ function buildPaletteGrid() {
   PALETTES.forEach((palette, index) => {
     const card = document.createElement('div'); card.className = `palette-card${index === paletteIndex ? ' active' : ''}`;
     card.innerHTML = `<div class="palette-name">${palette.name}<br><span class="palette-desc">${palette.desc}</span></div><div class="palette-dots">${palette.colors.map((color) => `<span class="palette-dot" style="background:${color.hex};color:${['#ffffff', '#f3df72', '#fff000'].includes(color.hex.toLowerCase()) ? '#112' : '#fff'}">${color.glyph}</span>`).join('')}</div>`;
-    card.addEventListener('click', () => { paletteIndex = index; localStorage.setItem('wrt_pal', String(index)); buildPaletteGrid(); initGame(currentLevel); state.paused = true; });
+    card.addEventListener('click', () => { paletteIndex = index; storage.set('wrt_pal', String(index)); buildPaletteGrid(); initGame(currentLevel); state.paused = true; });
     $('palGrid').appendChild(card);
   });
 }
@@ -1013,8 +1023,8 @@ function buildPaletteGrid() {
 
 const AudioContextClass = window.AudioContext || window.webkitAudioContext;
 let audioContext = null;
-let soundOn = localStorage.getItem('wrt_snd') !== '0';
-let musicOn = localStorage.getItem('wrt_mus') === '1';
+let soundOn = storage.get('wrt_snd') !== '0';
+let musicOn = storage.get('wrt_mus') === '1';
 let musicTimer = 0;
 function ensureAudio() { if (!AudioContextClass) return; if (!audioContext) audioContext = new AudioContextClass(); if (audioContext.state === 'suspended') audioContext.resume(); }
 function tone(frequency, duration, volume = .08, type = 'sine') { if (!soundOn || !audioContext) return; const oscillator = audioContext.createOscillator(); const gain = audioContext.createGain(); oscillator.type = type; oscillator.frequency.value = frequency; gain.gain.setValueAtTime(volume, audioContext.currentTime); gain.gain.exponentialRampToValueAtTime(.001, audioContext.currentTime + duration); oscillator.connect(gain); gain.connect(audioContext.destination); oscillator.start(); oscillator.stop(audioContext.currentTime + duration); }
@@ -1026,8 +1036,8 @@ function musicMenu() { if (musicOn) scheduleMusic([196, 261, 329, 392], 0); }
 function musicGame() { if (musicOn) scheduleMusic([130, 155, 196, 233], 0); }
 function musicWin() { if (musicOn) scheduleMusic([523, 659, 784, 1047], 0); }
 function scheduleMusic(notes, index) { if (!musicOn || !audioContext) return; window.clearTimeout(musicTimer); tone(notes[index % notes.length], .65, .018, 'sine'); musicTimer = window.setTimeout(() => scheduleMusic(notes, index + 1), 820); }
-$('bSnd').addEventListener('click', () => { ensureAudio(); soundOn = !soundOn; localStorage.setItem('wrt_snd', soundOn ? '1' : '0'); $('bSnd').textContent = soundOn ? '🔊' : '🔇'; });
-$('bMus').addEventListener('click', () => { ensureAudio(); musicOn = !musicOn; localStorage.setItem('wrt_mus', musicOn ? '1' : '0'); $('bMus').textContent = musicOn ? '♫' : '♪'; if (musicOn) musicMenu(); else window.clearTimeout(musicTimer); });
+$('bSnd').addEventListener('click', () => { ensureAudio(); soundOn = !soundOn; storage.set('wrt_snd', soundOn ? '1' : '0'); $('bSnd').textContent = soundOn ? '🔊' : '🔇'; });
+$('bMus').addEventListener('click', () => { ensureAudio(); musicOn = !musicOn; storage.set('wrt_mus', musicOn ? '1' : '0'); $('bMus').textContent = musicOn ? '♫' : '♪'; if (musicOn) musicMenu(); else window.clearTimeout(musicTimer); });
 $('bSnd').textContent = soundOn ? '🔊' : '🔇'; $('bMus').textContent = musicOn ? '♫' : '♪';
 
 /* -------------------------------------------------------------------------- */
@@ -1101,8 +1111,8 @@ async function connectCloud() {
         if (!snapshot.exists()) return;
         const remote = snapshot.data();
         const remoteMax = clamp(Number(remote.maxLevel || 1), 1, TOTAL_LEVELS);
-        if (remoteMax > maxLevel) { maxLevel = remoteMax; localStorage.setItem('wrt_mlv', String(maxLevel)); buildLevelSelector(); }
-        if (!playerName && remote.name) { playerName = String(remote.name).slice(0, 15); localStorage.setItem('wrt_pname', playerName); }
+        if (remoteMax > maxLevel) { maxLevel = remoteMax; storage.set('wrt_mlv', String(maxLevel)); buildLevelSelector(); }
+        if (!playerName && remote.name) { playerName = String(remote.name).slice(0, 15); storage.set('wrt_pname', playerName); }
         updateOnlineStatus();
       } catch (error) { console.info('Cloud progress unavailable:', error); }
     });

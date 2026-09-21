@@ -55,7 +55,7 @@ Mantener un chorro cerca de un palo durante demasiado tiempo aumenta la tensión
 
 ## ▶️ Ejecutar
 
-Es un proyecto estático. No hay bundler ni instalación obligatoria: Three.js se carga desde CDN como módulo ES.
+Es un proyecto estático. No hay bundler ni instalación obligatoria: Three.js está incluido localmente como módulo ES en `vendor/three.module.js`, por lo que el juego puede arrancar aunque el CDN esté bloqueado.
 
 ```bash
 # Opción recomendada
@@ -79,9 +79,11 @@ Para usar otro proyecto, sustituye `FIREBASE_CONFIG` en `game3d.js` y habilita:
 ## 🧱 Arquitectura
 
 ```text
-index.html   → carcasa arcade, HUD, menús, tutorial y controles
-styles.css   → diseño responsive, overlays y estética de hardware acuático
-game3d.js    → escena Three.js, física, audio, persistencia y Firebase opcional
+index.html          → carcasa arcade, HUD, menús, tutorial y controles
+styles.css          → diseño responsive, overlays y estética de hardware acuático
+game3d.js           → escena Three.js, física, audio, persistencia y Firebase opcional
+vendor/three.module.js → runtime local de Three.js 0.160.0
+vendor/THREE-LICENSE   → licencia MIT de Three.js
 ```
 
 La escena utiliza materiales y geometría procedurales, por lo que no necesita modelos 3D ni imágenes externas. El canvas WebGL se adapta al tamaño real de la pantalla del juguete mediante `ResizeObserver`.
