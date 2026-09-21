@@ -19,7 +19,10 @@ const TAU = Math.PI * 2;
 const TOTAL_RINGS = 20;
 const MIN_PER_POLE = 5;
 const BASE_Y = -2.78;
+// El tanque ocupa todo el volumen jugable. WATER_Y se conserva como altura de
+// aparición para repartir los aros; WATER_TOP es la superficie real del agua.
 const WATER_Y = -1.72;
+const WATER_TOP = 2.55;
 const RING_STEP = 0.34;
 const RING_RADIUS = 0.34;
 const GRAVITY = -5.6;
@@ -126,9 +129,10 @@ renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 
 const scene = new THREE.Scene();
 scene.fog = new THREE.Fog(0x06182d, 8, 20);
-const camera = new THREE.PerspectiveCamera(42, 1, .1, 100);
-camera.position.set(0, .05, 10.8);
-const cameraTarget = new THREE.Vector3(0, -.73, 0);
+const camera = new THREE.PerspectiveCamera(48, 1, .1, 100);
+camera.position.set(0, .05, 14.8);
+// El centro queda equilibrado entre el suelo y las puntas de los palos.
+const cameraTarget = new THREE.Vector3(0, -.15, 0);
 camera.lookAt(cameraTarget);
 
 const ambientLight = new THREE.HemisphereLight(0x9be9ff, 0x061224, 1.65);
@@ -209,35 +213,45 @@ const floorTrim = new THREE.Mesh(new THREE.BoxGeometry(12, .035, 5.76), new THRE
 floorTrim.position.set(0, BASE_Y - .065, .15);
 stageGroup.add(floorTrim);
 
+const tankHeight = WATER_TOP - BASE_Y;
 const waterVolume = new THREE.Mesh(
-  new THREE.BoxGeometry(11.6, 1.72, 4.85),
-  new THREE.MeshPhysicalMaterial({ color: 0x167ca9, roughness: .12, metalness: .08, transmission: .18, transparent: true, opacity: .29, side: THREE.DoubleSide })
+  new THREE.BoxGeometry(11.7, tankHeight, 4.95),
+  new THREE.MeshPhysicalMaterial({ color: 0x167ca9, roughness: .12, metalness: .08, transmission: .12, transparent: true, opacity: .20, depthWrite: false, side: THREE.DoubleSide })
 );
-waterVolume.position.set(0, (BASE_Y + WATER_Y) / 2 - .02, .1);
+waterVolume.position.set(0, BASE_Y + tankHeight / 2, .1);
 waterVolume.receiveShadow = true;
 stageGroup.add(waterVolume);
 
-const waterGeometry = new THREE.PlaneGeometry(11.7, 4.9, 48, 18);
+// Lámina vertical que mantiene el aspecto de juguete lleno de agua incluso
+// cuando la cámara del móvil mira de frente al tanque.
+const waterBackdrop = new THREE.Mesh(
+  new THREE.PlaneGeometry(11.7, tankHeight, 48, 24),
+  new THREE.MeshPhysicalMaterial({ color: 0x0c78aa, emissive: 0x052d51, emissiveIntensity: .65, roughness: .18, metalness: .08, transparent: true, opacity: .28, depthWrite: false, side: THREE.DoubleSide })
+);
+waterBackdrop.position.set(0, BASE_Y + tankHeight / 2, -1.88);
+stageGroup.add(waterBackdrop);
+
+const waterGeometry = new THREE.PlaneGeometry(11.7, 4.95, 48, 18);
 waterGeometry.rotateX(-Math.PI / 2);
 const waterBaseZ = new Float32Array(waterGeometry.attributes.position.count);
 for (let i = 0; i < waterGeometry.attributes.position.count; i++) waterBaseZ[i] = waterGeometry.attributes.position.getZ(i);
 const waterSurface = new THREE.Mesh(
   waterGeometry,
-  new THREE.MeshPhysicalMaterial({ color: 0x42c8ee, emissive: 0x063f66, emissiveIntensity: .6, roughness: .12, metalness: .22, transparent: true, opacity: .62, side: THREE.DoubleSide })
+  new THREE.MeshPhysicalMaterial({ color: 0x42c8ee, emissive: 0x063f66, emissiveIntensity: .6, roughness: .12, metalness: .22, transparent: true, opacity: .34, depthWrite: false, side: THREE.DoubleSide })
 );
-waterSurface.position.set(0, WATER_Y, .1);
+waterSurface.position.set(0, WATER_TOP, .1);
 waterSurface.receiveShadow = true;
 stageGroup.add(waterSurface);
 
 const edgeMaterial = new THREE.MeshStandardMaterial({ color: 0x89eaff, emissive: 0x0c5f7e, emissiveIntensity: .75, roughness: .28, metalness: .48 });
-for (const x of [-5.87, 5.87]) {
-  const edge = new THREE.Mesh(new THREE.BoxGeometry(.08, 3.05, 5.0), edgeMaterial);
-  edge.position.set(x, -1.45, .08);
+for (const x of [-5.98, 5.98]) {
+  const edge = new THREE.Mesh(new THREE.BoxGeometry(.08, tankHeight + .28, 5.1), edgeMaterial);
+  edge.position.set(x, BASE_Y + tankHeight / 2, .08);
   edge.castShadow = true;
   stageGroup.add(edge);
 }
-const backRail = new THREE.Mesh(new THREE.BoxGeometry(11.7, .055, .055), edgeMaterial);
-backRail.position.set(0, .62, -1.95);
+const backRail = new THREE.Mesh(new THREE.BoxGeometry(11.95, .055, .055), edgeMaterial);
+backRail.position.set(0, WATER_TOP, -1.95);
 stageGroup.add(backRail);
 
 const bubbleMaterial = new THREE.MeshPhysicalMaterial({ color: 0xc8f7ff, transparent: true, opacity: .33, roughness: .02, metalness: .1 });
@@ -245,7 +259,7 @@ const bubbleGroup = new THREE.Group();
 effectGroup.add(bubbleGroup);
 for (let i = 0; i < 28; i++) {
   const bubble = new THREE.Mesh(new THREE.SphereGeometry(.025 + Math.random() * .045, 8, 8), bubbleMaterial.clone());
-  bubble.position.set((Math.random() - .5) * 10.8, BASE_Y + .15 + Math.random() * 1.45, -.8 + Math.random() * 2.1);
+  bubble.position.set((Math.random() - .5) * 10.8, BASE_Y + .16 + Math.random() * (tankHeight - .38), -.8 + Math.random() * 2.1);
   bubble.userData.speed = .05 + Math.random() * .13;
   bubble.userData.phase = Math.random() * TAU;
   bubbleGroup.add(bubble);
@@ -393,7 +407,7 @@ function resetRings() {
     for (let n = 0; n < 5; n++) {
       const ring = createRing(ci, index++);
       ring.x = -4.45 + Math.random() * 8.9;
-      ring.y = WATER_Y + .15 + Math.random() * 1.65;
+      ring.y = BASE_Y + .35 + Math.random() * (WATER_TOP - BASE_Y - 1.05);
       ring.z = -.5 + Math.random() * 1.55;
       ring.vx = (Math.random() - .5) * .55;
       ring.vy = (Math.random() - .5) * .35;
@@ -462,7 +476,7 @@ function updateWater(dt) {
   bubbles.forEach((bubble, index) => {
     bubble.position.y += bubble.userData.speed * dt;
     bubble.position.x += Math.sin(waveTime * .7 + bubble.userData.phase) * .0015;
-    if (bubble.position.y > WATER_Y + .16) {
+    if (bubble.position.y > WATER_TOP - .12) {
       bubble.position.y = BASE_Y + .13;
       bubble.position.x = (Math.random() - .5) * 10.7;
       bubble.position.z = -.8 + Math.random() * 2.1;
@@ -628,10 +642,13 @@ function applyJets(dt) {
 }
 
 function updateFreeRing(ring, dt) {
-  const inWater = ring.y < WATER_Y;
-  ring.vy += (inWater ? GRAVITY * .36 : GRAVITY) * dt;
+  // El agua ocupa el tanque completo; la superficie superior solo marca el
+  // límite visual. Así los aros mantienen flotación también a la altura de
+  // los palos y vuelven a caer sobre ellos al soltar el chorro.
+  const inWater = ring.y < WATER_TOP;
+  ring.vy += (inWater ? GRAVITY * .52 : GRAVITY) * dt;
   if (inWater) {
-    ring.vy += 2.15 * dt;
+    ring.vy += 1.35 * dt;
     ring.vx *= Math.exp(-dt * 1.25);
     ring.vz *= Math.exp(-dt * 1.8);
   } else {
@@ -728,8 +745,9 @@ function colorRequirementsMet() {
 function updateCamera(dt) {
   camera.position.x = lerp(camera.position.x, state.tiltX * .28, Math.min(1, dt * 2.2));
   camera.position.y = lerp(camera.position.y, .05 + state.tiltY * .12, Math.min(1, dt * 2.2));
+  camera.position.z = lerp(camera.position.z, camera.userData.fitZ || 14.8, Math.min(1, dt * 2.2));
   cameraTarget.x = state.tiltX * .06;
-  cameraTarget.y = -.73 + state.tiltY * .04;
+  cameraTarget.y = -.15 + state.tiltY * .04;
   camera.lookAt(cameraTarget);
 }
 
@@ -1131,7 +1149,19 @@ window.fbEnabled = false; window.fbUser = null;
 function resizeRenderer() {
   const rect = waterScreen.getBoundingClientRect();
   if (!rect.width || !rect.height) return;
-  renderer.setSize(rect.width, rect.height, false); camera.aspect = rect.width / rect.height; camera.updateProjectionMatrix();
+  const aspect = rect.width / rect.height;
+  renderer.setSize(rect.width, rect.height, false);
+  camera.aspect = aspect;
+  // Encuadra el tanque completo. En móvil el ancho útil suele ser menor que
+  // la altura, así que la distancia se calcula también con el FOV horizontal.
+  const fieldWidth = 12.8;
+  const fieldHeight = 6.6;
+  const verticalFov = THREE.MathUtils.degToRad(camera.fov);
+  const horizontalFov = 2 * Math.atan(Math.tan(verticalFov / 2) * aspect);
+  const fitVertical = (fieldHeight / 2) / Math.tan(verticalFov / 2);
+  const fitHorizontal = (fieldWidth / 2) / Math.tan(horizontalFov / 2);
+  camera.userData.fitZ = Math.max(14.8, fitVertical, fitHorizontal) + .55;
+  camera.updateProjectionMatrix();
 }
 window.addEventListener('resize', resizeRenderer);
 if ('ResizeObserver' in window) new ResizeObserver(resizeRenderer).observe(waterScreen);
