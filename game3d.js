@@ -60,6 +60,8 @@ const RING_CAPTURE_VERTICAL = RING_OUTER_RADIUS + POLE_TIP_RADIUS + .1;
 const RING_ORIENTATION_ASSIST = .62;
 const RING_SEAT_STIFFNESS = 1.25;
 const RING_SEAT_DAMPING = 1.0;
+const RING_SEAT_HORIZONTAL_STIFFNESS = 4.8;
+const RING_SEAT_HORIZONTAL_DAMPING = 2.4;
 const ringFlatQuaternion = new THREE.Quaternion().setFromEuler(new THREE.Euler(Math.PI / 2, 0, 0));
 const GRAVITY = -5.6;
 const NOZZLE_Y = BASE_Y - .02;
@@ -197,8 +199,8 @@ scene.fog = new THREE.Fog(0x06182d, 8, 20);
 const physicsWorld = new CANNON.World({ gravity: new CANNON.Vec3(0, GRAVITY, 0) });
 physicsWorld.broadphase = new CANNON.SAPBroadphase(physicsWorld);
 physicsWorld.allowSleep = true;
-physicsWorld.solver.iterations = MOBILE_DEVICE ? 8 : 12;
-physicsWorld.solver.tolerance = .0005;
+physicsWorld.solver.iterations = MOBILE_DEVICE ? 10 : 16;
+physicsWorld.solver.tolerance = .00025;
 const ringPhysicsMaterial = new CANNON.Material('ring');
 const tankPhysicsMaterial = new CANNON.Material('tank');
 physicsWorld.defaultContactMaterial.friction = .018;
@@ -207,8 +209,10 @@ physicsWorld.defaultContactMaterial.restitution = .34;
 // velocidad al rozar un palo, una pared o la base.
 physicsWorld.addContactMaterial(new CANNON.ContactMaterial(ringPhysicsMaterial, tankPhysicsMaterial, { friction: .004, restitution: .46 }));
 const physicsGround = new CANNON.Body({ mass: 0, material: tankPhysicsMaterial });
-physicsGround.addShape(new CANNON.Box(new CANNON.Vec3(6, .11, 2.85)));
-physicsGround.position.set(0, BASE_Y - .2, .15);
+// Conserva la cara superior en la misma cota que el suelo visual, pero con
+// más espesor hacia abajo para que un aro no pueda atravesarlo por tunneling.
+physicsGround.addShape(new CANNON.Box(new CANNON.Vec3(6, .22, 2.85)));
+physicsGround.position.set(0, BASE_Y - .31, .15);
 physicsWorld.addBody(physicsGround);
 const physicsSideWalls = [];
 for (const x of [-5.94, 5.94]) {
@@ -1040,7 +1044,9 @@ function applyRingSeatForce(ring, body) {
   const pole = ring.seatPole;
   if (!ring.scored || !pole) return false;
   const targetY = ring.seatTargetY;
-  body.force.x += (pole.x - body.position.x) * (RING_SEAT_STIFFNESS * 1.45) - (body.velocity.x - pole.vX) * RING_SEAT_DAMPING;
+  // Una guía horizontal más firme evita que un aro ya puntuado quede
+  // enganchado por el borde mientras sigue cayendo, sin fijar su posición.
+  body.force.x += (pole.x - body.position.x) * RING_SEAT_HORIZONTAL_STIFFNESS - (body.velocity.x - pole.vX) * RING_SEAT_HORIZONTAL_DAMPING;
   body.force.y += (targetY - body.position.y) * RING_SEAT_STIFFNESS - body.velocity.y * RING_SEAT_DAMPING;
   return true;
 }
@@ -1124,6 +1130,20 @@ function reflowPoleSeats(pole) {
   });
 }
 
+function guideScoredRingIntoPole(ring, pole) {
+  const body = ring.body;
+  const xError = clamp(pole.x - body.position.x, -.16, .16);
+  const relativeXVelocity = body.velocity.x - pole.vX;
+  // Pequeño impulso físico de entrada: corrige el roce justo al puntuar,
+  // pero no teletransporta ni congela el cuerpo.
+  body.applyImpulse(new CANNON.Vec3(
+    clamp(xError * 1.35 - relativeXVelocity * .12, -.28, .28),
+    0,
+    0
+  ), body.position);
+  body.wakeUp();
+}
+
 function registerPhysicsScore(ring, pole) {
   const stackIndex = pole.rings.length;
   ring.scored = true; ring.pole = pole; ring.contactPole = null; ring.capturePole = null;
@@ -1131,6 +1151,7 @@ function registerPhysicsScore(ring, pole) {
   ring.seatTargetY = BASE_Y + .24 + stackIndex * RING_STACK_STEP;
   ring.body.mass = RING_SEATED_MASS;
   ring.body.updateMassProperties();
+  guideScoredRingIntoPole(ring, pole);
   pole.rings.push(ring);
   const combo = pole.lastColor === ring.ci ? pole.combo + 1 : 1;
   pole.lastColor = ring.ci; pole.combo = combo; ring.points = 100 * combo;
