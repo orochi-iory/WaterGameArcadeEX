@@ -42,7 +42,7 @@ const RING_OUTER_RADIUS = RING_RADIUS + RING_TUBE;
 const RING_MASS = .72;
 // Un aro que ha tocado el interior del palo gana peso, pero conserva una
 // posibilidad real de volver a salir si un chorro lo levanta.
-const RING_SEATED_MASS = RING_MASS * 2.7;
+const RING_SEATED_MASS = RING_MASS * 2;
 
 const RING_BUOYANCY_FORCE = 3.5;
 const POLE_SHAFT_TOP_RADIUS = .075;
@@ -58,8 +58,8 @@ const RING_CAPTURE_RADIUS = RING_OUTER_RADIUS + POLE_TIP_RADIUS;
 const RING_INNER_CONTACT_RADIUS = RING_ENTRY_RADIUS + .03;
 const RING_CAPTURE_VERTICAL = RING_OUTER_RADIUS + POLE_TIP_RADIUS + .1;
 const RING_ORIENTATION_ASSIST = .62;
-const RING_SEAT_STIFFNESS = 1.25;
-const RING_SEAT_DAMPING = 1.0;
+const RING_SEAT_STIFFNESS = 1.0;
+const RING_SEAT_DAMPING = .8;
 const RING_SEAT_HORIZONTAL_STIFFNESS = 4.8;
 const RING_SEAT_HORIZONTAL_DAMPING = 2.4;
 const ringFlatQuaternion = new THREE.Quaternion().setFromEuler(new THREE.Euler(Math.PI / 2, 0, 0));
@@ -985,6 +985,17 @@ function updatePhysicsPoleMotion(dt) {
   physicsWorld.broadphase.dirty = true;
 }
 
+function applyFloorContactSupport(body) {
+  // El contacto Cannon sigue siendo la defensa principal. Esta fuerza física
+  // solo entra si el centro ya ha penetrado la cota de reposo del aro, para
+  // recuperar un cuerpo que haya cruzado el suelo durante un paso discreto.
+  const floorRestY = BASE_Y - .09 + RING_TUBE;
+  const penetration = floorRestY - body.position.y;
+  if (penetration <= 0) return;
+  const supportForce = penetration * 180 - Math.min(0, body.velocity.y) * 24;
+  body.force.y += Math.min(90, Math.max(0, supportForce));
+}
+
 function applyRingOrientationAssist(ring, body, submerged) {
   // La asistencia se basa en la caída del cuerpo, no en qué chorro está activo.
   // Así el agua puede hacerlo girar libremente y solo la gravedad suaviza la
@@ -1058,6 +1069,7 @@ function applyCannonForces(dt) {
     if (!body) continue;
     const submerged = submergedFraction(body.position.y);
     applyRingSeatForce(ring, body);
+    applyFloorContactSupport(body);
     body.force.y += submerged * RING_BUOYANCY_FORCE;
     applyRingOrientationAssist(ring, body, submerged);
     updateRingCapture(ring, body);
