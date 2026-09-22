@@ -42,7 +42,7 @@ const RING_OUTER_RADIUS = RING_RADIUS + RING_TUBE;
 const RING_MASS = .72;
 // Un aro que ha tocado el interior del palo gana peso, pero conserva una
 // posibilidad real de volver a salir si un chorro lo levanta.
-const RING_SEATED_MASS = RING_MASS * 3;
+const RING_SEATED_MASS = RING_MASS * 2.7;
 
 const RING_BUOYANCY_FORCE = 3.5;
 const POLE_SHAFT_TOP_RADIUS = .075;
