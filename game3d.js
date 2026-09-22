@@ -4,7 +4,7 @@ import * as CANNON from './vendor/cannon-es.js';
 const $ = (id) => document.getElementById(id);
 // Referencia visible para distinguir rápidamente el build probado en una captura.
 // Incrementar este identificador en cada iteración funcional publicada.
-const BUILD_VERSION = 'R10';
+const BUILD_VERSION = 'R11';
 const MOBILE_DEVICE = /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent) || window.matchMedia?.('(pointer: coarse)').matches || window.innerWidth < 768;
 const WATER_GRID_X = MOBILE_DEVICE ? 24 : 48;
 const WATER_GRID_Y = MOBILE_DEVICE ? 10 : 18;
@@ -679,14 +679,14 @@ function createRingPhysicsBody(ring) {
   const body = new CANNON.Body({ mass: RING_MASS, material: ringPhysicsMaterial });
   body.collisionFilterGroup = RING_COLLISION_GROUP;
   body.collisionFilterMask = TANK_COLLISION_GROUP | RING_COLLISION_GROUP;
-  body.linearDamping = .16;
-  body.angularDamping = .24;
+  body.linearDamping = .14;
+  body.angularDamping = .12;
   body.linearFactor.set(1, 1, 0); // 2.5D: Z es grosor de contacto, no un carril de juego.
   body.allowSleep = false;
   // El aro es un compuesto de esferas suaves distribuidas sobre el toro
   // visual. Conservan el agujero interior, pero evitan las esquinas de las
   // cajas que estaban formando enganches y lanzamientos entre aros.
-  const segments = MOBILE_DEVICE ? 16 : 20;
+  const segments = MOBILE_DEVICE ? 12 : 16;
   for (let i = 0; i < segments; i++) {
     const angle = i / segments * TAU;
     const offset = new CANNON.Vec3(Math.cos(angle) * RING_RADIUS, 0, Math.sin(angle) * RING_RADIUS);
@@ -1091,6 +1091,23 @@ function applyRingOrientationAssist(ring, body, submerged) {
   body.torque.z += -body.angularVelocity.z * (.24 + strength * .22);
 }
 
+function applyRingRestingOrientationAssist(ring, body) {
+  if (ring.scored || !ring.body) return;
+  const lowest = ringLowestPointY(body);
+  const floorInfluence = clamp((.5 - (lowest - PHYSICS_FLOOR_TOP)) / .5, 0, 1);
+  if (floorInfluence <= 0) return;
+  body.quaternion.vmult(ringLocalNormal, ringWorldNormal);
+  const sidewaysNormal = Math.hypot(ringWorldNormal.x, ringWorldNormal.z);
+  if (sidewaysNormal < .025) return;
+  // Un aro apoyado de canto no debe quedarse perfectamente vertical por una
+  // simetría numérica: este torque físico suave le permite ladearse y apoyar
+  // el toro sobre su cara, sin fijar su quaternion ni su posición.
+  const strength = .28 + floorInfluence * .8;
+  const damping = .22 + floorInfluence * .28;
+  body.torque.x += -ringWorldNormal.z * strength - body.angularVelocity.x * damping;
+  body.torque.z += ringWorldNormal.x * strength - body.angularVelocity.z * damping;
+}
+
 function applyRingSeatLevelingAssist(ring, body) {
   if (!ring.scored || !ring.seatPole) return;
   body.quaternion.vmult(ringLocalNormal, ringWorldNormal);
@@ -1160,6 +1177,7 @@ function applyCannonForces(dt) {
     applyFloorContactSupport(body);
     body.force.y += submerged * RING_BUOYANCY_FORCE;
     applyRingOrientationAssist(ring, body, submerged);
+    applyRingRestingOrientationAssist(ring, body);
     applyRingSeatLevelingAssist(ring, body);
     updateRingCapture(ring, body);
     const currentX = Math.sin(elapsed * .9 + body.position.y * .8) * .22 + Math.cos(elapsed * .55 + body.position.x * .35) * .1;
