@@ -67,6 +67,7 @@ const RING_SEAT_STIFFNESS = 1.0;
 const RING_SEAT_DAMPING = .8;
 const RING_SEAT_HORIZONTAL_STIFFNESS = 4.8;
 const RING_SEAT_HORIZONTAL_DAMPING = 2.4;
+const RING_SEATED_CONTROL_ACCELERATION = 9;
 const RING_PAIR_MIN_DISTANCE = .5;
 const RING_PAIR_SEPARATION_STIFFNESS = 34;
 const RING_PAIR_SEPARATION_DAMPING = 7;
@@ -969,6 +970,7 @@ const floorShapeCenter = new CANNON.Vec3();
 const floorShapeAxisX = new CANNON.Vec3();
 const floorShapeAxisY = new CANNON.Vec3();
 const floorShapeAxisZ = new CANNON.Vec3();
+const pairWorldNormal = new CANNON.Vec3();
 function submergedFraction(y) {
   return clamp((WATER_TOP - y + RING_TUBE) / (RING_TUBE * 2.2), 0, 1);
 }
@@ -1107,6 +1109,14 @@ function applyRingSeatForce(ring, body) {
   return true;
 }
 
+function ringSeatIsStable(ring) {
+  if (!ring.scored || !ring.seatPole || !ring.body) return false;
+  ring.body.quaternion.vmult(ringLocalNormal, pairWorldNormal);
+  return Math.abs(ring.body.position.x - ring.seatPole.x) < .18
+    && Math.abs(ring.body.position.y - ring.seatTargetY) < .28
+    && pairWorldNormal.y > Math.cos(RING_SEAT_MAX_TILT);
+}
+
 function applyRingPairSeparation() {
   for (let firstIndex = 0; firstIndex < rings.length; firstIndex++) {
     const first = rings[firstIndex];
@@ -1115,8 +1125,8 @@ function applyRingPairSeparation() {
       const second = rings[secondIndex];
       if (!second.body) continue;
       const sameSeatPole = first.scored && second.scored && first.seatPole === second.seatPole;
-      const firstSettled = sameSeatPole && Math.abs(first.body.position.x - first.seatPole.x) < .18 && Math.abs(first.body.position.y - first.seatTargetY) < .28;
-      const secondSettled = sameSeatPole && Math.abs(second.body.position.x - second.seatPole.x) < .18 && Math.abs(second.body.position.y - second.seatTargetY) < .28;
+      const firstSettled = sameSeatPole && ringSeatIsStable(first);
+      const secondSettled = sameSeatPole && ringSeatIsStable(second);
       if (firstSettled && secondSettled) continue;
       const dx = second.body.position.x - first.body.position.x;
       const dy = second.body.position.y - first.body.position.y;
@@ -1155,7 +1165,8 @@ function applyCannonForces(dt) {
     // El control vertical sigue siendo el centro de la jugabilidad: ↑ / ↓ y
     // beta del giroscopio también pueden levantar un aro ensartado. Z no es
     // un control: solo conserva el grosor volumétrico de los contactos 3D.
-    body.force.y += -state.tiltY * controlMass * 4.4;
+    const verticalControlAcceleration = ring.scored ? RING_SEATED_CONTROL_ACCELERATION : 4.4;
+    body.force.y += -state.tiltY * controlMass * verticalControlAcceleration;
     body.torque.x += -body.angularVelocity.x * (1.1 + submerged * 1.8);
     body.torque.z += -body.angularVelocity.z * (1.1 + submerged * 1.8);
 
