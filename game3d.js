@@ -69,8 +69,6 @@ const RING_SEAT_DAMPING = .8;
 const RING_SEAT_HORIZONTAL_STIFFNESS = 4.8;
 const RING_SEAT_HORIZONTAL_DAMPING = 2.4;
 const RING_SEATED_CONTROL_ACCELERATION = 9;
-const TILT_PENALTY_ACTIVATION_SECONDS = 3;
-const TILT_PENALTY_RELEASE_RATE = 3;
 const RING_PAIR_MIN_DISTANCE = .46;
 const RING_PAIR_SEPARATION_STIFFNESS = 18;
 const RING_PAIR_SEPARATION_DAMPING = 5;
@@ -599,11 +597,7 @@ function createPole(def) {
   poleGroup.add(group);
   return {
     group, shaft, top, beacon, label, reqLabel, x: def.x, baseX: def.x, h: def.h, spd: def.spd || 0, phase: Math.random() * TAU,
-    capacity, reqColor: hasRequirement ? def.rc : -1, reqCount: def.rn || 0, rings: [], lastColor: -1, combo: 0, vX: 0, previousX: def.x,
-    // Penalización independiente: el temporizador se llena en 3 s y se vacía
-    // tres veces más deprisa al soltar ↑/↓. Al vaciarse después de un disparo
-    // permite repetir la expulsión en otros 3 s de presión continua.
-    tiltPenaltyCharge: 0
+    capacity, reqColor: hasRequirement ? def.rc : -1, reqCount: def.rn || 0, rings: [], lastColor: -1, combo: 0, vX: 0, previousX: def.x
   };
 }
 
@@ -963,67 +957,6 @@ function updateTilt(dt) {
   vFill.style.width = `${hy}px`; vFill.style.left = `${state.tiltY < 0 ? verticalWidth - hy : verticalWidth}px`;
 }
 
-function verticalPenaltyPressed() {
-  return Boolean(input.keys.ArrowUp || input.keys.ArrowDown);
-}
-
-function updateTiltPenalty(dt) {
-  const pressed = verticalPenaltyPressed();
-  let expelled = 0;
-  for (const pole of poles) {
-    // Un palo sin aros no puede recibir la penalización; si quedaba carga
-    // pendiente, la devuelve rápidamente igual que al soltar el control.
-    if (!pressed || pole.rings.length === 0) {
-      pole.tiltPenaltyCharge = Math.max(0, pole.tiltPenaltyCharge - dt * TILT_PENALTY_RELEASE_RATE);
-      continue;
-    }
-    pole.tiltPenaltyCharge = Math.min(
-      TILT_PENALTY_ACTIVATION_SECONDS,
-      pole.tiltPenaltyCharge + dt
-    );
-    if (pole.tiltPenaltyCharge < TILT_PENALTY_ACTIVATION_SECONDS) continue;
-
-    // Se expulsa el aro superior ya asentado usando exactamente la salida
-    // física existente: detachScoredRing libera el cuerpo y launchEscapingRing
-    // aplica el impulso Cannon-es, sin recolocar ni teletransportar el aro.
-    const ring = pole.rings[pole.rings.length - 1];
-    pole.tiltPenaltyCharge = 0;
-    if (!ring) continue;
-    detachScoredRing(ring, pole, true);
-    expelled++;
-  }
-  if (expelled > 0) {
-    sfxRingRelease();
-    vibrate(35);
-    showToast(expelled === 1 ? 'PENALIZACIÓN · ARO EXPULSADO' : `PENALIZACIÓN · ${expelled} AROS EXPULSADOS`);
-  }
-}
-
-function updateTiltPenaltyIndicators() {
-  const indicators = $('indicators');
-  const hFill = $('hFill');
-  const vFill = $('vFill');
-  const held = !state.paused && !state.gameOver && verticalPenaltyPressed();
-  const maxCharge = poles.reduce((highest, pole) => Math.max(highest, pole.tiltPenaltyCharge || 0), 0);
-  const progress = clamp(maxCharge / TILT_PENALTY_ACTIVATION_SECONDS, 0, 1);
-  const active = held && progress > 0;
-  if (!active) {
-    indicators.classList.remove('penalty');
-    indicators.style.removeProperty('--penalty-alpha');
-    hFill.style.removeProperty('opacity');
-    vFill.style.removeProperty('opacity');
-    return;
-  }
-
-  // El pulso se acelera con la carga: el jugador ve la penalización antes de
-  // la expulsión y recibe una alarma cada vez más insistente al seguir pulsando.
-  const flashRate = 2.4 + progress * 8;
-  const pulse = .28 + .72 * ((Math.sin(state.elapsed * TAU * flashRate) + 1) * .5);
-  indicators.classList.add('penalty');
-  indicators.style.setProperty('--penalty-alpha', pulse.toFixed(3));
-  indicators.style.setProperty('--penalty-progress', progress.toFixed(3));
-}
-
 function countColorCombos(pole) {
   const counts = {};
   for (const ring of pole.rings) counts[ring.ci] = (counts[ring.ci] || 0) + 1;
@@ -1296,18 +1229,12 @@ function launchEscapingRing(ring, pole) {
   const escapeSide = Math.sign(body.position.x - pole.x) || (Math.random() < .5 ? -1 : 1);
   body.force.set(0, 0, 0);
   body.torque.set(0, 0, 0);
-  // Un aro penalizado puede estar asentado muy abajo del palo. El impulso
-  // vertical se calcula para darle altura suficiente para superar la punta,
-  // pero sigue siendo un lanzamiento Cannon-es: no se corrige su posición ni
-  // se fija la trayectoria. Los aros que ya salen por la punta reciben como
-  // mínimo el impulso de escape original.
-  const distanceToTip = Math.max(0, BASE_Y + pole.h - body.position.y);
-  const launchClearance = clamp(distanceToTip + .35, .35, 3.65);
-  const launchVelocity = Math.sqrt(2 * Math.abs(GRAVITY) * launchClearance) + .35;
-  const upwardImpulse = clamp(launchVelocity * body.mass, .82, 6);
+  // La salida normal ocurre al cruzar la punta: basta el impulso de escape
+  // original. La posición, la rotación y la trayectoria siguen siendo de
+  // Cannon-es, sin el lanzamiento reforzado que usaba la antigua mecánica.
   body.applyImpulse(new CANNON.Vec3(
     escapeSide * (1.2 + Math.random() * .25) + pole.vX * .1,
-    upwardImpulse,
+    .82 + Math.random() * .24,
     0
   ), body.position);
   body.angularVelocity.x += (Math.random() - .5) * 2.2;
@@ -1496,7 +1423,6 @@ function updateGame(dt) {
   updateGamepad();
   updateCamera(dt);
   if (state.paused || state.gameOver) {
-    updateTiltPenaltyIndicators();
     updateWater(dt);
     updateJetVisuals(dt);
     updateParticles(dt);
@@ -1506,8 +1432,6 @@ function updateGame(dt) {
   state.elapsed += dt;
   $('tV').textContent = formatTime(state.elapsed);
   updateTilt(dt);
-  updateTiltPenalty(dt);
-  updateTiltPenaltyIndicators();
   updateWater(dt);
   updateJetVisuals(dt);
   updateJetEffects(dt);

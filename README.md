@@ -24,7 +24,6 @@ Water Game Arcade EX ya no es un canvas 2D: el tablero completo se renderiza con
 - 🎯 Enceste con captura física suave: el contacto del diámetro interior guía el aro sin teletransporte ni captura por roce exterior.
 - 🎮 Diez niveles: cinco clásicos y cinco niveles con requisitos de color.
 - 🔥 Combos, bonus de tiempo, bonus de color perfecto y aros pesados al quedar ensartados.
-- ⚠️ Mantener `↑` o `↓` durante 3 segundos penaliza cada palo con aros: expulsa físicamente uno y repite la salida cada 3 segundos; las barras parpadean en rojo con frecuencia creciente.
 - 📱 Controles táctiles, teclado, giroscopio, vibración y pantalla completa.
 - 👁️ Cinco paletas accesibles con contrastes de color diferenciados.
 - 💾 Ranking local y sincronización global opcional con Firebase.
@@ -44,7 +43,7 @@ Ensarta los **20 aros** en los tres palos. Para completar un nivel necesitas al 
 | Reiniciar | `R` | `↺` | — |
 | Menú | — | `☰` | — |
 
-El juego usa una configuración 2.5D: los aros y los palos comparten el mismo plano X/Y, mientras Z conserva únicamente el grosor necesario para resolver contactos. Mueve los aros en X/Y y haz que el diámetro interior toque la punta del palo; la guía solo centra el aro desde ese contacto físico, sin capturar roces exteriores. Una vez ensartados pesan aproximadamente 2,5x más para que la inclinación continua no los levante con facilidad. La salida normal sigue dependiendo de la física; además, mantener `↑` o `↓` activa la penalización temporizada de 3 segundos, cuyo lanzamiento usa el mismo impulso Cannon-es y no teletransporta el aro. Soltar el control vacía la carga de cada palo tres veces más rápido que la llena.
+El juego usa una configuración 2.5D: los aros y los palos comparten el mismo plano X/Y, mientras Z conserva únicamente el grosor necesario para resolver contactos. Mueve los aros en X/Y y haz que el diámetro interior toque la punta del palo; la guía solo centra el aro desde ese contacto físico, sin capturar roces exteriores. Una vez ensartados pesan aproximadamente 2,5x más para que la inclinación continua no los levante con facilidad. La salida de los aros depende de la física Cannon-es y no de teletransportes.
 
 ## 🏆 Puntuación
 
