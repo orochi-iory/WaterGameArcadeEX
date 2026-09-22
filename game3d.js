@@ -4,7 +4,7 @@ import * as CANNON from './vendor/cannon-es.js';
 const $ = (id) => document.getElementById(id);
 // Referencia visible para distinguir rápidamente el build probado en una captura.
 // Incrementar este identificador en cada iteración funcional publicada.
-const BUILD_VERSION = 'R8';
+const BUILD_VERSION = 'R9';
 const MOBILE_DEVICE = /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent) || window.matchMedia?.('(pointer: coarse)').matches || window.innerWidth < 768;
 const WATER_GRID_X = MOBILE_DEVICE ? 24 : 48;
 const WATER_GRID_Y = MOBILE_DEVICE ? 10 : 18;
@@ -45,6 +45,8 @@ const RING_COLLISION_TUBE = RING_TUBE;
 const RING_HOLE_RADIUS = RING_RADIUS - RING_TUBE;
 const RING_OUTER_RADIUS = RING_RADIUS + RING_TUBE;
 const RING_MASS = .72;
+const RING_COLLISION_GROUP = 1;
+const TANK_COLLISION_GROUP = 2;
 // Un aro asentado recupera un poco más de inercia que en la primera prueba:
 // pesa 3x, pero sigue pudiendo salir con un impulso físico Cannon-es.
 const RING_SEATED_MASS = RING_MASS * 3;
@@ -225,10 +227,12 @@ physicsWorld.defaultContactMaterial.restitution = .34;
 // Contactos lubricados y de rebote corto: un aro no debe convertirse en una
 // pelota al tocar un palo, una pared o la base.
 physicsWorld.addContactMaterial(new CANNON.ContactMaterial(ringPhysicsMaterial, tankPhysicsMaterial, { friction: .004, restitution: .12 }));
-// Dos aros no deben rebotar como pelotas ni quedarse enganchados por la
-// fricción de sus colliders compuestos; el suelo conserva su rebote separado.
-physicsWorld.addContactMaterial(new CANNON.ContactMaterial(ringPhysicsMaterial, ringPhysicsMaterial, { friction: .002, restitution: .06 }));
+// Los aros no colisionan entre sí: el apilado puntuado se guía por sus
+// objetivos verticales y los contactos con suelo/palos siguen siendo físicos.
+// Esto evita que dos toros compuestos se enganchen y se lancen mutuamente.
 const physicsGround = new CANNON.Body({ mass: 0, material: tankPhysicsMaterial });
+physicsGround.collisionFilterGroup = TANK_COLLISION_GROUP;
+physicsGround.collisionFilterMask = RING_COLLISION_GROUP;
 // Conserva la cara superior en la misma cota que el suelo visual, pero con
 // más espesor hacia abajo para que un aro no pueda atravesarlo por tunneling.
 physicsGround.addShape(new CANNON.Box(new CANNON.Vec3(6, .32, 2.85)));
@@ -239,6 +243,8 @@ const physicsSideWalls = [];
 // interior visible, pero no se atraviesan cuando un aro llega con velocidad.
 for (const x of [-6.06, 6.06]) {
   const wall = new CANNON.Body({ mass: 0, material: tankPhysicsMaterial });
+  wall.collisionFilterGroup = TANK_COLLISION_GROUP;
+  wall.collisionFilterMask = RING_COLLISION_GROUP;
   wall.addShape(new CANNON.Box(new CANNON.Vec3(.2, 3.2, 2.7)));
   wall.position.set(x, -.1, .15); physicsWorld.addBody(wall); physicsSideWalls.push(wall);
 }
@@ -246,6 +252,8 @@ for (const x of [-6.06, 6.06]) {
 // caras interiores quedan a Z = ±.48, justo alrededor del radio de .48.
 for (const z of [-(PLAY_DEPTH / 2 + .1), PLAY_DEPTH / 2 + .1]) {
   const wall = new CANNON.Body({ mass: 0, material: tankPhysicsMaterial });
+  wall.collisionFilterGroup = TANK_COLLISION_GROUP;
+  wall.collisionFilterMask = RING_COLLISION_GROUP;
   wall.addShape(new CANNON.Box(new CANNON.Vec3(6.2, 3.2, .18)));
   wall.position.set(0, -.1, z); physicsWorld.addBody(wall); physicsSideWalls.push(wall);
 }
@@ -253,6 +261,8 @@ for (const z of [-(PLAY_DEPTH / 2 + .1), PLAY_DEPTH / 2 + .1]) {
 // impulso de salida atraviese el encuadre por tunneling sin ser un elemento
 // visual adicional.
 const physicsCeiling = new CANNON.Body({ mass: 0, material: tankPhysicsMaterial });
+physicsCeiling.collisionFilterGroup = TANK_COLLISION_GROUP;
+physicsCeiling.collisionFilterMask = RING_COLLISION_GROUP;
 physicsCeiling.addShape(new CANNON.Box(new CANNON.Vec3(6.2, .24, PLAY_DEPTH / 2 + .18)));
 // La cara inferior conserva la cota de la superficie visible.
 physicsCeiling.position.set(0, WATER_TOP + .24, 0);
@@ -666,6 +676,8 @@ function handleRingPoleContact(ring, event) {
 
 function createRingPhysicsBody(ring) {
   const body = new CANNON.Body({ mass: RING_MASS, material: ringPhysicsMaterial });
+  body.collisionFilterGroup = RING_COLLISION_GROUP;
+  body.collisionFilterMask = TANK_COLLISION_GROUP;
   body.linearDamping = .16;
   body.angularDamping = .24;
   body.linearFactor.set(1, 1, 0); // 2.5D: Z es grosor de contacto, no un carril de juego.
@@ -696,6 +708,8 @@ function createRingPhysicsBody(ring) {
 
 function createPolePhysicsBody(pole) {
   const body = new CANNON.Body({ mass: 0, material: tankPhysicsMaterial });
+  body.collisionFilterGroup = TANK_COLLISION_GROUP;
+  body.collisionFilterMask = RING_COLLISION_GROUP;
   // Mismo radio y misma resolución que CylinderGeometry del modelo visual.
   const shaft = new CANNON.Cylinder(POLE_SHAFT_TOP_RADIUS, POLE_SHAFT_RADIUS, pole.h, MOBILE_DEVICE ? 10 : 18);
   body.addShape(shaft, new CANNON.Vec3(0, pole.h / 2, 0));
