@@ -68,9 +68,14 @@ const RING_SEAT_DAMPING = .8;
 const RING_SEAT_HORIZONTAL_STIFFNESS = 4.8;
 const RING_SEAT_HORIZONTAL_DAMPING = 2.4;
 const RING_SEATED_CONTROL_ACCELERATION = 9;
+const TILT_PENALTY_ACTIVATION_SECONDS = 3;
+const TILT_PENALTY_RELEASE_RATE = 3;
 const RING_PAIR_MIN_DISTANCE = .5;
 const RING_PAIR_SEPARATION_STIFFNESS = 34;
 const RING_PAIR_SEPARATION_DAMPING = 7;
+const FLOOR_SUPPORT_STIFFNESS = 720;
+const FLOOR_SUPPORT_DAMPING = 90;
+const FLOOR_SUPPORT_MAX_FORCE = 320;
 const ringFlatQuaternion = new THREE.Quaternion().setFromEuler(new THREE.Euler(Math.PI / 2, 0, 0));
 const GRAVITY = -5.6;
 const NOZZLE_Y = BASE_Y - .02;
@@ -590,7 +595,11 @@ function createPole(def) {
   poleGroup.add(group);
   return {
     group, shaft, top, beacon, label, reqLabel, x: def.x, baseX: def.x, h: def.h, spd: def.spd || 0, phase: Math.random() * TAU,
-    capacity, reqColor: hasRequirement ? def.rc : -1, reqCount: def.rn || 0, rings: [], lastColor: -1, combo: 0, vX: 0, previousX: def.x
+    capacity, reqColor: hasRequirement ? def.rc : -1, reqCount: def.rn || 0, rings: [], lastColor: -1, combo: 0, vX: 0, previousX: def.x,
+    // Penalización independiente: el temporizador se llena en 3 s y se vacía
+    // tres veces más deprisa al soltar ↑/↓. Al vaciarse después de un disparo
+    // permite repetir la expulsión en otros 3 s de presión continua.
+    tiltPenaltyCharge: 0
   };
 }
 
@@ -950,6 +959,67 @@ function updateTilt(dt) {
   vFill.style.width = `${hy}px`; vFill.style.left = `${state.tiltY < 0 ? verticalWidth - hy : verticalWidth}px`;
 }
 
+function verticalPenaltyPressed() {
+  return Boolean(input.keys.ArrowUp || input.keys.ArrowDown);
+}
+
+function updateTiltPenalty(dt) {
+  const pressed = verticalPenaltyPressed();
+  let expelled = 0;
+  for (const pole of poles) {
+    // Un palo sin aros no puede recibir la penalización; si quedaba carga
+    // pendiente, la devuelve rápidamente igual que al soltar el control.
+    if (!pressed || pole.rings.length === 0) {
+      pole.tiltPenaltyCharge = Math.max(0, pole.tiltPenaltyCharge - dt * TILT_PENALTY_RELEASE_RATE);
+      continue;
+    }
+    pole.tiltPenaltyCharge = Math.min(
+      TILT_PENALTY_ACTIVATION_SECONDS,
+      pole.tiltPenaltyCharge + dt
+    );
+    if (pole.tiltPenaltyCharge < TILT_PENALTY_ACTIVATION_SECONDS) continue;
+
+    // Se expulsa el aro superior ya asentado usando exactamente la salida
+    // física existente: detachScoredRing libera el cuerpo y launchEscapingRing
+    // aplica el impulso Cannon-es, sin recolocar ni teletransportar el aro.
+    const ring = pole.rings[pole.rings.length - 1];
+    pole.tiltPenaltyCharge = 0;
+    if (!ring) continue;
+    detachScoredRing(ring, pole, true);
+    expelled++;
+  }
+  if (expelled > 0) {
+    sfxRingRelease();
+    vibrate(35);
+    showToast(expelled === 1 ? 'PENALIZACIÓN · ARO EXPULSADO' : `PENALIZACIÓN · ${expelled} AROS EXPULSADOS`);
+  }
+}
+
+function updateTiltPenaltyIndicators() {
+  const indicators = $('indicators');
+  const hFill = $('hFill');
+  const vFill = $('vFill');
+  const held = !state.paused && !state.gameOver && verticalPenaltyPressed();
+  const maxCharge = poles.reduce((highest, pole) => Math.max(highest, pole.tiltPenaltyCharge || 0), 0);
+  const progress = clamp(maxCharge / TILT_PENALTY_ACTIVATION_SECONDS, 0, 1);
+  const active = held && progress > 0;
+  if (!active) {
+    indicators.classList.remove('penalty');
+    indicators.style.removeProperty('--penalty-alpha');
+    hFill.style.removeProperty('opacity');
+    vFill.style.removeProperty('opacity');
+    return;
+  }
+
+  // El pulso se acelera con la carga: el jugador ve la penalización antes de
+  // la expulsión y recibe una alarma cada vez más insistente al seguir pulsando.
+  const flashRate = 2.4 + progress * 8;
+  const pulse = .28 + .72 * ((Math.sin(state.elapsed * TAU * flashRate) + 1) * .5);
+  indicators.classList.add('penalty');
+  indicators.style.setProperty('--penalty-alpha', pulse.toFixed(3));
+  indicators.style.setProperty('--penalty-progress', progress.toFixed(3));
+}
+
 function countColorCombos(pole) {
   const counts = {};
   for (const ring of pole.rings) counts[ring.ci] = (counts[ring.ci] || 0) + 1;
@@ -1021,12 +1091,24 @@ function applyFloorContactSupport(body) {
   // El contacto Cannon sigue siendo la defensa principal. Esta fuerza física
   // solo entra si la geometría inferior del aro ya ha penetrado el suelo, para
   // recuperar un cuerpo que haya cruzado la superficie durante un paso discreto.
+  // Se calcula con el punto inferior real de todos los Box del aro compuesto,
+  // no con el centro del cuerpo, porque el aro puede estar girado al caer.
   const lowest = ringLowestPointY(body);
   const predictedLowest = lowest + Math.min(0, body.velocity.y) * physicsFixedStep;
   const penetration = PHYSICS_FLOOR_TOP - Math.min(lowest, predictedLowest);
   if (penetration <= 0) return;
-  const supportForce = penetration * 420 - Math.min(0, body.velocity.y) * 48;
-  body.force.y += Math.min(180, Math.max(0, supportForce));
+
+  const downwardSpeed = Math.max(0, -body.velocity.y);
+  const supportForce = penetration * FLOOR_SUPPORT_STIFFNESS + downwardSpeed * FLOOR_SUPPORT_DAMPING;
+  body.force.y += Math.min(FLOOR_SUPPORT_MAX_FORCE, Math.max(0, supportForce));
+
+  // Si un paso discreto ya dejó el volumen bajo la cara superior, un impulso
+  // corto y físico corta la velocidad de entrada. No corrige la posición ni la
+  // rotación: el solver y la gravedad siguen resolviendo el contacto.
+  if (lowest < PHYSICS_FLOOR_TOP - .002 && downwardSpeed > .08) {
+    const recoverySpeed = Math.min(2.4, downwardSpeed * .6 + penetration / physicsFixedStep * .35);
+    body.applyImpulse(new CANNON.Vec3(0, recoverySpeed * body.mass, 0), body.position);
+  }
 }
 
 function applyRingOrientationAssist(ring, body, submerged) {
@@ -1394,6 +1476,7 @@ function updateGame(dt) {
   updateGamepad();
   updateCamera(dt);
   if (state.paused || state.gameOver) {
+    updateTiltPenaltyIndicators();
     updateWater(dt);
     updateJetVisuals(dt);
     updateParticles(dt);
@@ -1403,6 +1486,8 @@ function updateGame(dt) {
   state.elapsed += dt;
   $('tV').textContent = formatTime(state.elapsed);
   updateTilt(dt);
+  updateTiltPenalty(dt);
+  updateTiltPenaltyIndicators();
   updateWater(dt);
   updateJetVisuals(dt);
   updateJetEffects(dt);

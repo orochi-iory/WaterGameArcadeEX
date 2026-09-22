@@ -309,6 +309,20 @@ input { -webkit-user-select: text; user-select: text; touch-action: auto; }
 .indicator-fill { position: absolute; top: 1px; bottom: 1px; width: 0; border-radius: inherit; transition: width .08s, left .08s; }
 .indicator-fill.horizontal { background: linear-gradient(90deg, #36a6ff, #62f1ff); }
 .indicator-fill.vertical { background: linear-gradient(90deg, #ffae42, #ffe074); }
+/* Mantiene las barras legibles como aviso de penalización sin añadir un
+   indicador rígido al tablero: el ritmo del parpadeo lo actualiza game3d.js. */
+.indicators.penalty { --penalty-alpha: 1; }
+.indicators.penalty .indicator { color: #ff6878; text-shadow: 0 0 8px rgba(255, 46, 74, .72); }
+.indicators.penalty .indicator-bar {
+  border-color: #ff3f5a;
+  box-shadow: 0 0 7px rgba(255, 38, 70, .45), inset 0 0 5px rgba(255, 38, 70, .25);
+  opacity: var(--penalty-alpha);
+}
+.indicators.penalty .indicator-fill.horizontal,
+.indicators.penalty .indicator-fill.vertical {
+  background: linear-gradient(90deg, #ff304f, #ff9b91);
+  box-shadow: 0 0 7px rgba(255, 37, 69, .95);
+}
 
 .controls {
   position: relative;
