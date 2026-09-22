@@ -1,10 +1,10 @@
 import * as THREE from './vendor/three.module.js';
-import * as CANNON from './vendor/cannon-es.js';
+import * as PHYSICS from './vendor/rapier-physics.js';
 
 const $ = (id) => document.getElementById(id);
 // Referencia visible para distinguir rápidamente el build probado en una captura.
 // Incrementar este identificador en cada iteración funcional publicada.
-const BUILD_VERSION = 'R13';
+const BUILD_VERSION = 'R14';
 const MOBILE_DEVICE = /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent) || window.matchMedia?.('(pointer: coarse)').matches || window.innerWidth < 768;
 const WATER_GRID_X = MOBILE_DEVICE ? 24 : 48;
 const WATER_GRID_Y = MOBILE_DEVICE ? 10 : 18;
@@ -23,7 +23,7 @@ const TAU = Math.PI * 2;
 /* -------------------------------------------------------------------------- */
 /*  Water Game Arcade EX — 3D game layer                                     */
 /*  The original 2D canvas simulation is replaced by a Three.js scene whose  */
-/*  ring and pole dynamics are solved by Cannon-es; water, particles and     */
+/*  ring and pole dynamics are solved by Rapier; water, particles and     */
 /*  cabinet lighting remain actual Three.js objects.                          */
 /* -------------------------------------------------------------------------- */
 
@@ -48,7 +48,7 @@ const RING_MASS = .72;
 const RING_COLLISION_GROUP = 1;
 const TANK_COLLISION_GROUP = 2;
 // Un aro asentado recupera un poco más de inercia que en la primera prueba:
-// pesa 3.25x, pero sigue pudiendo salir con un impulso físico Cannon-es.
+// pesa 3.25x, pero sigue pudiendo salir con un impulso físico Rapier.
 const RING_SEATED_MASS = RING_MASS * 3.25;
 
 const RING_BUOYANCY_FORCE = 3.5;
@@ -57,7 +57,7 @@ const POLE_SHAFT_RADIUS = .12;
 const POLE_TIP_RADIUS = .11;
 // Entrada física estricta, usada cuando el aro llega sin asistencia.
 const RING_ENTRY_RADIUS = Math.max(.01, RING_HOLE_RADIUS - POLE_TIP_RADIUS);
-// Ventana corta para conservar un contacto Cannon con el eje o la punta
+// Ventana corta para conservar un contacto Rapier con el eje o la punta
 // mientras el centro termina de llegar al borde interior. No guía por sí sola.
 const RING_CAPTURE_RADIUS = RING_OUTER_RADIUS + POLE_TIP_RADIUS;
 // Ventana estrecha para reconocer el contacto del borde interior del agujero.
@@ -66,18 +66,11 @@ const RING_INNER_CONTACT_RADIUS = RING_ENTRY_RADIUS + .03;
 const RING_CAPTURE_VERTICAL = RING_OUTER_RADIUS + POLE_TIP_RADIUS + .1;
 const RING_ENTRY_MAX_TILT = Math.PI / 3;
 const RING_ORIENTATION_ASSIST = .62;
-const RING_SEAT_STIFFNESS = 1.0;
-const RING_SEAT_DAMPING = .8;
-const RING_SEAT_HORIZONTAL_STIFFNESS = 4.8;
-const RING_SEAT_HORIZONTAL_DAMPING = 2.4;
-const RING_SEATED_CONTROL_ACCELERATION = 9;
-// Límites de velocidad de salida aplicados mediante un impulso de frenado;
-// evitan que un aro conserve una aceleración extrema al abandonar un palo.
-const RING_RELEASE_MAX_UPWARD_SPEED = 2.4;
-const RING_RELEASE_MAX_HORIZONTAL_SPEED = 3.2;
-const FLOOR_SUPPORT_STIFFNESS = 720;
-const FLOOR_SUPPORT_DAMPING = 90;
-const FLOOR_SUPPORT_MAX_FORCE = 320;
+// La inclinación y los chorros son fuerzas del mismo tipo: no se multiplican
+// por la masa del aro asentado. Un aro con masa 3.25x recibe la misma fuerza y,
+// por tanto, acelera menos de forma natural.
+const RING_TILT_FORCE_X = RING_MASS * 4.8;
+const RING_TILT_FORCE_Y = RING_MASS * 9.2;
 const ringFlatQuaternion = new THREE.Quaternion().setFromEuler(new THREE.Euler(Math.PI / 2, 0, 0));
 const GRAVITY = -5.6;
 const NOZZLE_Y = BASE_Y - .02;
@@ -210,58 +203,60 @@ const scene = new THREE.Scene();
 scene.fog = new THREE.Fog(0x06182d, 8, 20);
 
 /* -------------------------------------------------------------------------- */
-/* Cannon-es rigid-body world                                                 */
+/* Rapier rigid-body world                                                     */
 /* -------------------------------------------------------------------------- */
-const physicsWorld = new CANNON.World({ gravity: new CANNON.Vec3(0, GRAVITY, 0) });
-physicsWorld.broadphase = new CANNON.SAPBroadphase(physicsWorld);
+const physicsWorld = new PHYSICS.World({ gravity: new PHYSICS.Vec3(0, GRAVITY, 0) });
+physicsWorld.broadphase = new PHYSICS.SAPBroadphase(physicsWorld);
 physicsWorld.allowSleep = true;
-physicsWorld.solver.iterations = MOBILE_DEVICE ? 14 : 24;
+physicsWorld.solver.iterations = MOBILE_DEVICE ? 10 : 16;
 physicsWorld.solver.tolerance = .00025;
-const ringPhysicsMaterial = new CANNON.Material('ring');
-const tankPhysicsMaterial = new CANNON.Material('tank');
+const ringPhysicsMaterial = new PHYSICS.Material('ring');
+const tankPhysicsMaterial = new PHYSICS.Material('tank');
+ringPhysicsMaterial.friction = .002; ringPhysicsMaterial.restitution = .06;
+tankPhysicsMaterial.friction = .004; tankPhysicsMaterial.restitution = .12;
 physicsWorld.defaultContactMaterial.friction = .018;
 physicsWorld.defaultContactMaterial.restitution = .34;
 // Contactos lubricados y de rebote corto: un aro no debe convertirse en una
 // pelota al tocar un palo, una pared o la base.
-physicsWorld.addContactMaterial(new CANNON.ContactMaterial(ringPhysicsMaterial, tankPhysicsMaterial, { friction: .004, restitution: .12 }));
+physicsWorld.addContactMaterial(new PHYSICS.ContactMaterial(ringPhysicsMaterial, tankPhysicsMaterial, { friction: .004, restitution: .12 }));
 // Los aros conservan contactos físicos entre sí, pero con fricción y rebote
 // mínimos. La geometría de cada toro usa esferas suaves para evitar que bordes
 // de cajas compuestas se enganchen y se lancen mutuamente.
-physicsWorld.addContactMaterial(new CANNON.ContactMaterial(ringPhysicsMaterial, ringPhysicsMaterial, { friction: .002, restitution: .06 }));
-const physicsGround = new CANNON.Body({ mass: 0, material: tankPhysicsMaterial });
+physicsWorld.addContactMaterial(new PHYSICS.ContactMaterial(ringPhysicsMaterial, ringPhysicsMaterial, { friction: .002, restitution: .06 }));
+const physicsGround = new PHYSICS.Body({ mass: 0, material: tankPhysicsMaterial });
 physicsGround.collisionFilterGroup = TANK_COLLISION_GROUP;
 physicsGround.collisionFilterMask = RING_COLLISION_GROUP;
 // Conserva la cara superior en la misma cota que el suelo visual, pero con
 // más espesor hacia abajo para que un aro no pueda atravesarlo por tunneling.
-physicsGround.addShape(new CANNON.Box(new CANNON.Vec3(6, .32, 2.85)));
+physicsGround.addShape(new PHYSICS.Box(new PHYSICS.Vec3(6, .32, 2.85)));
 physicsGround.position.set(0, PHYSICS_FLOOR_TOP - .32, .15);
 physicsWorld.addBody(physicsGround);
 const physicsSideWalls = [];
 // Colliders gruesos y desplazados hacia fuera: conservan la misma cara
 // interior visible, pero no se atraviesan cuando un aro llega con velocidad.
 for (const x of [-6.06, 6.06]) {
-  const wall = new CANNON.Body({ mass: 0, material: tankPhysicsMaterial });
+  const wall = new PHYSICS.Body({ mass: 0, material: tankPhysicsMaterial });
   wall.collisionFilterGroup = TANK_COLLISION_GROUP;
   wall.collisionFilterMask = RING_COLLISION_GROUP;
-  wall.addShape(new CANNON.Box(new CANNON.Vec3(.2, 3.2, 2.7)));
+  wall.addShape(new PHYSICS.Box(new PHYSICS.Vec3(.2, 3.2, 2.7)));
   wall.position.set(x, -.1, .15); physicsWorld.addBody(wall); physicsSideWalls.push(wall);
 }
 // La profundidad se limita al mismo orden de magnitud que la base: las
 // caras interiores quedan a Z = ±.48, justo alrededor del radio de .48.
 for (const z of [-(PLAY_DEPTH / 2 + .1), PLAY_DEPTH / 2 + .1]) {
-  const wall = new CANNON.Body({ mass: 0, material: tankPhysicsMaterial });
+  const wall = new PHYSICS.Body({ mass: 0, material: tankPhysicsMaterial });
   wall.collisionFilterGroup = TANK_COLLISION_GROUP;
   wall.collisionFilterMask = RING_COLLISION_GROUP;
-  wall.addShape(new CANNON.Box(new CANNON.Vec3(6.2, 3.2, .18)));
+  wall.addShape(new PHYSICS.Box(new PHYSICS.Vec3(6.2, 3.2, .18)));
   wall.position.set(0, -.1, z); physicsWorld.addBody(wall); physicsSideWalls.push(wall);
 }
 // Techo físico invisible grueso justo sobre la superficie. Impide que un
 // impulso de salida atraviese el encuadre por tunneling sin ser un elemento
 // visual adicional.
-const physicsCeiling = new CANNON.Body({ mass: 0, material: tankPhysicsMaterial });
+const physicsCeiling = new PHYSICS.Body({ mass: 0, material: tankPhysicsMaterial });
 physicsCeiling.collisionFilterGroup = TANK_COLLISION_GROUP;
 physicsCeiling.collisionFilterMask = RING_COLLISION_GROUP;
-physicsCeiling.addShape(new CANNON.Box(new CANNON.Vec3(6.2, .24, PLAY_DEPTH / 2 + .18)));
+physicsCeiling.addShape(new PHYSICS.Box(new PHYSICS.Vec3(6.2, .24, PLAY_DEPTH / 2 + .18)));
 // La cara inferior conserva la cota de la superficie visible.
 physicsCeiling.position.set(0, WATER_TOP + .24, 0);
 physicsWorld.addBody(physicsCeiling);
@@ -628,14 +623,13 @@ function createRing(ci, index) {
   ringGroup.add(mesh);
   return {
     mesh, ci, color: info.hex, index, x: 0, y: 0, z: 0, previousX: 0, previousY: 0, previousZ: 0,
-    scored: false, pole: null, contactPole: null, capturePole: null, seatPole: null, seatTargetY: 0, escapePole: null, descentAssist: 0, points: 0,
+    scored: false, pole: null, capturePole: null, seatPole: null, escapePole: null, descentAssist: 0, points: 0,
     angle: Math.random() * TAU, spin: (Math.random() - .5) * 1.4,
     pitch: (Math.random() - .5) * .12, roll: (Math.random() - .5) * .12
   };
 }
 
 function clearRingPoleCapture(ring) {
-  ring.contactPole = null;
   ring.capturePole = null;
   if (ring.scored || !ring.body || ring.body.mass === RING_MASS) return;
   ring.body.mass = RING_MASS;
@@ -645,7 +639,6 @@ function clearRingPoleCapture(ring) {
 
 function beginRingPoleCapture(ring, pole) {
   if (ring.scored || pole.rings.length >= pole.capacity) return;
-  ring.contactPole = pole;
   ring.capturePole = pole;
   if (ring.body.mass !== RING_SEATED_MASS) {
     ring.body.mass = RING_SEATED_MASS;
@@ -654,61 +647,42 @@ function beginRingPoleCapture(ring, pole) {
   }
 }
 
-function handleRingPoleContact(ring, event) {
-  const poleBody = event.body;
-  const pole = poleBody?.userData?.pole;
-  const contact = event.contact;
-  if (ring.scored || !pole || !contact || pole.rings.length >= pole.capacity) return;
-  // Algunas parejas de formas invierten si/sj dentro de Cannon; buscamos la
-  // forma del palo por identidad para no confundirla con un segmento del aro.
-  const poleShape = poleBody.shapes.includes(contact.si) ? contact.si : contact.sj;
-  if (poleShape !== poleBody.shapes[0] && poleShape !== poleBody.shapes[1]) return;
-  const topY = BASE_Y + pole.h;
-  const radial = Math.hypot(ring.body.position.x - pole.x, ring.body.position.z);
-  if (radial > RING_CAPTURE_RADIUS || ring.body.position.y < topY - RING_CAPTURE_VERTICAL - .12 || ring.body.position.y > topY + RING_CAPTURE_VERTICAL + .12) return;
-  // Guardamos el contacto físico; la masa solo cambia cuando el centro ha
-  // llegado al borde interior del agujero, no al primer roce exterior.
-  ring.contactPole = pole;
-  if (radial <= RING_INNER_CONTACT_RADIUS && ring.body.velocity.y <= .2) beginRingPoleCapture(ring, pole);
-}
-
 function createRingPhysicsBody(ring) {
-  const body = new CANNON.Body({ mass: RING_MASS, material: ringPhysicsMaterial });
+  const body = new PHYSICS.Body({ mass: RING_MASS, material: ringPhysicsMaterial });
   body.collisionFilterGroup = RING_COLLISION_GROUP;
   body.collisionFilterMask = TANK_COLLISION_GROUP | RING_COLLISION_GROUP;
   body.linearDamping = .14;
   body.angularDamping = .12;
-  body.linearFactor.set(1, 1, 0); // 2.5D: Z es grosor de contacto, no un carril de juego.
+  // Rapier resuelve el volumen completo; Z no está bloqueado ni convertido en
+  // un carril. Las paredes de profundidad solo limitan el tanque físico.
   body.allowSleep = false;
   // El aro es un compuesto de esferas suaves distribuidas sobre el toro
   // visual. Conservan el agujero interior, pero evitan las esquinas de las
   // cajas que estaban formando enganches y lanzamientos entre aros.
-  const segments = MOBILE_DEVICE ? 10 : 12;
+  const segments = MOBILE_DEVICE ? 12 : 16;
   for (let i = 0; i < segments; i++) {
     const angle = i / segments * TAU;
-    const offset = new CANNON.Vec3(Math.cos(angle) * RING_RADIUS, 0, Math.sin(angle) * RING_RADIUS);
-    body.addShape(new CANNON.Sphere(RING_COLLISION_TUBE), offset);
+    const offset = new PHYSICS.Vec3(Math.cos(angle) * RING_RADIUS, 0, Math.sin(angle) * RING_RADIUS);
+    body.addShape(new PHYSICS.Sphere(RING_COLLISION_TUBE), offset);
   }
   body.position.set(ring.x, ring.y, ring.z);
   ring.previousX = body.position.x; ring.previousY = body.position.y; ring.previousZ = body.position.z;
   body.quaternion.setFromEuler(ring.pitch, ring.angle, ring.roll, 'XYZ');
   body.angularVelocity.set((Math.random() - .5) * .5, ring.spin, (Math.random() - .5) * .5);
-  body.userData = { ring };
-  body.addEventListener('collide', (event) => handleRingPoleContact(ring, event));
   physicsWorld.addBody(body);
   ring.body = body;
   physicsRingBodies.push(body);
 }
 
 function createPolePhysicsBody(pole) {
-  const body = new CANNON.Body({ mass: 0, material: tankPhysicsMaterial });
+  const body = new PHYSICS.Body({ mass: 0, material: tankPhysicsMaterial });
   body.collisionFilterGroup = TANK_COLLISION_GROUP;
   body.collisionFilterMask = RING_COLLISION_GROUP;
   // Mismo radio y misma resolución que CylinderGeometry del modelo visual.
-  const shaft = new CANNON.Cylinder(POLE_SHAFT_TOP_RADIUS, POLE_SHAFT_RADIUS, pole.h, MOBILE_DEVICE ? 10 : 18);
-  body.addShape(shaft, new CANNON.Vec3(0, pole.h / 2, 0));
-  body.addShape(new CANNON.Sphere(POLE_TIP_RADIUS), new CANNON.Vec3(0, pole.h, 0));
-  body.addShape(new CANNON.Cylinder(.38, .48, .18, MOBILE_DEVICE ? 12 : 24), new CANNON.Vec3(0, .09, 0));
+  const shaft = new PHYSICS.Cylinder(POLE_SHAFT_TOP_RADIUS, POLE_SHAFT_RADIUS, pole.h, MOBILE_DEVICE ? 10 : 18);
+  body.addShape(shaft, new PHYSICS.Vec3(0, pole.h / 2, 0));
+  body.addShape(new PHYSICS.Sphere(POLE_TIP_RADIUS), new PHYSICS.Vec3(0, pole.h, 0));
+  body.addShape(new PHYSICS.Cylinder(.38, .48, .18, MOBILE_DEVICE ? 12 : 24), new PHYSICS.Vec3(0, .09, 0));
   body.position.set(pole.x, BASE_Y, 0);
   body.userData = { pole };
   physicsWorld.addBody(body);
@@ -859,7 +833,7 @@ function updateWater(dt) {
 function jetDirection(index) {
   const swing = Math.sin(state.elapsed * 1.8 + index * 2.1) * .48 + Math.sin(state.elapsed * 4.7 + index) * .06 + state.tiltX * .045;
   // El chorro trabaja en el plano X/Y. El grosor Z existe solo para que
-  // Cannon pueda resolver contactos entre cuerpos con volumen.
+  // Rapier pueda resolver contactos entre cuerpos con volumen.
   return new THREE.Vector3(Math.sin(swing), Math.cos(swing), 0).normalize();
 }
 
@@ -984,15 +958,9 @@ function colorRequirementsMet() {
   return poles.every((pole) => pole.reqColor < 0 || pole.rings.filter((ring) => ring.ci === pole.reqColor).length >= pole.reqCount);
 }
 
-const cannonForce = new CANNON.Vec3();
-const cannonPoint = new CANNON.Vec3();
-const ringLocalNormal = new CANNON.Vec3(0, 1, 0);
-const ringWorldNormal = new CANNON.Vec3();
-const floorShapeQuaternion = new CANNON.Quaternion();
-const floorShapeCenter = new CANNON.Vec3();
-const floorShapeAxisX = new CANNON.Vec3();
-const floorShapeAxisY = new CANNON.Vec3();
-const floorShapeAxisZ = new CANNON.Vec3();
+const physicsForce = new PHYSICS.Vec3();
+const ringLocalNormal = new PHYSICS.Vec3(0, 1, 0);
+const ringWorldNormal = new PHYSICS.Vec3();
 function submergedFraction(y) {
   return clamp((WATER_TOP - y + RING_TUBE) / (RING_TUBE * 2.2), 0, 1);
 }
@@ -1012,59 +980,12 @@ function updatePhysicsPoleMotion(dt) {
     if (pole.body) {
       pole.body.position.x = pole.x;
       pole.body.velocity.set(pole.vX, 0, 0);
-      pole.body.aabbNeedsUpdate = true;
-      pole.body.updateAABB();
     }
     updatePoleLabel(pole);
   }
   // SAP conserva una lista ordenada; un nivel con palos móviles debe volver a
   // ordenarla antes de buscar contactos para no perder choques al cruzar X.
   physicsWorld.broadphase.dirty = true;
-}
-
-function ringLowestPointY(body) {
-  let lowest = Infinity;
-  for (let index = 0; index < body.shapes.length; index++) {
-    const shape = body.shapes[index];
-    body.quaternion.vmult(body.shapeOffsets[index], floorShapeCenter);
-    if (shape.radius !== undefined) {
-      lowest = Math.min(lowest, body.position.y + floorShapeCenter.y - shape.radius);
-      continue;
-    }
-    const halfExtents = shape.halfExtents;
-    if (!halfExtents) continue;
-    body.quaternion.mult(body.shapeOrientations[index], floorShapeQuaternion);
-    floorShapeAxisX.set(halfExtents.x, 0, 0); floorShapeQuaternion.vmult(floorShapeAxisX, floorShapeAxisX);
-    floorShapeAxisY.set(0, halfExtents.y, 0); floorShapeQuaternion.vmult(floorShapeAxisY, floorShapeAxisY);
-    floorShapeAxisZ.set(0, 0, halfExtents.z); floorShapeQuaternion.vmult(floorShapeAxisZ, floorShapeAxisZ);
-    const extentY = Math.abs(floorShapeAxisX.y) + Math.abs(floorShapeAxisY.y) + Math.abs(floorShapeAxisZ.y);
-    lowest = Math.min(lowest, body.position.y + floorShapeCenter.y - extentY);
-  }
-  return lowest;
-}
-
-function applyFloorContactSupport(body) {
-  // El contacto Cannon sigue siendo la defensa principal. Esta fuerza física
-  // solo entra si la geometría inferior del aro ya ha penetrado el suelo, para
-  // recuperar un cuerpo que haya cruzado la superficie durante un paso discreto.
-  // Se calcula con el punto inferior real de todos los colliders del aro
-  // compuesto, no con el centro del cuerpo, porque puede estar girado al caer.
-  const lowest = ringLowestPointY(body);
-  const predictedLowest = lowest + Math.min(0, body.velocity.y) * physicsFixedStep;
-  const penetration = PHYSICS_FLOOR_TOP - Math.min(lowest, predictedLowest);
-  if (penetration <= 0) return;
-
-  const downwardSpeed = Math.max(0, -body.velocity.y);
-  const supportForce = penetration * FLOOR_SUPPORT_STIFFNESS + downwardSpeed * FLOOR_SUPPORT_DAMPING;
-  body.force.y += Math.min(FLOOR_SUPPORT_MAX_FORCE, Math.max(0, supportForce));
-
-  // Si un paso discreto ya dejó el volumen bajo la cara superior, un impulso
-  // corto y físico corta la velocidad de entrada. No corrige la posición ni la
-  // rotación: el solver y la gravedad siguen resolviendo el contacto.
-  if (lowest < PHYSICS_FLOOR_TOP - .002 && downwardSpeed > .08) {
-    const recoverySpeed = Math.min(2.4, downwardSpeed * .6 + penetration / physicsFixedStep * .35);
-    body.applyImpulse(new CANNON.Vec3(0, recoverySpeed * body.mass, 0), body.position);
-  }
 }
 
 function applyRingOrientationAssist(ring, body, submerged) {
@@ -1090,74 +1011,55 @@ function applyRingOrientationAssist(ring, body, submerged) {
 
 function updateRingCapture(ring, body) {
   if (ring.scored) return;
-  const contactPole = ring.contactPole;
-  if (contactPole && !ring.capturePole) {
-    const topY = BASE_Y + contactPole.h;
-    const radial = Math.hypot(body.position.x - contactPole.x, body.position.z);
-    const outsideContact = contactPole.rings.length >= contactPole.capacity
-      || body.position.y < topY - RING_CAPTURE_VERTICAL - .12
-      || body.position.y > topY + RING_CAPTURE_VERTICAL + .12
-      || radial > RING_CAPTURE_RADIUS + .16;
-    if (outsideContact) {
-      clearRingPoleCapture(ring);
-      return;
-    }
-    if (radial <= RING_INNER_CONTACT_RADIUS && body.position.y <= topY + RING_CAPTURE_VERTICAL && body.velocity.y <= .2) {
-      beginRingPoleCapture(ring, contactPole);
-    }
+  // Rapier resuelve el contacto del palo; la captura solo se arma cuando el
+  // centro ya está dentro del agujero, nunca por el diámetro exterior.
+  if (!ring.capturePole && body.velocity.y <= .2) {
+    const candidate = poles.find((pole) => {
+      if (pole.rings.length >= pole.capacity) return false;
+      const topY = BASE_Y + pole.h;
+      const radial = Math.hypot(body.position.x - pole.x, body.position.z);
+      return body.position.y >= topY - RING_CAPTURE_VERTICAL - .12
+        && body.position.y <= topY + RING_CAPTURE_VERTICAL + .12
+        && radial <= RING_INNER_CONTACT_RADIUS;
+    });
+    if (candidate) beginRingPoleCapture(ring, candidate);
   }
   const pole = ring.capturePole;
   if (!pole) return;
   const topY = BASE_Y + pole.h;
   const radial = Math.hypot(body.position.x - pole.x, body.position.z);
-  if (pole.rings.length >= pole.capacity || body.position.y < topY - RING_CAPTURE_VERTICAL - .12 || body.position.y > topY + RING_CAPTURE_VERTICAL + .12 || radial > RING_INNER_CONTACT_RADIUS + .16) {
+  if (pole.rings.length >= pole.capacity
+    || body.position.y < topY - RING_CAPTURE_VERTICAL - .12
+    || body.position.y > topY + RING_CAPTURE_VERTICAL + .12
+    || radial > RING_INNER_CONTACT_RADIUS + .16
+    || body.velocity.y > .2) {
     clearRingPoleCapture(ring);
     return;
   }
-  // La guía solo actúa mientras el aro desciende; no lo ancla ni lo acompaña
-  // como un carril si un chorro consigue levantarlo.
-  if (body.velocity.y > .2) return;
-  const centering = 1 - clamp(radial / (RING_INNER_CONTACT_RADIUS + .001), 0, 1);
-  const stiffness = 1.1 + centering * 2.8;
-  body.force.x += (pole.x - body.position.x) * stiffness - (body.velocity.x - pole.vX) * (.65 + centering * .55);
+  // La captura no crea un carril ni una fuerza de centrado: desde aquí solo
+  // cambia la masa real y Rapier resuelve el contacto con el palo.
 }
 
-function applyRingSeatForce(ring, body) {
-  const pole = ring.seatPole;
-  if (!ring.scored || !pole) return false;
-  const targetY = ring.seatTargetY;
-  // Una guía horizontal más firme evita que un aro ya puntuado quede
-  // enganchado por el borde mientras sigue cayendo, sin fijar su posición.
-  body.force.x += (pole.x - body.position.x) * RING_SEAT_HORIZONTAL_STIFFNESS - (body.velocity.x - pole.vX) * RING_SEAT_HORIZONTAL_DAMPING;
-  body.force.y += (targetY - body.position.y) * RING_SEAT_STIFFNESS - body.velocity.y * RING_SEAT_DAMPING;
-  return true;
-}
-
-function applyCannonForces(dt) {
+function applyRapierForces(dt) {
   const elapsed = state.elapsed;
   for (const ring of rings) {
     const body = ring.body;
     if (!body) continue;
     const submerged = submergedFraction(body.position.y);
-    applyRingSeatForce(ring, body);
-    applyFloorContactSupport(body);
     body.force.y += submerged * RING_BUOYANCY_FORCE;
     applyRingOrientationAssist(ring, body, submerged);
     // La asistencia solo actúa durante el descenso; en reposo el aro conserva
     // su giro libre y no se fuerza una postura horizontal.
     updateRingCapture(ring, body);
     const currentX = Math.sin(elapsed * .9 + body.position.y * .8) * .22 + Math.cos(elapsed * .55 + body.position.x * .35) * .1;
-    // La masa de la pila se conserva en 3.25x, pero el control de inclinación
-    // debe seguir aplicando la aceleración completa a un aro asentado. El
-    // chorro, en cambio, sigue siendo una fuerza física y sí nota ese peso.
-    const controlMass = ring.scored ? body.mass : RING_MASS;
+    // La masa de la pila se conserva en 3.25x. La inclinación aplica una
+    // fuerza fija, igual que un chorro, en vez de multiplicarse por la masa:
+    // Rapier deja que el aro asentado acelere menos por su propio peso.
     body.force.x += (currentX - body.velocity.x) * RING_MASS * .42 * submerged;
-    body.force.x += state.tiltX * controlMass * 3.4;
-    // El control vertical sigue siendo el centro de la jugabilidad: ↑ / ↓ y
-    // beta del giroscopio también pueden levantar un aro ensartado. Z no es
-    // un control: solo conserva el grosor volumétrico de los contactos 3D.
-    const verticalControlAcceleration = ring.scored ? RING_SEATED_CONTROL_ACCELERATION : 4.4;
-    body.force.y += -state.tiltY * controlMass * verticalControlAcceleration;
+    body.force.x += state.tiltX * RING_TILT_FORCE_X;
+    // La inclinación vertical usa la misma regla física para aros libres y
+    // asentados; ↑ / ↓ solo cambia la fuerza aplicada al agua y al aro.
+    body.force.y += -state.tiltY * RING_TILT_FORCE_Y;
     // El agua amortigua un poco el giro, pero no lo congela. Durante el
     // descenso la asistencia de orientación puede frenarlo suavemente; fuera
     // de esa fase se deja bastante más libertad angular.
@@ -1179,15 +1081,15 @@ function applyCannonForces(dt) {
       const turbulenceX = Math.sin(elapsed * 8.2 + body.position.y * 2.3 + j * 1.7) * 1.35
         + Math.cos(elapsed * 5.4 + body.position.x * 2.8 - j) * .75;
       const turbulenceY = Math.sin(elapsed * 6.7 + body.position.x * 1.9 + j * 2.2) * .7;
-      cannonForce.set(
+      physicsForce.set(
         (direction.x * JET_FORCE_X + turbulenceX) * falloff,
         (direction.y * JET_FORCE_Y + turbulenceY) * falloff,
         0
       );
-      // Cannon recibe el punto en coordenadas de mundo: el chorro empuja la
-      // zona inferior del aro, no un punto calculado como si fuese local.
-      cannonPoint.set(body.position.x, body.position.y - .24, 0);
-      body.applyForce(cannonForce, cannonPoint);
+      // El chorro aplica una fuerza física en el centro de masa. No se añade
+      // un brazo artificial que haga que el aro se incline y se enganche al
+      // palo solo por estar debajo del toro.
+      body.applyForce(physicsForce, body.position);
     }
   }
 }
@@ -1205,19 +1107,9 @@ function launchEscapingRing(ring, pole) {
   const escapeSide = Math.sign(body.position.x - pole.x) || (Math.random() < .5 ? -1 : 1);
   body.force.set(0, 0, 0);
   body.torque.set(0, 0, 0);
-  // Si el aro llegó a la punta con mucha velocidad por la inclinación, se
-  // aplica un impulso físico contrario antes del pequeño lanzamiento lateral.
-  // No se recoloca el cuerpo ni se fija su trayectoria: solo se elimina la
-  // inercia extrema que podía atravesar el techo y hacer desaparecer el aro.
-  const upwardExcess = Math.max(0, body.velocity.y - RING_RELEASE_MAX_UPWARD_SPEED);
-  if (upwardExcess > 0) body.applyImpulse(new CANNON.Vec3(0, -upwardExcess * body.mass, 0), body.position);
-  const horizontalSpeed = Math.abs(body.velocity.x);
-  const horizontalExcess = Math.max(0, horizontalSpeed - RING_RELEASE_MAX_HORIZONTAL_SPEED);
-  if (horizontalExcess > 0) body.applyImpulse(new CANNON.Vec3(-Math.sign(body.velocity.x) * horizontalExcess * body.mass, 0, 0), body.position);
-  // La salida normal ocurre al cruzar la punta: basta el impulso de escape
-  // original. La posición, la rotación y la trayectoria siguen siendo de
-  // Cannon-es.
-  body.applyImpulse(new CANNON.Vec3(
+  // La salida normal ocurre al cruzar la punta: solo se añade un impulso
+  // físico breve; la posición y la trayectoria siguen siendo de Rapier.
+  body.applyImpulse(new PHYSICS.Vec3(
     escapeSide * (1.2 + Math.random() * .25) + pole.vX * .1,
     .82 + Math.random() * .24,
     0
@@ -1228,34 +1120,11 @@ function launchEscapingRing(ring, pole) {
   body.wakeUp();
 }
 
-function reflowPoleSeats(pole) {
-  pole.rings.forEach((ring, index) => {
-    ring.seatTargetY = BASE_Y + .24 + index * RING_STACK_STEP;
-  });
-}
-
-function guideScoredRingIntoPole(ring, pole) {
-  const body = ring.body;
-  const xError = clamp(pole.x - body.position.x, -.16, .16);
-  const relativeXVelocity = body.velocity.x - pole.vX;
-  // Pequeño impulso físico de entrada: corrige el roce justo al puntuar,
-  // pero no teletransporta ni congela el cuerpo.
-  body.applyImpulse(new CANNON.Vec3(
-    clamp(xError * 1.35 - relativeXVelocity * .12, -.28, .28),
-    0,
-    0
-  ), body.position);
-  body.wakeUp();
-}
-
 function registerPhysicsScore(ring, pole) {
-  const stackIndex = pole.rings.length;
-  ring.scored = true; ring.pole = pole; ring.contactPole = null; ring.capturePole = null;
+  ring.scored = true; ring.pole = pole; ring.capturePole = null;
   ring.seatPole = pole;
-  ring.seatTargetY = BASE_Y + .24 + stackIndex * RING_STACK_STEP;
   ring.body.mass = RING_SEATED_MASS;
   ring.body.updateMassProperties();
-  guideScoredRingIntoPole(ring, pole);
   pole.rings.push(ring);
   const combo = pole.lastColor === ring.ci ? pole.combo + 1 : 1;
   pole.lastColor = ring.ci; pole.combo = combo; ring.points = 100 * combo;
@@ -1275,11 +1144,10 @@ function registerPhysicsScore(ring, pole) {
 function detachScoredRing(ring, pole, launch = false) {
   const index = pole.rings.indexOf(ring);
   if (index >= 0) pole.rings.splice(index, 1);
-  reflowPoleSeats(pole);
   state.score = Math.max(0, state.score - (ring.points || 100));
   ring.body.mass = RING_MASS;
   ring.body.updateMassProperties();
-  ring.scored = false; ring.pole = null; ring.contactPole = null; ring.capturePole = null; ring.seatPole = null; ring.seatTargetY = 0; ring.escapePole = launch ? pole : null; ring.points = 0;
+  ring.scored = false; ring.pole = null; ring.capturePole = null; ring.seatPole = null; ring.escapePole = launch ? pole : null; ring.points = 0;
   rebuildPoleCombo(pole);
   if (state.winQueued) { state.winQueued = false; window.clearTimeout(state.winTimer); state.winTimer = 0; }
   if (launch) launchEscapingRing(ring, pole);
@@ -1375,12 +1243,12 @@ function syncPhysicsToScene() {
   }
 }
 
-function stepCannonPhysics(dt) {
+function stepRapierPhysics(dt) {
   physicsAccumulator = Math.min(physicsAccumulator + Math.min(dt, .05), .12);
   let steps = 0;
   while (physicsAccumulator >= physicsFixedStep && steps < 4) {
     updatePhysicsPoleMotion(physicsFixedStep);
-    applyCannonForces(physicsFixedStep);
+    applyRapierForces(physicsFixedStep);
     for (const ring of rings) {
       if (!ring.body) continue;
       ring.previousX = ring.body.position.x;
@@ -1420,7 +1288,7 @@ function updateGame(dt) {
   updateWater(dt);
   updateJetVisuals(dt);
   updateJetEffects(dt);
-  stepCannonPhysics(dt);
+  stepRapierPhysics(dt);
   updateParticles(dt);
   updateUI();
 }
