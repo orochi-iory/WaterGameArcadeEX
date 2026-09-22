@@ -1109,6 +1109,19 @@ function ringCrossedPoleTip(ring, pole, thresholdY, allowedRadius = RING_ENTRY_R
   return Math.hypot(crossingX - crossingPoleX, crossingZ) <= allowedRadius;
 }
 
+function ringCrossedPoleTipUpward(ring, pole, thresholdY, allowedRadius = RING_CAPTURE_RADIUS) {
+  const body = ring.body;
+  const previousY = Number.isFinite(ring.previousY) ? ring.previousY : body.position.y;
+  const rise = body.position.y - previousY;
+  if (body.position.y <= thresholdY || previousY > thresholdY || rise <= .0001) return false;
+  const crossingT = clamp((thresholdY - previousY) / rise, 0, 1);
+  const previousPoleX = Number.isFinite(pole.previousX) ? pole.previousX : pole.x;
+  const crossingX = lerp(ring.previousX, body.position.x, crossingT);
+  const crossingZ = lerp(ring.previousZ, body.position.z, crossingT);
+  const crossingPoleX = lerp(previousPoleX, pole.x, crossingT);
+  return Math.hypot(crossingX - crossingPoleX, crossingZ) <= allowedRadius;
+}
+
 function updateEscapingRingState(ring) {
   const pole = ring.escapePole;
   if (!pole) return false;
@@ -1123,8 +1136,8 @@ function updateEscapingRingState(ring) {
 function checkSeatedRingExits() {
   for (const ring of rings) {
     if (!ring.scored || !ring.seatPole || !ring.body) continue;
-    const topY = BASE_Y + ring.seatPole.h;
-    if (ring.previousY <= topY && ring.body.position.y > topY) releaseRingOverTip(ring);
+    const pole = ring.seatPole;
+    if (ringCrossedPoleTipUpward(ring, pole, BASE_Y + pole.h, RING_CAPTURE_RADIUS)) releaseRingOverTip(ring);
   }
 }
 
