@@ -4,7 +4,7 @@ import * as CANNON from './vendor/cannon-es.js';
 const $ = (id) => document.getElementById(id);
 // Referencia visible para distinguir rápidamente el build probado en una captura.
 // Incrementar este identificador en cada iteración funcional publicada.
-const BUILD_VERSION = 'R12';
+const BUILD_VERSION = 'R13';
 const MOBILE_DEVICE = /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent) || window.matchMedia?.('(pointer: coarse)').matches || window.innerWidth < 768;
 const WATER_GRID_X = MOBILE_DEVICE ? 24 : 48;
 const WATER_GRID_Y = MOBILE_DEVICE ? 10 : 18;
@@ -48,8 +48,8 @@ const RING_MASS = .72;
 const RING_COLLISION_GROUP = 1;
 const TANK_COLLISION_GROUP = 2;
 // Un aro asentado recupera un poco más de inercia que en la primera prueba:
-// pesa 3x, pero sigue pudiendo salir con un impulso físico Cannon-es.
-const RING_SEATED_MASS = RING_MASS * 3;
+// pesa 3.25x, pero sigue pudiendo salir con un impulso físico Cannon-es.
+const RING_SEATED_MASS = RING_MASS * 3.25;
 
 const RING_BUOYANCY_FORCE = 3.5;
 const POLE_SHAFT_TOP_RADIUS = .075;
@@ -66,9 +66,6 @@ const RING_INNER_CONTACT_RADIUS = RING_ENTRY_RADIUS + .03;
 const RING_CAPTURE_VERTICAL = RING_OUTER_RADIUS + POLE_TIP_RADIUS + .1;
 const RING_ENTRY_MAX_TILT = Math.PI / 3;
 const RING_ORIENTATION_ASSIST = .62;
-const RING_SEAT_MAX_TILT = Math.PI / 6;
-const RING_SEAT_LEVELING_STIFFNESS = 9;
-const RING_SEAT_LEVELING_DAMPING = 2.2;
 const RING_SEAT_STIFFNESS = 1.0;
 const RING_SEAT_DAMPING = .8;
 const RING_SEAT_HORIZONTAL_STIFFNESS = 4.8;
@@ -1091,40 +1088,6 @@ function applyRingOrientationAssist(ring, body, submerged) {
   body.torque.z += -body.angularVelocity.z * (.24 + strength * .22);
 }
 
-function applyRingRestingOrientationAssist(ring, body) {
-  if (ring.scored || !ring.body) return;
-  const lowest = ringLowestPointY(body);
-  const floorInfluence = clamp((.5 - (lowest - PHYSICS_FLOOR_TOP)) / .5, 0, 1);
-  const lowAreaInfluence = clamp((BASE_Y + 1.15 - body.position.y) / 1.15, 0, 1);
-  const supportInfluence = Math.max(floorInfluence, lowAreaInfluence);
-  if (supportInfluence <= 0) return;
-  body.quaternion.vmult(ringLocalNormal, ringWorldNormal);
-  const sidewaysNormal = Math.hypot(ringWorldNormal.x, ringWorldNormal.z);
-  if (sidewaysNormal < .025) return;
-  // Un aro apoyado de canto no debe quedarse perfectamente vertical por una
-  // simetría numérica: este torque físico suave le permite ladearse y apoyar
-  // el toro sobre su cara o sobre otro aro de la pila, sin fijar su quaternion
-  // ni su posición.
-  const strength = .24 + supportInfluence * .62;
-  const damping = .18 + supportInfluence * .24;
-  body.torque.x += -ringWorldNormal.z * strength - body.angularVelocity.x * damping;
-  body.torque.z += ringWorldNormal.x * strength - body.angularVelocity.z * damping;
-}
-
-function applyRingSeatLevelingAssist(ring, body) {
-  if (!ring.scored || !ring.seatPole) return;
-  body.quaternion.vmult(ringLocalNormal, ringWorldNormal);
-  const tilt = Math.acos(clamp(ringWorldNormal.y, -1, 1));
-  const softStart = RING_SEAT_MAX_TILT * .55;
-  if (tilt <= softStart) return;
-  const excessTilt = tilt - softStart;
-  const strength = Math.min(12, excessTilt * RING_SEAT_LEVELING_STIFFNESS);
-  // Ayuda física hacia la horizontal solo cuando se acerca al límite de 30°.
-  // El yaw y el giro sobre el propio eje quedan libres.
-  body.torque.x += -ringWorldNormal.z * strength - body.angularVelocity.x * RING_SEAT_LEVELING_DAMPING;
-  body.torque.z += ringWorldNormal.x * strength - body.angularVelocity.z * RING_SEAT_LEVELING_DAMPING;
-}
-
 function updateRingCapture(ring, body) {
   if (ring.scored) return;
   const contactPole = ring.contactPole;
@@ -1180,11 +1143,11 @@ function applyCannonForces(dt) {
     applyFloorContactSupport(body);
     body.force.y += submerged * RING_BUOYANCY_FORCE;
     applyRingOrientationAssist(ring, body, submerged);
-    applyRingRestingOrientationAssist(ring, body);
-    applyRingSeatLevelingAssist(ring, body);
+    // La asistencia solo actúa durante el descenso; en reposo el aro conserva
+    // su giro libre y no se fuerza una postura horizontal.
     updateRingCapture(ring, body);
     const currentX = Math.sin(elapsed * .9 + body.position.y * .8) * .22 + Math.cos(elapsed * .55 + body.position.x * .35) * .1;
-    // La masa de la pila se conserva en 2.5x, pero el control de inclinación
+    // La masa de la pila se conserva en 3.25x, pero el control de inclinación
     // debe seguir aplicando la aceleración completa a un aro asentado. El
     // chorro, en cambio, sigue siendo una fuerza física y sí nota ese peso.
     const controlMass = ring.scored ? body.mass : RING_MASS;
@@ -1195,8 +1158,12 @@ function applyCannonForces(dt) {
     // un control: solo conserva el grosor volumétrico de los contactos 3D.
     const verticalControlAcceleration = ring.scored ? RING_SEATED_CONTROL_ACCELERATION : 4.4;
     body.force.y += -state.tiltY * controlMass * verticalControlAcceleration;
-    body.torque.x += -body.angularVelocity.x * (1.1 + submerged * 1.8);
-    body.torque.z += -body.angularVelocity.z * (1.1 + submerged * 1.8);
+    // El agua amortigua un poco el giro, pero no lo congela. Durante el
+    // descenso la asistencia de orientación puede frenarlo suavemente; fuera
+    // de esa fase se deja bastante más libertad angular.
+    const waterAngularDamping = ring.descentAssist > .02 ? .42 + submerged * .55 : .12 + submerged * .12;
+    body.torque.x += -body.angularVelocity.x * waterAngularDamping;
+    body.torque.z += -body.angularVelocity.z * waterAngularDamping;
 
     for (let j = 0; j < 3; j++) {
       if (!input.jets[j]) continue;
