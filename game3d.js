@@ -39,20 +39,25 @@ const RING_COLLISION_TUBE = RING_TUBE;
 const RING_HOLE_RADIUS = RING_RADIUS - RING_TUBE;
 const RING_OUTER_RADIUS = RING_RADIUS + RING_TUBE;
 const RING_MASS = .72;
-const RING_SEATED_MASS = RING_MASS * 3.5;
+// Un aro que ha tocado el interior del palo gana peso, pero conserva una
+// posibilidad real de volver a salir si un chorro lo levanta.
+const RING_SEATED_MASS = RING_MASS * 3;
+
 const RING_BUOYANCY_FORCE = 3.5;
 const POLE_SHAFT_RADIUS = .12;
 const POLE_TIP_RADIUS = .11;
 // Entrada física estricta, usada cuando el aro llega sin asistencia.
 const RING_ENTRY_RADIUS = Math.max(.01, RING_HOLE_RADIUS - POLE_TIP_RADIUS);
-// Captura lúdica: equivale a que la circunferencia exterior roce la esfera de
-// la punta. No cambia la malla ni teletransporta el cuerpo; solo abre una
-// ventana para aplicar una guía suave antes del cruce.
+// Ventana corta para conservar un contacto Cannon con el eje o la punta
+// mientras el centro termina de llegar al borde interior. No guía por sí sola.
 const RING_CAPTURE_RADIUS = RING_OUTER_RADIUS + POLE_TIP_RADIUS;
+// Ventana estrecha para reconocer el contacto del borde interior del agujero.
+// La captura ya no se activa por rozar el diámetro exterior del aro.
+const RING_INNER_CONTACT_RADIUS = RING_ENTRY_RADIUS + .03;
 const RING_CAPTURE_VERTICAL = RING_OUTER_RADIUS + POLE_TIP_RADIUS + .1;
 const RING_ORIENTATION_ASSIST = .62;
-const RING_SEAT_STIFFNESS = 2.2;
-const RING_SEAT_DAMPING = 1.6;
+const RING_SEAT_STIFFNESS = 1.25;
+const RING_SEAT_DAMPING = 1.0;
 const ringFlatQuaternion = new THREE.Quaternion().setFromEuler(new THREE.Euler(Math.PI / 2, 0, 0));
 const GRAVITY = -5.6;
 const NOZZLE_Y = BASE_Y - .02;
@@ -87,25 +92,25 @@ const PALETTES = [
 
 const LEVELS = [
   null,
-  { name: 'Clásico', poles: [{ x: -2.55, h: 2.55, spd: 0 }, { x: 0, h: 3.28, spd: 0 }, { x: 2.55, h: 2.55, spd: 0 }] },
-  { name: 'Alturas', poles: [{ x: -3.0, h: 2.2, spd: 0 }, { x: 0, h: 3.36, spd: 0 }, { x: 3.0, h: 2.2, spd: 0 }] },
-  { name: 'Escalera', poles: [{ x: -3.15, h: 3.25, spd: 0 }, { x: 0, h: 2.55, spd: 0 }, { x: 3.15, h: 2.0, spd: 0 }] },
-  { name: 'Movimiento', poles: [{ x: -2.55, h: 2.25, spd: 0 }, { x: 0, h: 3.1, spd: .75 }, { x: 2.55, h: 2.25, spd: 0 }] },
-  { name: 'Caos', poles: [{ x: -2.95, h: 2.35, spd: 1.1 }, { x: 0, h: 3.25, spd: .62 }, { x: 2.95, h: 2.2, spd: 1.38 }] },
+  { name: 'Clásico', poles: [{ x: -2.75, h: 2.55, spd: 0 }, { x: 0, h: 3.28, spd: 0 }, { x: 2.75, h: 2.55, spd: 0 }] },
+  { name: 'Alturas', poles: [{ x: -3.2, h: 2.2, spd: 0 }, { x: 0, h: 3.36, spd: 0 }, { x: 3.2, h: 2.2, spd: 0 }] },
+  { name: 'Escalera', poles: [{ x: -3.35, h: 3.25, spd: 0 }, { x: 0, h: 2.55, spd: 0 }, { x: 3.35, h: 2.0, spd: 0 }] },
+  { name: 'Movimiento', poles: [{ x: -2.9, h: 2.25, spd: 0 }, { x: 0, h: 3.1, spd: .75 }, { x: 2.9, h: 2.25, spd: 0 }] },
+  { name: 'Caos', poles: [{ x: -3.35, h: 2.35, spd: 1.1 }, { x: 0, h: 3.25, spd: .62 }, { x: 3.35, h: 2.2, spd: 1.38 }] },
   { name: 'Colores', poles: [
-    { x: -2.55, h: 2.55, spd: 0, rc: 0, rn: 3 }, { x: 0, h: 3.28, spd: 0, rc: 1, rn: 3 }, { x: 2.55, h: 2.55, spd: 0, rc: 2, rn: 3 }
+    { x: -2.75, h: 2.55, spd: 0, rc: 0, rn: 3 }, { x: 0, h: 3.28, spd: 0, rc: 1, rn: 3 }, { x: 2.75, h: 2.55, spd: 0, rc: 2, rn: 3 }
   ]},
   { name: 'Prisma', poles: [
-    { x: -3, h: 2.2, spd: 0, rc: 3, rn: 3 }, { x: 0, h: 3.36, spd: 0, rc: 0, rn: 3 }, { x: 3, h: 2.2, spd: 0, rc: 1, rn: 3 }
+    { x: -3.2, h: 2.2, spd: 0, rc: 3, rn: 3 }, { x: 0, h: 3.36, spd: 0, rc: 0, rn: 3 }, { x: 3.2, h: 2.2, spd: 0, rc: 1, rn: 3 }
   ]},
   { name: 'Arcoíris', poles: [
-    { x: -3.15, h: 3.25, spd: 0, rc: 2, rn: 4 }, { x: 0, h: 2.55, spd: 0, rc: 3, rn: 3 }, { x: 3.15, h: 2.0, spd: 0, rc: 0, rn: 3 }
+    { x: -3.35, h: 3.25, spd: 0, rc: 2, rn: 4 }, { x: 0, h: 2.55, spd: 0, rc: 3, rn: 3 }, { x: 3.35, h: 2.0, spd: 0, rc: 0, rn: 3 }
   ]},
   { name: 'Flujo', poles: [
-    { x: -2.55, h: 2.25, spd: 0, rc: 1, rn: 3 }, { x: 0, h: 3.1, spd: .78, rc: 2, rn: 4 }, { x: 2.55, h: 2.25, spd: 0, rc: 3, rn: 3 }
+    { x: -2.9, h: 2.25, spd: 0, rc: 1, rn: 3 }, { x: 0, h: 3.1, spd: .78, rc: 2, rn: 4 }, { x: 2.9, h: 2.25, spd: 0, rc: 3, rn: 3 }
   ]},
   { name: 'Maestro', poles: [
-    { x: -2.95, h: 2.35, spd: 1.1, rc: 0, rn: 3 }, { x: 0, h: 3.25, spd: .62, rc: 1, rn: 4 }, { x: 2.95, h: 2.2, spd: 1.38, rc: 2, rn: 3 }
+    { x: -3.35, h: 2.35, spd: 1.1, rc: 0, rn: 3 }, { x: 0, h: 3.25, spd: .62, rc: 1, rn: 4 }, { x: 3.35, h: 2.2, spd: 1.38, rc: 2, rn: 3 }
   ]}
 ];
 const TOTAL_LEVELS = LEVELS.length - 1;
@@ -582,10 +587,48 @@ function createRing(ci, index) {
   ringGroup.add(mesh);
   return {
     mesh, ci, color: info.hex, index, x: 0, y: 0, z: 0, previousX: 0, previousY: 0, previousZ: 0,
-    scored: false, pole: null, capturePole: null, seatPole: null, seatTargetY: 0, escapePole: null, descentAssist: 0, points: 0,
+    scored: false, pole: null, contactPole: null, capturePole: null, seatPole: null, seatTargetY: 0, escapePole: null, descentAssist: 0, points: 0,
     angle: Math.random() * TAU, spin: (Math.random() - .5) * 1.4,
     pitch: (Math.random() - .5) * .12, roll: (Math.random() - .5) * .12
   };
+}
+
+function clearRingPoleCapture(ring) {
+  ring.contactPole = null;
+  ring.capturePole = null;
+  if (ring.scored || !ring.body || ring.body.mass === RING_MASS) return;
+  ring.body.mass = RING_MASS;
+  ring.body.updateMassProperties();
+  ring.body.wakeUp();
+}
+
+function beginRingPoleCapture(ring, pole) {
+  if (ring.scored || pole.rings.length >= pole.capacity) return;
+  ring.contactPole = pole;
+  ring.capturePole = pole;
+  if (ring.body.mass !== RING_SEATED_MASS) {
+    ring.body.mass = RING_SEATED_MASS;
+    ring.body.updateMassProperties();
+    ring.body.wakeUp();
+  }
+}
+
+function handleRingPoleContact(ring, event) {
+  const poleBody = event.body;
+  const pole = poleBody?.userData?.pole;
+  const contact = event.contact;
+  if (ring.scored || !pole || !contact || pole.rings.length >= pole.capacity) return;
+  // Algunas parejas de formas invierten si/sj dentro de Cannon; buscamos la
+  // forma del palo por identidad para no confundirla con un segmento del aro.
+  const poleShape = poleBody.shapes.includes(contact.si) ? contact.si : contact.sj;
+  if (poleShape !== poleBody.shapes[0] && poleShape !== poleBody.shapes[1]) return;
+  const topY = BASE_Y + pole.h;
+  const radial = Math.hypot(ring.body.position.x - pole.x, ring.body.position.z);
+  if (radial > RING_CAPTURE_RADIUS || ring.body.position.y < topY - RING_CAPTURE_VERTICAL - .12 || ring.body.position.y > topY + RING_CAPTURE_VERTICAL + .12) return;
+  // Guardamos el contacto físico; la masa solo cambia cuando el centro ha
+  // llegado al borde interior del agujero, no al primer roce exterior.
+  ring.contactPole = pole;
+  if (radial <= RING_INNER_CONTACT_RADIUS && ring.body.velocity.y <= .2) beginRingPoleCapture(ring, pole);
 }
 
 function createRingPhysicsBody(ring) {
@@ -611,6 +654,7 @@ function createRingPhysicsBody(ring) {
   body.quaternion.setFromEuler(ring.pitch, ring.angle, ring.roll, 'XYZ');
   body.angularVelocity.set((Math.random() - .5) * .5, ring.spin, (Math.random() - .5) * .5);
   body.userData = { ring };
+  body.addEventListener('collide', (event) => handleRingPoleContact(ring, event));
   physicsWorld.addBody(body);
   ring.body = body;
   physicsRingBodies.push(body);
@@ -650,7 +694,7 @@ function resetRings() {
       const ring = createRing(ci, index++);
       // Cada aro nace cerca del carril de un palo, pero deliberadamente fuera
       // de su radio de entrada. Nunca aparece ya atravesando la punta: el
-      // jugador debe elevarlo y corregir X/Y para que cruce la bola del palo.
+      // jugador debe elevarlo y corregir X/Y para que cruce la punta del palo.
       const spawnPole = poles[ring.index % poles.length];
       const side = Math.random() < .5 ? -1 : 1;
       ring.x = spawnPole.baseX + side * (.84 + Math.random() * .14);
@@ -933,32 +977,36 @@ function applyRingOrientationAssist(ring, body, submerged) {
 
 function updateRingCapture(ring, body) {
   if (ring.scored) return;
-  let candidate = null;
-  let nearest = Infinity;
-  const descending = body.velocity.y < .2;
-  if (descending) {
-    for (const pole of poles) {
-      if (pole.rings.length >= pole.capacity) continue;
-      const topY = BASE_Y + pole.h;
-      const dy = body.position.y - topY;
-      if (dy < -RING_CAPTURE_VERTICAL || dy > RING_CAPTURE_VERTICAL) continue;
-      const radial = Math.hypot(body.position.x - pole.x, body.position.z);
-      if (radial > RING_CAPTURE_RADIUS || radial >= nearest) continue;
-      nearest = radial; candidate = pole;
+  const contactPole = ring.contactPole;
+  if (contactPole && !ring.capturePole) {
+    const topY = BASE_Y + contactPole.h;
+    const radial = Math.hypot(body.position.x - contactPole.x, body.position.z);
+    const outsideContact = contactPole.rings.length >= contactPole.capacity
+      || body.position.y < topY - RING_CAPTURE_VERTICAL - .12
+      || body.position.y > topY + RING_CAPTURE_VERTICAL + .12
+      || radial > RING_CAPTURE_RADIUS + .16;
+    if (outsideContact) {
+      clearRingPoleCapture(ring);
+      return;
+    }
+    if (radial <= RING_INNER_CONTACT_RADIUS && body.position.y <= topY + RING_CAPTURE_VERTICAL && body.velocity.y <= .2) {
+      beginRingPoleCapture(ring, contactPole);
     }
   }
-  if (candidate) ring.capturePole = candidate;
   const pole = ring.capturePole;
   if (!pole) return;
   const topY = BASE_Y + pole.h;
   const radial = Math.hypot(body.position.x - pole.x, body.position.z);
-  if (body.position.y < topY - RING_CAPTURE_VERTICAL - .12 || body.position.y > topY + RING_CAPTURE_VERTICAL + .12 || radial > RING_CAPTURE_RADIUS + .16) {
-    ring.capturePole = null;
+  if (pole.rings.length >= pole.capacity || body.position.y < topY - RING_CAPTURE_VERTICAL - .12 || body.position.y > topY + RING_CAPTURE_VERTICAL + .12 || radial > RING_INNER_CONTACT_RADIUS + .16) {
+    clearRingPoleCapture(ring);
     return;
   }
-  const centering = 1 - clamp(radial / (RING_CAPTURE_RADIUS + .001), 0, 1);
-  const stiffness = 1.8 + centering * 4.8;
-  body.force.x += (pole.x - body.position.x) * stiffness - (body.velocity.x - pole.vX) * (1.0 + centering * .8);
+  // La guía solo actúa mientras el aro desciende; no lo ancla ni lo acompaña
+  // como un carril si un chorro consigue levantarlo.
+  if (body.velocity.y > .2) return;
+  const centering = 1 - clamp(radial / (RING_INNER_CONTACT_RADIUS + .001), 0, 1);
+  const stiffness = 1.1 + centering * 2.8;
+  body.force.x += (pole.x - body.position.x) * stiffness - (body.velocity.x - pole.vX) * (.65 + centering * .55);
 }
 
 function applyRingSeatForce(ring, body) {
@@ -1051,7 +1099,7 @@ function reflowPoleSeats(pole) {
 
 function registerPhysicsScore(ring, pole) {
   const stackIndex = pole.rings.length;
-  ring.scored = true; ring.pole = pole; ring.capturePole = null;
+  ring.scored = true; ring.pole = pole; ring.contactPole = null; ring.capturePole = null;
   ring.seatPole = pole;
   ring.seatTargetY = BASE_Y + .24 + stackIndex * RING_STACK_STEP;
   ring.body.mass = RING_SEATED_MASS;
@@ -1079,7 +1127,7 @@ function detachScoredRing(ring, pole, launch = false) {
   state.score = Math.max(0, state.score - (ring.points || 100));
   ring.body.mass = RING_MASS;
   ring.body.updateMassProperties();
-  ring.scored = false; ring.pole = null; ring.capturePole = null; ring.seatPole = null; ring.seatTargetY = 0; ring.escapePole = launch ? pole : null; ring.points = 0;
+  ring.scored = false; ring.pole = null; ring.contactPole = null; ring.capturePole = null; ring.seatPole = null; ring.seatTargetY = 0; ring.escapePole = launch ? pole : null; ring.points = 0;
   rebuildPoleCombo(pole);
   if (state.winQueued) { state.winQueued = false; window.clearTimeout(state.winTimer); state.winTimer = 0; }
   if (launch) launchEscapingRing(ring, pole);
@@ -1098,8 +1146,7 @@ function ringCrossedPoleTip(ring, pole, thresholdY, allowedRadius = RING_ENTRY_R
   const previousY = Number.isFinite(ring.previousY) ? ring.previousY : body.position.y;
   const drop = previousY - body.position.y;
   // Se comprueba el cruce del plano central de la punta, no una posición
-  // recolocada después. El radio puede ser el hueco físico o la ventana de
-  // captura exterior activada por el roce descendente de la circunferencia.
+  // recolocada después. La ayuda de captura no amplía el radio del agujero.
   if (body.position.y >= thresholdY || previousY < thresholdY || drop <= .0001) return false;
   const crossingT = clamp((previousY - thresholdY) / drop, 0, 1);
   const previousPoleX = Number.isFinite(pole.previousX) ? pole.previousX : pole.x;
@@ -1147,7 +1194,9 @@ function checkPhysicsPoleEntries() {
     if (!body || ring.scored || updateEscapingRingState(ring)) continue;
     for (const pole of poles) {
       if (pole.rings.length >= pole.capacity) continue;
-      const allowedRadius = ring.capturePole === pole ? RING_CAPTURE_RADIUS : RING_ENTRY_RADIUS;
+      // La captura ayuda a centrar, pero solo admite la tolerancia estrecha
+      // del contacto interior; nunca la ventana exterior de un simple roce.
+      const allowedRadius = ring.capturePole === pole ? RING_INNER_CONTACT_RADIUS : RING_ENTRY_RADIUS;
       if (!ringCrossedPoleTip(ring, pole, BASE_Y + pole.h, allowedRadius)) continue;
       registerPhysicsScore(ring, pole);
       break;
