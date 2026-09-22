@@ -39,6 +39,7 @@ const RING_COLLISION_TUBE = RING_TUBE;
 const RING_HOLE_RADIUS = RING_RADIUS - RING_TUBE;
 const RING_OUTER_RADIUS = RING_RADIUS + RING_TUBE;
 const RING_MASS = .72;
+const RING_SEATED_MASS = RING_MASS * 3.5;
 const RING_BUOYANCY_FORCE = 3.5;
 const POLE_SHAFT_RADIUS = .12;
 const POLE_TIP_RADIUS = .11;
@@ -50,9 +51,8 @@ const RING_ENTRY_RADIUS = Math.max(.01, RING_HOLE_RADIUS - POLE_TIP_RADIUS);
 const RING_CAPTURE_RADIUS = RING_OUTER_RADIUS + POLE_TIP_RADIUS;
 const RING_CAPTURE_VERTICAL = RING_OUTER_RADIUS + POLE_TIP_RADIUS + .1;
 const RING_ORIENTATION_ASSIST = .62;
-const RING_SEAT_STIFFNESS = 2.8;
-const RING_SEAT_DAMPING = 1.8;
-const RING_SEAT_CONSTRAINT_FORCE = 58;
+const RING_SEAT_STIFFNESS = 2.2;
+const RING_SEAT_DAMPING = 1.6;
 const ringFlatQuaternion = new THREE.Quaternion().setFromEuler(new THREE.Euler(Math.PI / 2, 0, 0));
 const GRAVITY = -5.6;
 const NOZZLE_Y = BASE_Y - .02;
@@ -153,7 +153,6 @@ let rings = [];
 let poles = [];
 let physicsPoleBodies = [];
 let physicsRingBodies = [];
-let ringSeatConstraints = [];
 let particles = [];
 let bubbles = [];
 let waveTime = 0;
@@ -191,21 +190,21 @@ scene.fog = new THREE.Fog(0x06182d, 8, 20);
 const physicsWorld = new CANNON.World({ gravity: new CANNON.Vec3(0, GRAVITY, 0) });
 physicsWorld.broadphase = new CANNON.SAPBroadphase(physicsWorld);
 physicsWorld.allowSleep = true;
-physicsWorld.solver.iterations = MOBILE_DEVICE ? 6 : 10;
-physicsWorld.solver.tolerance = .001;
+physicsWorld.solver.iterations = MOBILE_DEVICE ? 8 : 12;
+physicsWorld.solver.tolerance = .0005;
 const ringPhysicsMaterial = new CANNON.Material('ring');
 const tankPhysicsMaterial = new CANNON.Material('tank');
-physicsWorld.defaultContactMaterial.friction = .04;
-physicsWorld.defaultContactMaterial.restitution = .38;
-// La geometría de Cannon resuelve el deslizamiento; no se fija el aro con
-// ninguna posición auxiliar ni con una marca visual.
-physicsWorld.addContactMaterial(new CANNON.ContactMaterial(ringPhysicsMaterial, tankPhysicsMaterial, { friction: .015, restitution: .45 }));
+physicsWorld.defaultContactMaterial.friction = .018;
+physicsWorld.defaultContactMaterial.restitution = .34;
+// Contactos lubricados: el aro conserva el rebote, pero no pierde toda la
+// velocidad al rozar un palo, una pared o la base.
+physicsWorld.addContactMaterial(new CANNON.ContactMaterial(ringPhysicsMaterial, tankPhysicsMaterial, { friction: .004, restitution: .46 }));
 const physicsGround = new CANNON.Body({ mass: 0, material: tankPhysicsMaterial });
 physicsGround.addShape(new CANNON.Box(new CANNON.Vec3(6, .11, 2.85)));
 physicsGround.position.set(0, BASE_Y - .2, .15);
 physicsWorld.addBody(physicsGround);
 const physicsSideWalls = [];
-for (const x of [-5.85, 5.85]) {
+for (const x of [-5.94, 5.94]) {
   const wall = new CANNON.Body({ mass: 0, material: tankPhysicsMaterial });
   wall.addShape(new CANNON.Box(new CANNON.Vec3(.08, 3.1, 2.7)));
   wall.position.set(x, -.1, .15); physicsWorld.addBody(wall); physicsSideWalls.push(wall);
@@ -217,11 +216,12 @@ for (const z of [-(PLAY_DEPTH / 2 + .01), PLAY_DEPTH / 2 + .01]) {
   wall.addShape(new CANNON.Box(new CANNON.Vec3(6, 3.1, .08)));
   wall.position.set(0, -.1, z); physicsWorld.addBody(wall); physicsSideWalls.push(wall);
 }
-// Techo físico por encima del palo más alto. Impide que un chorro saque los
-// aros del encuadre sin bloquear la entrada por la punta superior.
+// Techo físico invisible justo sobre la superficie. Impide que un chorro
+// saque los aros del encuadre sin convertirse en un elemento visual.
 const physicsCeiling = new CANNON.Body({ mass: 0, material: tankPhysicsMaterial });
 physicsCeiling.addShape(new CANNON.Box(new CANNON.Vec3(6, .08, PLAY_DEPTH / 2 + .01)));
-physicsCeiling.position.set(0, 3.55, 0);
+// Límite superior invisible, apenas por encima de la superficie visible.
+physicsCeiling.position.set(0, WATER_TOP + .10, 0);
 physicsWorld.addBody(physicsCeiling);
 const physicsFixedStep = 1 / 60;
 let physicsAccumulator = 0;
@@ -566,7 +566,7 @@ function createPole(def) {
   poleGroup.add(group);
   return {
     group, shaft, top, beacon, label, reqLabel, x: def.x, baseX: def.x, h: def.h, spd: def.spd || 0, phase: Math.random() * TAU,
-    capacity, reqColor: hasRequirement ? def.rc : -1, reqCount: def.rn || 0, rings: [], stress: 0, rejectCd: 0, lastColor: -1, combo: 0, vX: 0, previousX: def.x
+    capacity, reqColor: hasRequirement ? def.rc : -1, reqCount: def.rn || 0, rings: [], lastColor: -1, combo: 0, vX: 0, previousX: def.x
   };
 }
 
@@ -582,7 +582,7 @@ function createRing(ci, index) {
   ringGroup.add(mesh);
   return {
     mesh, ci, color: info.hex, index, x: 0, y: 0, z: 0, previousX: 0, previousY: 0, previousZ: 0,
-    scored: false, pole: null, capturePole: null, seatPole: null, seatTargetY: 0, seatConstraint: null, points: 0,
+    scored: false, pole: null, capturePole: null, seatPole: null, seatTargetY: 0, escapePole: null, descentAssist: 0, points: 0,
     angle: Math.random() * TAU, spin: (Math.random() - .5) * 1.4,
     pitch: (Math.random() - .5) * .12, roll: (Math.random() - .5) * .12
   };
@@ -590,8 +590,8 @@ function createRing(ci, index) {
 
 function createRingPhysicsBody(ring) {
   const body = new CANNON.Body({ mass: RING_MASS, material: ringPhysicsMaterial });
-  body.linearDamping = .16;
-  body.angularDamping = .24;
+  body.linearDamping = .10;
+  body.angularDamping = .15;
   body.linearFactor.set(1, 1, 0); // 2.5D: Z es grosor de contacto, no un carril de juego.
   body.allowSleep = false;
   // El aro es un compuesto de segmentos que sigue el toro visual. Hay más
@@ -618,10 +618,10 @@ function createRingPhysicsBody(ring) {
 
 function createPolePhysicsBody(pole) {
   const body = new CANNON.Body({ mass: 0, material: tankPhysicsMaterial });
-  const shaft = new CANNON.Cylinder(.075, POLE_SHAFT_RADIUS, pole.h, MOBILE_DEVICE ? 8 : 12);
+  const shaft = new CANNON.Cylinder(.075, POLE_SHAFT_RADIUS, pole.h, MOBILE_DEVICE ? 12 : 24);
   body.addShape(shaft, new CANNON.Vec3(0, pole.h / 2, 0));
   body.addShape(new CANNON.Sphere(POLE_TIP_RADIUS), new CANNON.Vec3(0, pole.h, 0));
-  body.addShape(new CANNON.Cylinder(.38, .48, .18, MOBILE_DEVICE ? 8 : 12), new CANNON.Vec3(0, .09, 0));
+  body.addShape(new CANNON.Cylinder(.38, .48, .18, MOBILE_DEVICE ? 12 : 24), new CANNON.Vec3(0, .09, 0));
   body.position.set(pole.x, BASE_Y, 0);
   body.userData = { pole };
   physicsWorld.addBody(body);
@@ -630,8 +630,6 @@ function createPolePhysicsBody(pole) {
 }
 
 function rebuildPhysicsLevel() {
-  ringSeatConstraints.forEach((constraint) => physicsWorld.removeConstraint(constraint));
-  ringSeatConstraints = [];
   physicsPoleBodies.forEach((body) => physicsWorld.removeBody(body));
   physicsRingBodies.forEach((body) => physicsWorld.removeBody(body));
   physicsPoleBodies = []; physicsRingBodies = [];
@@ -905,7 +903,6 @@ function updatePhysicsPoleMotion(dt) {
       pole.body.aabbNeedsUpdate = true;
       pole.body.updateAABB();
     }
-    updatePolePenalty(pole, dt);
     updatePoleLabel(pole);
   }
   // SAP conserva una lista ordenada; un nivel con palos móviles debe volver a
@@ -913,44 +910,19 @@ function updatePhysicsPoleMotion(dt) {
   physicsWorld.broadphase.dirty = true;
 }
 
-function updatePolePenalty(pole, dt) {
-  const occupied = pole.rings.length;
-  if (!occupied) {
-    pole.stress = Math.max(0, pole.stress - dt * 3.6);
-    pole.shaft.material.emissiveIntensity = .3;
-    pole.top.material.emissiveIntensity = .15;
-    return;
-  }
-  let pressure = Math.abs(state.tiltX) * .11 + Math.abs(state.tiltY) * .09;
-  for (let j = 0; j < 3; j++) {
-    if (!input.jets[j]) continue;
-    const distance = Math.abs(pole.x - JET_X[j]);
-    if (distance < 1.55) pressure += (1 - distance / 1.55) * (.52 + Math.min(.24, jSoundTimer * .1));
-  }
-  if (pressure > .025) pole.stress += pressure * dt;
-  else pole.stress = Math.max(0, pole.stress - dt * 1.7);
-  pole.rejectCd = Math.max(0, pole.rejectCd - dt);
-  const comboCount = countColorCombos(pole).combos;
-  const ejectMultiplier = comboCount >= 1 ? 1.55 : 1;
-  if (pole.rejectCd <= 0 && pole.stress > 2.35 / ejectMultiplier) {
-    if (pole.stress > 4.2 / ejectMultiplier) ejectAllFromPole(pole);
-    else ejectPoleRing(pole.rings[pole.rings.length - 1], true);
-    pole.rejectCd = .72;
-    pole.stress = .05;
-  }
-  const danger = clamp(pole.stress / 2.35, 0, 1);
-  pole.shaft.material.emissiveIntensity = .3 + danger * .9;
-  pole.top.material.emissiveIntensity = .15 + danger * 1.2;
-  pole.beacon.material.color.set(danger > .72 ? 0xff4c62 : pole.reqColor >= 0 ? PALETTES[paletteIndex].colors[pole.reqColor].hex : 0x7feaff);
-}
-
 function applyRingOrientationAssist(ring, body, submerged) {
-  const descending = body.velocity.y < -.08;
-  if (!descending && !ring.capturePole && !ring.seatPole) return;
+  // La asistencia se basa en la caída del cuerpo, no en qué chorro está activo.
+  // Así el agua puede hacerlo girar libremente y solo la gravedad suaviza la
+  // orientación durante el descenso.
+  const previousDrop = Math.max(0, (Number.isFinite(ring.previousY) ? ring.previousY : body.position.y) - body.position.y);
+  const speedDescent = clamp((-body.velocity.y - .08) / 2.6, 0, 1);
+  const stepDescent = clamp(previousDrop / .045, 0, 1);
+  const descentTarget = Math.max(speedDescent, stepDescent);
+  ring.descentAssist = lerp(ring.descentAssist, descentTarget, .18);
+  if (ring.descentAssist < .015 && !ring.capturePole && !ring.seatPole) return;
   body.quaternion.vmult(ringLocalNormal, ringWorldNormal);
-  const descentAmount = clamp((-body.velocity.y + .12) / 2.6, 0, 1);
   const captureBoost = ring.capturePole || ring.seatPole ? 1.3 : 1;
-  const strength = RING_ORIENTATION_ASSIST * (.38 + descentAmount * .62) * captureBoost * (.55 + submerged * .45);
+  const strength = RING_ORIENTATION_ASSIST * (.25 + ring.descentAssist * .75) * captureBoost * (.55 + submerged * .45);
   // n × up: torque that makes the annulus horizontal without freezing its
   // yaw, spin or collision response.
   body.torque.x += -ringWorldNormal.z * strength;
@@ -1004,11 +976,9 @@ function applyCannonForces(dt) {
     const body = ring.body;
     if (!body) continue;
     const submerged = submergedFraction(body.position.y);
-    const seated = applyRingSeatForce(ring, body);
+    applyRingSeatForce(ring, body);
     body.force.y += submerged * RING_BUOYANCY_FORCE;
     applyRingOrientationAssist(ring, body, submerged);
-    if (seated) continue;
-
     updateRingCapture(ring, body);
     const currentX = Math.sin(elapsed * .9 + body.position.y * .8) * .22 + Math.cos(elapsed * .55 + body.position.x * .35) * .1;
     body.force.x += (currentX - body.velocity.x) * RING_MASS * .42 * submerged;
@@ -1055,13 +1025,13 @@ function rebuildPoleCombo(pole) {
   for (let index = pole.rings.length - 1; index >= 0 && pole.rings[index].ci === last.ci; index--) pole.combo++;
 }
 
-function launchEjectedRing(ring, pole) {
+function launchEscapingRing(ring, pole) {
   const body = ring.body;
   const escapeSide = Math.sign(body.position.x - pole.x) || (Math.random() < .5 ? -1 : 1);
   body.force.set(0, 0, 0);
   body.torque.set(0, 0, 0);
-  // La penalización solo aplica un impulso: la posición, la rotación y el
-  // resto de la trayectoria siguen siendo responsabilidad de Cannon.
+  // La salida aplica únicamente un impulso de escape: la posición, la
+  // rotación y el resto de la trayectoria siguen siendo responsabilidad de Cannon.
   body.applyImpulse(new CANNON.Vec3(
     escapeSide * (1.2 + Math.random() * .25) + pole.vX * .1,
     .82 + Math.random() * .24,
@@ -1073,31 +1043,9 @@ function launchEjectedRing(ring, pole) {
   body.wakeUp();
 }
 
-function attachRingSeatConstraint(ring, pole) {
-  if (!pole.body || ring.seatConstraint) return;
-  const constraint = new CANNON.PointToPointConstraint(
-    ring.body,
-    new CANNON.Vec3(0, 0, 0),
-    pole.body,
-    new CANNON.Vec3(0, ring.seatTargetY - BASE_Y, 0),
-    RING_SEAT_CONSTRAINT_FORCE
-  );
-  physicsWorld.addConstraint(constraint);
-  ring.seatConstraint = constraint;
-  ringSeatConstraints.push(constraint);
-}
-
-function releaseRingSeatConstraint(ring) {
-  if (!ring.seatConstraint) return;
-  physicsWorld.removeConstraint(ring.seatConstraint);
-  ringSeatConstraints = ringSeatConstraints.filter((constraint) => constraint !== ring.seatConstraint);
-  ring.seatConstraint = null;
-}
-
 function reflowPoleSeats(pole) {
   pole.rings.forEach((ring, index) => {
     ring.seatTargetY = BASE_Y + .24 + index * RING_STACK_STEP;
-    if (ring.seatConstraint) ring.seatConstraint.pivotB.set(0, ring.seatTargetY - BASE_Y, 0);
   });
 }
 
@@ -1106,8 +1054,9 @@ function registerPhysicsScore(ring, pole) {
   ring.scored = true; ring.pole = pole; ring.capturePole = null;
   ring.seatPole = pole;
   ring.seatTargetY = BASE_Y + .24 + stackIndex * RING_STACK_STEP;
+  ring.body.mass = RING_SEATED_MASS;
+  ring.body.updateMassProperties();
   pole.rings.push(ring);
-  attachRingSeatConstraint(ring, pole);
   const combo = pole.lastColor === ring.ci ? pole.combo + 1 : 1;
   pole.lastColor = ring.ci; pole.combo = combo; ring.points = 100 * combo;
   state.score += ring.points; state.currentCombo = Math.max(state.currentCombo, combo);
@@ -1126,26 +1075,22 @@ function registerPhysicsScore(ring, pole) {
 function detachScoredRing(ring, pole, launch = false) {
   const index = pole.rings.indexOf(ring);
   if (index >= 0) pole.rings.splice(index, 1);
-  releaseRingSeatConstraint(ring);
   reflowPoleSeats(pole);
   state.score = Math.max(0, state.score - (ring.points || 100));
-  ring.scored = false; ring.pole = null; ring.capturePole = null; ring.seatPole = null; ring.seatTargetY = 0; ring.points = 0;
+  ring.body.mass = RING_MASS;
+  ring.body.updateMassProperties();
+  ring.scored = false; ring.pole = null; ring.capturePole = null; ring.seatPole = null; ring.seatTargetY = 0; ring.escapePole = launch ? pole : null; ring.points = 0;
   rebuildPoleCombo(pole);
   if (state.winQueued) { state.winQueued = false; window.clearTimeout(state.winTimer); state.winTimer = 0; }
-  if (launch) launchEjectedRing(ring, pole);
+  if (launch) launchEscapingRing(ring, pole);
   updateUI(true); updatePoleLabel(pole);
 }
 
-function ejectPoleRing(ring, fromPenalty = false) {
+function releaseRingOverTip(ring) {
   if (!ring || !ring.scored || !ring.pole) return;
-  const pole = ring.pole;
-  detachScoredRing(ring, pole, true);
-  if (fromPenalty) { sfxFail(); showToast('TENSIÓN · ARO EXPULSADO'); vibrate(35); }
-}
-
-function ejectAllFromPole(pole) {
-  [...pole.rings].reverse().forEach((ring) => ejectPoleRing(ring));
-  sfxFail(); showToast('TENSIÓN MÁXIMA · PALO VACÍO'); vibrate([40, 25, 70]);
+  detachScoredRing(ring, ring.pole, true);
+  sfxRingRelease();
+  vibrate(35);
 }
 
 function ringCrossedPoleTip(ring, pole, thresholdY, allowedRadius = RING_ENTRY_RADIUS) {
@@ -1164,10 +1109,29 @@ function ringCrossedPoleTip(ring, pole, thresholdY, allowedRadius = RING_ENTRY_R
   return Math.hypot(crossingX - crossingPoleX, crossingZ) <= allowedRadius;
 }
 
+function updateEscapingRingState(ring) {
+  const pole = ring.escapePole;
+  if (!pole) return false;
+  const radial = Math.hypot(ring.body.position.x - pole.x, ring.body.position.z);
+  if (ring.body.position.y > BASE_Y + pole.h + RING_CAPTURE_VERTICAL || radial > RING_CAPTURE_RADIUS + .16) {
+    ring.escapePole = null;
+    return false;
+  }
+  return true;
+}
+
+function checkSeatedRingExits() {
+  for (const ring of rings) {
+    if (!ring.scored || !ring.seatPole || !ring.body) continue;
+    const topY = BASE_Y + ring.seatPole.h;
+    if (ring.previousY <= topY && ring.body.position.y > topY) releaseRingOverTip(ring);
+  }
+}
+
 function checkPhysicsPoleEntries() {
   for (const ring of rings) {
     const body = ring.body;
-    if (!body || ring.scored) continue;
+    if (!body || ring.scored || updateEscapingRingState(ring)) continue;
     for (const pole of poles) {
       if (pole.rings.length >= pole.capacity) continue;
       const allowedRadius = ring.capturePole === pole ? RING_CAPTURE_RADIUS : RING_ENTRY_RADIUS;
@@ -1175,21 +1139,6 @@ function checkPhysicsPoleEntries() {
       registerPhysicsScore(ring, pole);
       break;
     }
-  }
-}
-
-function reconcileScoredRings() {
-  const releaseRadius = RING_RADIUS + POLE_SHAFT_RADIUS + .06;
-  for (const ring of [...rings]) {
-    if (!ring.scored || !ring.pole || !ring.body) continue;
-    // Un aro ya capturado queda sujeto por una guía dinámica y solo se libera
-    // en detachScoredRing(), que es la ruta de penalización.
-    if (ring.seatPole) continue;
-    const pole = ring.pole;
-    const radial = Math.hypot(ring.body.position.x - pole.x, ring.body.position.z);
-    const belowTank = ring.body.position.y < BASE_Y - .42;
-    const outsidePole = radial > releaseRadius;
-    if (belowTank || outsidePole) detachScoredRing(ring, pole, false);
   }
 }
 
@@ -1216,8 +1165,8 @@ function stepCannonPhysics(dt) {
       ring.previousZ = ring.body.position.z;
     }
     physicsWorld.step(physicsFixedStep);
+    checkSeatedRingExits();
     checkPhysicsPoleEntries();
-    reconcileScoredRings();
     physicsAccumulator -= physicsFixedStep; steps++;
   }
   syncPhysicsToScene();
@@ -1567,7 +1516,7 @@ function ensureAudio() { if (!AudioContextClass) return; if (!audioContext) audi
 function tone(frequency, duration, volume = .08, type = 'sine') { if (!soundOn || !audioContext) return; const oscillator = audioContext.createOscillator(); const gain = audioContext.createGain(); oscillator.type = type; oscillator.frequency.value = frequency; gain.gain.setValueAtTime(volume, audioContext.currentTime); gain.gain.exponentialRampToValueAtTime(.001, audioContext.currentTime + duration); oscillator.connect(gain); gain.connect(audioContext.destination); oscillator.start(); oscillator.stop(audioContext.currentTime + duration); }
 function sfxJet() { tone(160 + Math.random() * 35, .06, .025, 'triangle'); }
 function sfxScore(combo = 1) { tone(420 + combo * 80, .16, .06, 'triangle'); if (combo > 1) window.setTimeout(() => tone(660 + combo * 70, .18, .05, 'sine'), 70); }
-function sfxFail() { tone(130, .22, .07, 'sawtooth'); window.setTimeout(() => tone(94, .28, .05, 'sawtooth'), 100); }
+function sfxRingRelease() { tone(130, .22, .07, 'sawtooth'); window.setTimeout(() => tone(94, .28, .05, 'sawtooth'), 100); }
 function sfxWin() { [523, 659, 784, 1047].forEach((frequency, index) => window.setTimeout(() => tone(frequency, .45, .08, 'triangle'), index * 130)); }
 function musicMenu() { if (musicOn) scheduleMusic([196, 261, 329, 392], 0); }
 function musicGame() { if (musicOn) scheduleMusic([130, 155, 196, 233], 0); }

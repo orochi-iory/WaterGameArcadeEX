@@ -21,13 +21,13 @@ Water Game Arcade EX ya no es un canvas 2D: el tablero completo se renderiza con
 - 🪄 Palos, soportes, luces, balizas y etiquetas de capacidad en el espacio 3D.
 - 💨 Chorros con conos de agua, oscilación, partículas y fuerzas físicas.
 - ⚙️ Física 3D con cuerpos rígidos Cannon-es: gravedad, flotación, drag, orientación, velocidad angular y colisiones de geometría real.
-- 🎯 Enceste con captura física suave: la circunferencia puede rozar la punta, el aro se guía sin teletransporte y queda sujeto hasta una penalización.
+- 🎯 Enceste con captura física suave: la circunferencia puede rozar la punta y el aro se guía sin teletransporte.
 - 🎮 Diez niveles: cinco clásicos y cinco niveles con requisitos de color.
-- 🔥 Combos, bonus de tiempo, bonus de color perfecto y penalización por tensión.
+- 🔥 Combos, bonus de tiempo, bonus de color perfecto y aros pesados al quedar ensartados.
 - 📱 Controles táctiles, teclado, giroscopio, vibración y pantalla completa.
 - 👁️ Cinco paletas accesibles con contrastes de color diferenciados.
 - 💾 Ranking local y sincronización global opcional con Firebase.
-- 🔊 Audio procedural para chorros, combos, tensión, expulsión, victoria y música ambiental.
+- 🔊 Audio procedural para chorros, combos, salidas físicas, victoria y música ambiental.
 
 ## 🎯 Cómo jugar
 
@@ -43,7 +43,7 @@ Ensarta los **20 aros** en los tres palos. Para completar un nivel necesitas al 
 | Reiniciar | `R` | `↺` | — |
 | Menú | — | `☰` | — |
 
-El juego usa una configuración 2.5D: los aros y los palos comparten el mismo plano X/Y, mientras Z conserva únicamente el grosor necesario para resolver contactos. Mueve los aros en X/Y y haz que crucen la punta del palo; mantén el sensor y los chorros suaves para no activar la penalización de tensión.
+El juego usa una configuración 2.5D: los aros y los palos comparten el mismo plano X/Y, mientras Z conserva únicamente el grosor necesario para resolver contactos. Mueve los aros en X/Y y haz que crucen la punta del palo; una vez ensartados pesan más y solo salen si la física los levanta por encima de la punta.
 
 ## 🏆 Puntuación
 
