@@ -37,17 +37,29 @@ const RING_TUBE = .065;
 const RING_STACK_STEP = RING_TUBE * 2 + .015;
 const RING_COLLISION_TUBE = RING_TUBE;
 const RING_HOLE_RADIUS = RING_RADIUS - RING_TUBE;
+const RING_OUTER_RADIUS = RING_RADIUS + RING_TUBE;
 const RING_MASS = .72;
 const RING_BUOYANCY_FORCE = 3.5;
 const POLE_SHAFT_RADIUS = .12;
 const POLE_TIP_RADIUS = .11;
-// Radio geométrico de entrada: el centro del aro solo puede cruzar la punta
-// si el volumen de su hueco deja sitio para la esfera de la punta. No es una
-// zona visual ni una marca: Cannon sigue resolviendo el contacto real.
+// Entrada física estricta, usada cuando el aro llega sin asistencia.
 const RING_ENTRY_RADIUS = Math.max(.01, RING_HOLE_RADIUS - POLE_TIP_RADIUS);
+// Captura lúdica: equivale a que la circunferencia exterior roce la esfera de
+// la punta. No cambia la malla ni teletransporta el cuerpo; solo abre una
+// ventana para aplicar una guía suave antes del cruce.
+const RING_CAPTURE_RADIUS = RING_OUTER_RADIUS + POLE_TIP_RADIUS;
+const RING_CAPTURE_VERTICAL = RING_OUTER_RADIUS + POLE_TIP_RADIUS + .1;
+const RING_ORIENTATION_ASSIST = .62;
+const RING_SEAT_STIFFNESS = 2.8;
+const RING_SEAT_DAMPING = 1.8;
+const RING_SEAT_CONSTRAINT_FORCE = 58;
 const ringFlatQuaternion = new THREE.Quaternion().setFromEuler(new THREE.Euler(Math.PI / 2, 0, 0));
 const GRAVITY = -5.6;
-const NOZZLE_Y = BASE_Y + 0.12;
+const NOZZLE_Y = BASE_Y - .02;
+const NOZZLE_Z = PLAY_DEPTH / 2 - .28;
+const JET_FIELD_RADIUS = 1.82;
+const JET_FORCE_X = 9.4;
+const JET_FORCE_Y = 13.2;
 const JET_X = [-3.35, 0, 3.35];
 const JET_COLORS = [0xff6b6b, 0x3fe2aa, 0x5bc8ff];
 const PALETTES = [
@@ -141,6 +153,7 @@ let rings = [];
 let poles = [];
 let physicsPoleBodies = [];
 let physicsRingBodies = [];
+let ringSeatConstraints = [];
 let particles = [];
 let bubbles = [];
 let waveTime = 0;
@@ -444,23 +457,42 @@ effectGroup.add(particlePoints);
 
 const jetBeams = [];
 const nozzles = [];
+const jetRims = [];
+const jetRipples = [];
 for (let j = 0; j < 3; j++) {
-  const nozzleMaterial = new THREE.MeshStandardMaterial({ color: 0x20333d, metalness: .75, roughness: .2, emissive: JET_COLORS[j], emissiveIntensity: .1 });
-  const nozzle = new THREE.Mesh(new THREE.CylinderGeometry(.17, .22, .24, MOBILE_DEVICE ? 10 : 18), nozzleMaterial);
-  nozzle.rotation.x = Math.PI / 2;
-  nozzle.position.set(JET_X[j], NOZZLE_Y, PLAY_DEPTH / 2 - .08);
-  nozzle.castShadow = true;
+  // Sustituye la antigua bola/boquilla por un hueco empotrado en el suelo:
+  // disco oscuro, borde metálico y una pequeña vibración de agua alrededor.
+  const nozzleMaterial = new THREE.MeshStandardMaterial({ color: 0x061722, metalness: .62, roughness: .34, emissive: JET_COLORS[j], emissiveIntensity: .06 });
+  const nozzle = new THREE.Mesh(new THREE.CylinderGeometry(.145, .18, .026, MOBILE_DEVICE ? 16 : 24), nozzleMaterial);
+  nozzle.position.set(JET_X[j], BASE_Y - .103, NOZZLE_Z);
+  nozzle.castShadow = !MOBILE_DEVICE;
   effectGroup.add(nozzle);
   nozzles.push(nozzle);
+
+  const rimMaterial = new THREE.MeshStandardMaterial({ color: JET_COLORS[j], emissive: JET_COLORS[j], emissiveIntensity: .18, roughness: .28, metalness: .35 });
+  const rim = new THREE.Mesh(new THREE.TorusGeometry(.17, .022, MOBILE_DEVICE ? 6 : 8, MOBILE_DEVICE ? 16 : 24), rimMaterial);
+  rim.rotation.x = Math.PI / 2;
+  rim.position.set(JET_X[j], BASE_Y - .082, NOZZLE_Z);
+  effectGroup.add(rim);
+  jetRims.push(rim);
+
+  const ripple = new THREE.Mesh(
+    new THREE.TorusGeometry(.12, .012, MOBILE_DEVICE ? 5 : 7, MOBILE_DEVICE ? 16 : 24),
+    new THREE.MeshBasicMaterial({ color: JET_COLORS[j], transparent: true, opacity: 0, depthWrite: false, blending: THREE.AdditiveBlending })
+  );
+  ripple.rotation.x = Math.PI / 2;
+  ripple.position.set(JET_X[j], NOZZLE_Y + .025, NOZZLE_Z - .015);
+  effectGroup.add(ripple);
+  jetRipples.push(ripple);
 
   const beamMaterial = MOBILE_DEVICE
     ? new THREE.MeshBasicMaterial({ color: JET_COLORS[j], transparent: true, opacity: 0, depthWrite: false, side: THREE.DoubleSide, blending: THREE.AdditiveBlending })
     : new THREE.MeshPhysicalMaterial({ color: JET_COLORS[j], emissive: JET_COLORS[j], emissiveIntensity: 1.1, transparent: true, opacity: 0, depthWrite: false, side: THREE.DoubleSide, blending: THREE.AdditiveBlending });
   const beam = new THREE.Mesh(
-    new THREE.ConeGeometry(.31, 4.7, MOBILE_DEVICE ? 10 : 20, 1, true),
+    new THREE.ConeGeometry(.43, 4.9, MOBILE_DEVICE ? 12 : 24, 1, true),
     beamMaterial
   );
-  beam.position.set(JET_X[j], NOZZLE_Y + 2.35, PLAY_DEPTH / 2 - .12);
+  beam.position.set(JET_X[j], NOZZLE_Y + 2.45, NOZZLE_Z);
   effectGroup.add(beam);
   jetBeams.push(beam);
 }
@@ -550,7 +582,7 @@ function createRing(ci, index) {
   ringGroup.add(mesh);
   return {
     mesh, ci, color: info.hex, index, x: 0, y: 0, z: 0, previousX: 0, previousY: 0, previousZ: 0,
-    scored: false, pole: null, points: 0,
+    scored: false, pole: null, capturePole: null, seatPole: null, seatTargetY: 0, seatConstraint: null, points: 0,
     angle: Math.random() * TAU, spin: (Math.random() - .5) * 1.4,
     pitch: (Math.random() - .5) * .12, roll: (Math.random() - .5) * .12
   };
@@ -598,6 +630,8 @@ function createPolePhysicsBody(pole) {
 }
 
 function rebuildPhysicsLevel() {
+  ringSeatConstraints.forEach((constraint) => physicsWorld.removeConstraint(constraint));
+  ringSeatConstraints = [];
   physicsPoleBodies.forEach((body) => physicsWorld.removeBody(body));
   physicsRingBodies.forEach((body) => physicsWorld.removeBody(body));
   physicsPoleBodies = []; physicsRingBodies = [];
@@ -674,6 +708,8 @@ function applyVisualScale(aspect = 1) {
   poles.forEach((pole) => { pole.group.scale.x = 1 / visualScaleX; });
   rings.forEach((ring) => { ring.mesh.scale.setScalar(1); setRingVisualPosition(ring, ring.x, ring.y, ring.z); });
   nozzles.forEach((nozzle) => { nozzle.scale.x = 1 / visualScaleX; });
+  jetRims.forEach((rim) => { rim.scale.x = 1 / visualScaleX; });
+  jetRipples.forEach((ripple) => { ripple.scale.x = 1 / visualScaleX; });
   jetBeams.forEach((beam) => { beam.scale.x = 1 / visualScaleX; });
 }
 
@@ -737,7 +773,7 @@ function updateWater(dt) {
 }
 
 function jetDirection(index) {
-  const swing = Math.sin(state.elapsed * 1.8 + index * 2.1) * .36 + state.tiltX * .045;
+  const swing = Math.sin(state.elapsed * 1.8 + index * 2.1) * .48 + Math.sin(state.elapsed * 4.7 + index) * .06 + state.tiltX * .045;
   // El chorro trabaja en el plano X/Y. El grosor Z existe solo para que
   // Cannon pueda resolver contactos entre cuerpos con volumen.
   return new THREE.Vector3(Math.sin(swing), Math.cos(swing), 0).normalize();
@@ -748,15 +784,22 @@ function updateJetVisuals(dt) {
     const active = input.jets[j] && !state.paused && !state.gameOver;
     const beam = jetBeams[j];
     const nozzle = nozzles[j];
+    const rim = jetRims[j];
+    const ripple = jetRipples[j];
     const direction = jetDirection(j);
-    const length = 4.7;
-    beam.position.set(JET_X[j] + direction.x * length / 2, NOZZLE_Y + direction.y * length / 2, PLAY_DEPTH / 2 - .12);
+    const length = 4.9;
+    beam.position.set(JET_X[j] + direction.x * length / 2, NOZZLE_Y + direction.y * length / 2, NOZZLE_Z);
     beam.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), direction);
-    beam.material.opacity = lerp(beam.material.opacity, active ? .24 : 0, Math.min(1, dt * 13));
+    beam.material.opacity = lerp(beam.material.opacity, active ? .28 : 0, Math.min(1, dt * 13));
     beam.material.emissiveIntensity = active ? 1.35 + Math.sin(state.elapsed * 18) * .25 : .5;
-    nozzle.material.emissiveIntensity = active ? .75 : .1;
-    const pulse = active ? 1.06 + Math.sin(state.elapsed * 20) * .04 : 1;
+    nozzle.material.emissiveIntensity = active ? .5 + Math.sin(state.elapsed * 22 + j) * .12 : .06;
+    rim.material.emissiveIntensity = active ? .75 + Math.sin(state.elapsed * 18 + j) * .18 : .16;
+    const pulse = active ? 1.08 + Math.sin(state.elapsed * 20 + j) * .05 : 1;
     nozzle.scale.set(pulse / visualScaleX, pulse, pulse);
+    rim.scale.set(pulse / visualScaleX, pulse, pulse);
+    const ripplePulse = active ? .82 + (Math.sin(state.elapsed * 7.5 + j * 1.9) + 1) * .16 : .75;
+    ripple.scale.set(ripplePulse / visualScaleX, ripplePulse, ripplePulse);
+    ripple.material.opacity = lerp(ripple.material.opacity, active ? .28 + Math.sin(state.elapsed * 14 + j) * .06 : 0, Math.min(1, dt * 9));
   }
 }
 
@@ -770,13 +813,13 @@ function updateJetEffects(dt) {
 
 function spawnJetParticles(index) {
   const direction = jetDirection(index);
-  for (let i = 0; i < (MOBILE_DEVICE ? 3 : 5); i++) {
-    const spread = (Math.random() - .5) * .22;
+  for (let i = 0; i < (MOBILE_DEVICE ? 4 : 7); i++) {
+    const spread = (Math.random() - .5) * .34;
     particles.push({
-      x: JET_X[index] + spread, y: NOZZLE_Y + .16, z: PLAY_DEPTH / 2 - .1 + (Math.random() - .5) * .04,
-      vx: direction.x * (1.8 + Math.random() * 1.8) + (Math.random() - .5) * .65,
-      vy: direction.y * (4.2 + Math.random() * 2.5), vz: (Math.random() - .5) * .12,
-      life: .46 + Math.random() * .5, maxLife: .9, size: .6 + Math.random() * .6
+      x: JET_X[index] + spread, y: NOZZLE_Y + .08 + Math.random() * .06, z: NOZZLE_Z + (Math.random() - .5) * .05,
+      vx: direction.x * (2.8 + Math.random() * 2.6) + (Math.random() - .5) * 1.05,
+      vy: direction.y * (5.2 + Math.random() * 3.2), vz: (Math.random() - .5) * .18,
+      life: .52 + Math.random() * .62, maxLife: 1.1, size: .6 + Math.random() * .6, phase: Math.random() * TAU
     });
   }
   if (particles.length > PARTICLE_CAPACITY) particles.splice(0, particles.length - PARTICLE_CAPACITY);
@@ -785,7 +828,11 @@ function spawnJetParticles(index) {
 function updateParticles(dt) {
   for (let i = particles.length - 1; i >= 0; i--) {
     const p = particles[i];
-    p.life -= dt; p.vy -= 2.1 * dt; p.x += p.vx * dt; p.y += p.vy * dt; p.z += p.vz * dt;
+    p.life -= dt;
+    p.vx += Math.sin(waveTime * 9 + p.phase) * .9 * dt;
+    p.vy -= 2.1 * dt;
+    p.vy += Math.cos(waveTime * 7 + p.phase) * .28 * dt;
+    p.x += p.vx * dt; p.y += p.vy * dt; p.z += p.vz * dt;
     if (p.life <= 0 || p.y < BASE_Y - .2) particles.splice(i, 1);
   }
   const positions = particlePoints.geometry.attributes.position.array;
@@ -834,6 +881,8 @@ function colorRequirementsMet() {
 
 const cannonForce = new CANNON.Vec3();
 const cannonPoint = new CANNON.Vec3();
+const ringLocalNormal = new CANNON.Vec3(0, 1, 0);
+const ringWorldNormal = new CANNON.Vec3();
 function submergedFraction(y) {
   return clamp((WATER_TOP - y + RING_TUBE) / (RING_TUBE * 2.2), 0, 1);
 }
@@ -895,13 +944,72 @@ function updatePolePenalty(pole, dt) {
   pole.beacon.material.color.set(danger > .72 ? 0xff4c62 : pole.reqColor >= 0 ? PALETTES[paletteIndex].colors[pole.reqColor].hex : 0x7feaff);
 }
 
+function applyRingOrientationAssist(ring, body, submerged) {
+  const descending = body.velocity.y < -.08;
+  if (!descending && !ring.capturePole && !ring.seatPole) return;
+  body.quaternion.vmult(ringLocalNormal, ringWorldNormal);
+  const descentAmount = clamp((-body.velocity.y + .12) / 2.6, 0, 1);
+  const captureBoost = ring.capturePole || ring.seatPole ? 1.3 : 1;
+  const strength = RING_ORIENTATION_ASSIST * (.38 + descentAmount * .62) * captureBoost * (.55 + submerged * .45);
+  // n × up: torque that makes the annulus horizontal without freezing its
+  // yaw, spin or collision response.
+  body.torque.x += -ringWorldNormal.z * strength;
+  body.torque.z += ringWorldNormal.x * strength;
+  body.torque.x += -body.angularVelocity.x * (.24 + strength * .22);
+  body.torque.z += -body.angularVelocity.z * (.24 + strength * .22);
+}
+
+function updateRingCapture(ring, body) {
+  if (ring.scored) return;
+  let candidate = null;
+  let nearest = Infinity;
+  const descending = body.velocity.y < .2;
+  if (descending) {
+    for (const pole of poles) {
+      if (pole.rings.length >= pole.capacity) continue;
+      const topY = BASE_Y + pole.h;
+      const dy = body.position.y - topY;
+      if (dy < -RING_CAPTURE_VERTICAL || dy > RING_CAPTURE_VERTICAL) continue;
+      const radial = Math.hypot(body.position.x - pole.x, body.position.z);
+      if (radial > RING_CAPTURE_RADIUS || radial >= nearest) continue;
+      nearest = radial; candidate = pole;
+    }
+  }
+  if (candidate) ring.capturePole = candidate;
+  const pole = ring.capturePole;
+  if (!pole) return;
+  const topY = BASE_Y + pole.h;
+  const radial = Math.hypot(body.position.x - pole.x, body.position.z);
+  if (body.position.y < topY - RING_CAPTURE_VERTICAL - .12 || body.position.y > topY + RING_CAPTURE_VERTICAL + .12 || radial > RING_CAPTURE_RADIUS + .16) {
+    ring.capturePole = null;
+    return;
+  }
+  const centering = 1 - clamp(radial / (RING_CAPTURE_RADIUS + .001), 0, 1);
+  const stiffness = 1.8 + centering * 4.8;
+  body.force.x += (pole.x - body.position.x) * stiffness - (body.velocity.x - pole.vX) * (1.0 + centering * .8);
+}
+
+function applyRingSeatForce(ring, body) {
+  const pole = ring.seatPole;
+  if (!ring.scored || !pole) return false;
+  const targetY = ring.seatTargetY;
+  body.force.x += (pole.x - body.position.x) * (RING_SEAT_STIFFNESS * 1.45) - (body.velocity.x - pole.vX) * RING_SEAT_DAMPING;
+  body.force.y += (targetY - body.position.y) * RING_SEAT_STIFFNESS - body.velocity.y * RING_SEAT_DAMPING;
+  return true;
+}
+
 function applyCannonForces(dt) {
   const elapsed = state.elapsed;
   for (const ring of rings) {
     const body = ring.body;
     if (!body) continue;
     const submerged = submergedFraction(body.position.y);
+    const seated = applyRingSeatForce(ring, body);
     body.force.y += submerged * RING_BUOYANCY_FORCE;
+    applyRingOrientationAssist(ring, body, submerged);
+    if (seated) continue;
+
+    updateRingCapture(ring, body);
     const currentX = Math.sin(elapsed * .9 + body.position.y * .8) * .22 + Math.cos(elapsed * .55 + body.position.x * .35) * .1;
     body.force.x += (currentX - body.velocity.x) * RING_MASS * .42 * submerged;
     body.force.x += state.tiltX * RING_MASS * 3.4;
@@ -918,13 +1026,22 @@ function applyCannonForces(dt) {
       const dx = body.position.x - JET_X[j];
       const dz = body.position.z;
       const radial = Math.hypot(dx, dz);
-      const widthFalloff = clamp(1 - radial / 1.55, 0, 1);
+      const widthFalloff = clamp(1 - radial / JET_FIELD_RADIUS, 0, 1);
       const dy = Math.max(0, body.position.y - NOZZLE_Y);
-      if (widthFalloff <= 0 || body.position.y < NOZZLE_Y - .25) continue;
-      const heightFalloff = clamp(1 - dy / 5.25, .16, 1);
-      const falloff = Math.pow(widthFalloff * heightFalloff, .82);
-      cannonForce.set(direction.x * 7.8 * falloff, direction.y * 10.8 * falloff, 0);
-      cannonPoint.set((JET_X[j] - body.position.x) * .5, -.24, 0);
+      if (widthFalloff <= 0 || body.position.y < NOZZLE_Y - .2) continue;
+      const heightFalloff = clamp(1 - dy / 5.45, .2, 1);
+      const falloff = Math.pow(widthFalloff * heightFalloff, .72);
+      const turbulenceX = Math.sin(elapsed * 8.2 + body.position.y * 2.3 + j * 1.7) * 1.35
+        + Math.cos(elapsed * 5.4 + body.position.x * 2.8 - j) * .75;
+      const turbulenceY = Math.sin(elapsed * 6.7 + body.position.x * 1.9 + j * 2.2) * .7;
+      cannonForce.set(
+        (direction.x * JET_FORCE_X + turbulenceX) * falloff,
+        (direction.y * JET_FORCE_Y + turbulenceY) * falloff,
+        0
+      );
+      // Cannon recibe el punto en coordenadas de mundo: el chorro empuja la
+      // zona inferior del aro, no un punto calculado como si fuese local.
+      cannonPoint.set(body.position.x, body.position.y - .24, 0);
       body.applyForce(cannonForce, cannonPoint);
     }
   }
@@ -956,9 +1073,41 @@ function launchEjectedRing(ring, pole) {
   body.wakeUp();
 }
 
+function attachRingSeatConstraint(ring, pole) {
+  if (!pole.body || ring.seatConstraint) return;
+  const constraint = new CANNON.PointToPointConstraint(
+    ring.body,
+    new CANNON.Vec3(0, 0, 0),
+    pole.body,
+    new CANNON.Vec3(0, ring.seatTargetY - BASE_Y, 0),
+    RING_SEAT_CONSTRAINT_FORCE
+  );
+  physicsWorld.addConstraint(constraint);
+  ring.seatConstraint = constraint;
+  ringSeatConstraints.push(constraint);
+}
+
+function releaseRingSeatConstraint(ring) {
+  if (!ring.seatConstraint) return;
+  physicsWorld.removeConstraint(ring.seatConstraint);
+  ringSeatConstraints = ringSeatConstraints.filter((constraint) => constraint !== ring.seatConstraint);
+  ring.seatConstraint = null;
+}
+
+function reflowPoleSeats(pole) {
+  pole.rings.forEach((ring, index) => {
+    ring.seatTargetY = BASE_Y + .24 + index * RING_STACK_STEP;
+    if (ring.seatConstraint) ring.seatConstraint.pivotB.set(0, ring.seatTargetY - BASE_Y, 0);
+  });
+}
+
 function registerPhysicsScore(ring, pole) {
-  ring.scored = true; ring.pole = pole;
+  const stackIndex = pole.rings.length;
+  ring.scored = true; ring.pole = pole; ring.capturePole = null;
+  ring.seatPole = pole;
+  ring.seatTargetY = BASE_Y + .24 + stackIndex * RING_STACK_STEP;
   pole.rings.push(ring);
+  attachRingSeatConstraint(ring, pole);
   const combo = pole.lastColor === ring.ci ? pole.combo + 1 : 1;
   pole.lastColor = ring.ci; pole.combo = combo; ring.points = 100 * combo;
   state.score += ring.points; state.currentCombo = Math.max(state.currentCombo, combo);
@@ -977,8 +1126,10 @@ function registerPhysicsScore(ring, pole) {
 function detachScoredRing(ring, pole, launch = false) {
   const index = pole.rings.indexOf(ring);
   if (index >= 0) pole.rings.splice(index, 1);
+  releaseRingSeatConstraint(ring);
+  reflowPoleSeats(pole);
   state.score = Math.max(0, state.score - (ring.points || 100));
-  ring.scored = false; ring.pole = null; ring.points = 0;
+  ring.scored = false; ring.pole = null; ring.capturePole = null; ring.seatPole = null; ring.seatTargetY = 0; ring.points = 0;
   rebuildPoleCombo(pole);
   if (state.winQueued) { state.winQueued = false; window.clearTimeout(state.winTimer); state.winTimer = 0; }
   if (launch) launchEjectedRing(ring, pole);
@@ -997,19 +1148,20 @@ function ejectAllFromPole(pole) {
   sfxFail(); showToast('TENSIÓN MÁXIMA · PALO VACÍO'); vibrate([40, 25, 70]);
 }
 
-function ringCrossedPoleTip(ring, pole, thresholdY) {
+function ringCrossedPoleTip(ring, pole, thresholdY, allowedRadius = RING_ENTRY_RADIUS) {
   const body = ring.body;
   const previousY = Number.isFinite(ring.previousY) ? ring.previousY : body.position.y;
   const drop = previousY - body.position.y;
   // Se comprueba el cruce del plano central de la punta, no una posición
-  // recolocada después. El radio se calcula con el hueco y la esfera reales.
+  // recolocada después. El radio puede ser el hueco físico o la ventana de
+  // captura exterior activada por el roce descendente de la circunferencia.
   if (body.position.y >= thresholdY || previousY < thresholdY || drop <= .0001) return false;
   const crossingT = clamp((previousY - thresholdY) / drop, 0, 1);
   const previousPoleX = Number.isFinite(pole.previousX) ? pole.previousX : pole.x;
   const crossingX = lerp(ring.previousX, body.position.x, crossingT);
   const crossingZ = lerp(ring.previousZ, body.position.z, crossingT);
   const crossingPoleX = lerp(previousPoleX, pole.x, crossingT);
-  return Math.hypot(crossingX - crossingPoleX, crossingZ) <= RING_ENTRY_RADIUS;
+  return Math.hypot(crossingX - crossingPoleX, crossingZ) <= allowedRadius;
 }
 
 function checkPhysicsPoleEntries() {
@@ -1018,7 +1170,8 @@ function checkPhysicsPoleEntries() {
     if (!body || ring.scored) continue;
     for (const pole of poles) {
       if (pole.rings.length >= pole.capacity) continue;
-      if (!ringCrossedPoleTip(ring, pole, BASE_Y + pole.h)) continue;
+      const allowedRadius = ring.capturePole === pole ? RING_CAPTURE_RADIUS : RING_ENTRY_RADIUS;
+      if (!ringCrossedPoleTip(ring, pole, BASE_Y + pole.h, allowedRadius)) continue;
       registerPhysicsScore(ring, pole);
       break;
     }
@@ -1029,6 +1182,9 @@ function reconcileScoredRings() {
   const releaseRadius = RING_RADIUS + POLE_SHAFT_RADIUS + .06;
   for (const ring of [...rings]) {
     if (!ring.scored || !ring.pole || !ring.body) continue;
+    // Un aro ya capturado queda sujeto por una guía dinámica y solo se libera
+    // en detachScoredRing(), que es la ruta de penalización.
+    if (ring.seatPole) continue;
     const pole = ring.pole;
     const radial = Math.hypot(ring.body.position.x - pole.x, ring.body.position.z);
     const belowTank = ring.body.position.y < BASE_Y - .42;
