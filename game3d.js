@@ -4,7 +4,7 @@ import * as CANNON from './vendor/cannon-es.js';
 const $ = (id) => document.getElementById(id);
 // Referencia visible para distinguir rápidamente el build probado en una captura.
 // Incrementar este identificador en cada iteración funcional publicada.
-const BUILD_VERSION = 'R11';
+const BUILD_VERSION = 'R12';
 const MOBILE_DEVICE = /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent) || window.matchMedia?.('(pointer: coarse)').matches || window.innerWidth < 768;
 const WATER_GRID_X = MOBILE_DEVICE ? 24 : 48;
 const WATER_GRID_Y = MOBILE_DEVICE ? 10 : 18;
@@ -686,7 +686,7 @@ function createRingPhysicsBody(ring) {
   // El aro es un compuesto de esferas suaves distribuidas sobre el toro
   // visual. Conservan el agujero interior, pero evitan las esquinas de las
   // cajas que estaban formando enganches y lanzamientos entre aros.
-  const segments = MOBILE_DEVICE ? 12 : 16;
+  const segments = MOBILE_DEVICE ? 10 : 12;
   for (let i = 0; i < segments; i++) {
     const angle = i / segments * TAU;
     const offset = new CANNON.Vec3(Math.cos(angle) * RING_RADIUS, 0, Math.sin(angle) * RING_RADIUS);
@@ -1095,15 +1095,18 @@ function applyRingRestingOrientationAssist(ring, body) {
   if (ring.scored || !ring.body) return;
   const lowest = ringLowestPointY(body);
   const floorInfluence = clamp((.5 - (lowest - PHYSICS_FLOOR_TOP)) / .5, 0, 1);
-  if (floorInfluence <= 0) return;
+  const lowAreaInfluence = clamp((BASE_Y + 1.15 - body.position.y) / 1.15, 0, 1);
+  const supportInfluence = Math.max(floorInfluence, lowAreaInfluence);
+  if (supportInfluence <= 0) return;
   body.quaternion.vmult(ringLocalNormal, ringWorldNormal);
   const sidewaysNormal = Math.hypot(ringWorldNormal.x, ringWorldNormal.z);
   if (sidewaysNormal < .025) return;
   // Un aro apoyado de canto no debe quedarse perfectamente vertical por una
   // simetría numérica: este torque físico suave le permite ladearse y apoyar
-  // el toro sobre su cara, sin fijar su quaternion ni su posición.
-  const strength = .28 + floorInfluence * .8;
-  const damping = .22 + floorInfluence * .28;
+  // el toro sobre su cara o sobre otro aro de la pila, sin fijar su quaternion
+  // ni su posición.
+  const strength = .24 + supportInfluence * .62;
+  const damping = .18 + supportInfluence * .24;
   body.torque.x += -ringWorldNormal.z * strength - body.angularVelocity.x * damping;
   body.torque.z += ringWorldNormal.x * strength - body.angularVelocity.z * damping;
 }
