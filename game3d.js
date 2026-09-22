@@ -4,7 +4,7 @@ import * as CANNON from './vendor/cannon-es.js';
 const $ = (id) => document.getElementById(id);
 // Referencia visible para distinguir rápidamente el build probado en una captura.
 // Incrementar este identificador en cada iteración funcional publicada.
-const BUILD_VERSION = 'R9';
+const BUILD_VERSION = 'R10';
 const MOBILE_DEVICE = /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent) || window.matchMedia?.('(pointer: coarse)').matches || window.innerWidth < 768;
 const WATER_GRID_X = MOBILE_DEVICE ? 24 : 48;
 const WATER_GRID_Y = MOBILE_DEVICE ? 10 : 18;
@@ -227,9 +227,10 @@ physicsWorld.defaultContactMaterial.restitution = .34;
 // Contactos lubricados y de rebote corto: un aro no debe convertirse en una
 // pelota al tocar un palo, una pared o la base.
 physicsWorld.addContactMaterial(new CANNON.ContactMaterial(ringPhysicsMaterial, tankPhysicsMaterial, { friction: .004, restitution: .12 }));
-// Los aros no colisionan entre sí: el apilado puntuado se guía por sus
-// objetivos verticales y los contactos con suelo/palos siguen siendo físicos.
-// Esto evita que dos toros compuestos se enganchen y se lancen mutuamente.
+// Los aros conservan contactos físicos entre sí, pero con fricción y rebote
+// mínimos. La geometría de cada toro usa esferas suaves para evitar que bordes
+// de cajas compuestas se enganchen y se lancen mutuamente.
+physicsWorld.addContactMaterial(new CANNON.ContactMaterial(ringPhysicsMaterial, ringPhysicsMaterial, { friction: .002, restitution: .06 }));
 const physicsGround = new CANNON.Body({ mass: 0, material: tankPhysicsMaterial });
 physicsGround.collisionFilterGroup = TANK_COLLISION_GROUP;
 physicsGround.collisionFilterMask = RING_COLLISION_GROUP;
@@ -677,23 +678,19 @@ function handleRingPoleContact(ring, event) {
 function createRingPhysicsBody(ring) {
   const body = new CANNON.Body({ mass: RING_MASS, material: ringPhysicsMaterial });
   body.collisionFilterGroup = RING_COLLISION_GROUP;
-  body.collisionFilterMask = TANK_COLLISION_GROUP;
+  body.collisionFilterMask = TANK_COLLISION_GROUP | RING_COLLISION_GROUP;
   body.linearDamping = .16;
   body.angularDamping = .24;
   body.linearFactor.set(1, 1, 0); // 2.5D: Z es grosor de contacto, no un carril de juego.
   body.allowSleep = false;
-  // El aro es un compuesto de segmentos que sigue el toro visual. Una malla
-  // física más contenida reduce las parejas de contacto y evita que los aros
-  // se enganchen entre sí sin cambiar la geometría visible.
+  // El aro es un compuesto de esferas suaves distribuidas sobre el toro
+  // visual. Conservan el agujero interior, pero evitan las esquinas de las
+  // cajas que estaban formando enganches y lanzamientos entre aros.
   const segments = MOBILE_DEVICE ? 16 : 20;
-  const tangentHalfLength = RING_RADIUS * Math.sin(Math.PI / segments);
   for (let i = 0; i < segments; i++) {
     const angle = i / segments * TAU;
     const offset = new CANNON.Vec3(Math.cos(angle) * RING_RADIUS, 0, Math.sin(angle) * RING_RADIUS);
-    const shape = new CANNON.Box(new CANNON.Vec3(RING_COLLISION_TUBE, RING_TUBE, tangentHalfLength));
-    const rotation = new CANNON.Quaternion();
-    rotation.setFromAxisAngle(new CANNON.Vec3(0, 1, 0), angle);
-    body.addShape(shape, offset, rotation);
+    body.addShape(new CANNON.Sphere(RING_COLLISION_TUBE), offset);
   }
   body.position.set(ring.x, ring.y, ring.z);
   ring.previousX = body.position.x; ring.previousY = body.position.y; ring.previousZ = body.position.z;
@@ -1032,10 +1029,14 @@ function ringLowestPointY(body) {
   let lowest = Infinity;
   for (let index = 0; index < body.shapes.length; index++) {
     const shape = body.shapes[index];
+    body.quaternion.vmult(body.shapeOffsets[index], floorShapeCenter);
+    if (shape.radius !== undefined) {
+      lowest = Math.min(lowest, body.position.y + floorShapeCenter.y - shape.radius);
+      continue;
+    }
     const halfExtents = shape.halfExtents;
     if (!halfExtents) continue;
     body.quaternion.mult(body.shapeOrientations[index], floorShapeQuaternion);
-    body.quaternion.vmult(body.shapeOffsets[index], floorShapeCenter);
     floorShapeAxisX.set(halfExtents.x, 0, 0); floorShapeQuaternion.vmult(floorShapeAxisX, floorShapeAxisX);
     floorShapeAxisY.set(0, halfExtents.y, 0); floorShapeQuaternion.vmult(floorShapeAxisY, floorShapeAxisY);
     floorShapeAxisZ.set(0, 0, halfExtents.z); floorShapeQuaternion.vmult(floorShapeAxisZ, floorShapeAxisZ);
@@ -1049,8 +1050,8 @@ function applyFloorContactSupport(body) {
   // El contacto Cannon sigue siendo la defensa principal. Esta fuerza física
   // solo entra si la geometría inferior del aro ya ha penetrado el suelo, para
   // recuperar un cuerpo que haya cruzado la superficie durante un paso discreto.
-  // Se calcula con el punto inferior real de todos los Box del aro compuesto,
-  // no con el centro del cuerpo, porque el aro puede estar girado al caer.
+  // Se calcula con el punto inferior real de todos los colliders del aro
+  // compuesto, no con el centro del cuerpo, porque puede estar girado al caer.
   const lowest = ringLowestPointY(body);
   const predictedLowest = lowest + Math.min(0, body.velocity.y) * physicsFixedStep;
   const penetration = PHYSICS_FLOOR_TOP - Math.min(lowest, predictedLowest);
