@@ -2,6 +2,9 @@ import * as THREE from './vendor/three.module.js';
 import * as CANNON from './vendor/cannon-es.js';
 
 const $ = (id) => document.getElementById(id);
+// Referencia visible para distinguir rápidamente el build probado en una captura.
+// Incrementar este identificador en cada iteración funcional publicada.
+const BUILD_VERSION = 'R5';
 const MOBILE_DEVICE = /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent) || window.matchMedia?.('(pointer: coarse)').matches || window.innerWidth < 768;
 const WATER_GRID_X = MOBILE_DEVICE ? 24 : 48;
 const WATER_GRID_Y = MOBILE_DEVICE ? 10 : 18;
@@ -1955,4 +1958,6 @@ function renderLoop(timestamp) {
 }
 
 /* Initial state */
+$('buildVersion').textContent = `BUILD ${BUILD_VERSION}`;
+$('buildVersion').title = `Referencia de versión ${BUILD_VERSION}`;
 buildLevelSelector(); buildGlobalLevelPicker(); buildPaletteGrid(); initGame(currentLevel); setupGyro(); updateOnlineStatus(); resizeRenderer(); connectCloud(); requestAnimationFrame(renderLoop);
