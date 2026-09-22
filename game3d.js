@@ -8,6 +8,7 @@ const WATER_GRID_Y = MOBILE_DEVICE ? 10 : 18;
 const BACKDROP_GRID_Y = MOBILE_DEVICE ? 12 : 24;
 const BUBBLE_COUNT = MOBILE_DEVICE ? 12 : 28;
 const PARTICLE_CAPACITY = MOBILE_DEVICE ? 220 : 480;
+const JET_BUBBLE_COUNT = MOBILE_DEVICE ? 6 : 12;
 const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
 const storage = {
   get(key, fallback = null) { try { return window.localStorage.getItem(key) ?? fallback; } catch { return fallback; } },
@@ -44,6 +45,7 @@ const RING_MASS = .72;
 const RING_SEATED_MASS = RING_MASS * 3;
 
 const RING_BUOYANCY_FORCE = 3.5;
+const POLE_SHAFT_TOP_RADIUS = .075;
 const POLE_SHAFT_RADIUS = .12;
 const POLE_TIP_RADIUS = .11;
 // Entrada física estricta, usada cuando el aro llega sin asistencia.
@@ -460,10 +462,10 @@ const particlePoints = new THREE.Points(
 particlePoints.frustumCulled = false;
 effectGroup.add(particlePoints);
 
-const jetBeams = [];
 const nozzles = [];
 const jetRims = [];
 const jetRipples = [];
+const jetBubbles = [];
 for (let j = 0; j < 3; j++) {
   // Sustituye la antigua bola/boquilla por un hueco empotrado en el suelo:
   // disco oscuro, borde metálico y una pequeña vibración de agua alrededor.
@@ -490,16 +492,20 @@ for (let j = 0; j < 3; j++) {
   effectGroup.add(ripple);
   jetRipples.push(ripple);
 
-  const beamMaterial = MOBILE_DEVICE
-    ? new THREE.MeshBasicMaterial({ color: JET_COLORS[j], transparent: true, opacity: 0, depthWrite: false, side: THREE.DoubleSide, blending: THREE.AdditiveBlending })
-    : new THREE.MeshPhysicalMaterial({ color: JET_COLORS[j], emissive: JET_COLORS[j], emissiveIntensity: 1.1, transparent: true, opacity: 0, depthWrite: false, side: THREE.DoubleSide, blending: THREE.AdditiveBlending });
-  const beam = new THREE.Mesh(
-    new THREE.ConeGeometry(.43, 4.9, MOBILE_DEVICE ? 12 : 24, 1, true),
-    beamMaterial
-  );
-  beam.position.set(JET_X[j], NOZZLE_Y + 2.45, NOZZLE_Z);
-  effectGroup.add(beam);
-  jetBeams.push(beam);
+}
+
+// Burbujas pequeñas y desfasadas sustituyen al cono direccional: hacen visible
+// la actividad del chorro sin dibujar una flecha rígida sobre el tablero.
+const jetBubbleGeometry = new THREE.SphereGeometry(.022, MOBILE_DEVICE ? 5 : 7, MOBILE_DEVICE ? 5 : 7);
+for (let i = 0; i < JET_BUBBLE_COUNT; i++) {
+  const bubble = new THREE.Mesh(jetBubbleGeometry, bubbleMaterial);
+  bubble.visible = false;
+  bubble.userData.jet = i % 3;
+  bubble.userData.progress = Math.random();
+  bubble.userData.phase = Math.random() * TAU;
+  bubble.userData.size = .65 + Math.random() * .75;
+  bubbleGroup.add(bubble);
+  jetBubbles.push(bubble);
 }
 
 function roundedRect(ctx, x, y, width, height, radius) {
@@ -551,7 +557,7 @@ function createPole(def) {
   const hasRequirement = def.rc !== undefined;
   const reqColor = hasRequirement ? PALETTES[paletteIndex].colors[def.rc].hex : '#b4e6f5';
   const shaftMaterial = new THREE.MeshStandardMaterial({ color: reqColor, emissive: reqColor, emissiveIntensity: hasRequirement ? .52 : .3, roughness: .28, metalness: .08, transparent: true, opacity: .96 });
-  const shaft = new THREE.Mesh(new THREE.CylinderGeometry(.075, .12, def.h, MOBILE_DEVICE ? 10 : 18), shaftMaterial);
+  const shaft = new THREE.Mesh(new THREE.CylinderGeometry(POLE_SHAFT_TOP_RADIUS, POLE_SHAFT_RADIUS, def.h, MOBILE_DEVICE ? 10 : 18), shaftMaterial);
   shaft.position.y = def.h / 2;
   shaft.castShadow = true;
   group.add(shaft);
@@ -662,7 +668,8 @@ function createRingPhysicsBody(ring) {
 
 function createPolePhysicsBody(pole) {
   const body = new CANNON.Body({ mass: 0, material: tankPhysicsMaterial });
-  const shaft = new CANNON.Cylinder(.075, POLE_SHAFT_RADIUS, pole.h, MOBILE_DEVICE ? 12 : 24);
+  // Mismo radio y misma resolución que CylinderGeometry del modelo visual.
+  const shaft = new CANNON.Cylinder(POLE_SHAFT_TOP_RADIUS, POLE_SHAFT_RADIUS, pole.h, MOBILE_DEVICE ? 10 : 18);
   body.addShape(shaft, new CANNON.Vec3(0, pole.h / 2, 0));
   body.addShape(new CANNON.Sphere(POLE_TIP_RADIUS), new CANNON.Vec3(0, pole.h, 0));
   body.addShape(new CANNON.Cylinder(.38, .48, .18, MOBILE_DEVICE ? 12 : 24), new CANNON.Vec3(0, .09, 0));
@@ -752,7 +759,6 @@ function applyVisualScale(aspect = 1) {
   nozzles.forEach((nozzle) => { nozzle.scale.x = 1 / visualScaleX; });
   jetRims.forEach((rim) => { rim.scale.x = 1 / visualScaleX; });
   jetRipples.forEach((ripple) => { ripple.scale.x = 1 / visualScaleX; });
-  jetBeams.forEach((beam) => { beam.scale.x = 1 / visualScaleX; });
 }
 
 function initGame(level = currentLevel) {
@@ -824,16 +830,9 @@ function jetDirection(index) {
 function updateJetVisuals(dt) {
   for (let j = 0; j < 3; j++) {
     const active = input.jets[j] && !state.paused && !state.gameOver;
-    const beam = jetBeams[j];
     const nozzle = nozzles[j];
     const rim = jetRims[j];
     const ripple = jetRipples[j];
-    const direction = jetDirection(j);
-    const length = 4.9;
-    beam.position.set(JET_X[j] + direction.x * length / 2, NOZZLE_Y + direction.y * length / 2, NOZZLE_Z);
-    beam.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), direction);
-    beam.material.opacity = lerp(beam.material.opacity, active ? .28 : 0, Math.min(1, dt * 13));
-    beam.material.emissiveIntensity = active ? 1.35 + Math.sin(state.elapsed * 18) * .25 : .5;
     nozzle.material.emissiveIntensity = active ? .5 + Math.sin(state.elapsed * 22 + j) * .12 : .06;
     rim.material.emissiveIntensity = active ? .75 + Math.sin(state.elapsed * 18 + j) * .18 : .16;
     const pulse = active ? 1.08 + Math.sin(state.elapsed * 20 + j) * .05 : 1;
@@ -845,7 +844,35 @@ function updateJetVisuals(dt) {
   }
 }
 
+function updateJetBubbles(dt) {
+  const activeJets = input.jets.map((jet, index) => jet && !state.paused && !state.gameOver ? index : -1).filter((index) => index >= 0);
+  jetBubbles.forEach((bubble) => {
+    const jet = bubble.userData.jet;
+    if (!activeJets.includes(jet)) {
+      bubble.visible = false;
+      bubble.userData.progress = Math.random() * .18;
+      return;
+    }
+    bubble.visible = true;
+    bubble.userData.progress += dt * (.38 + bubble.userData.size * .16);
+    if (bubble.userData.progress > 1.08) bubble.userData.progress = Math.random() * .12;
+    const direction = jetDirection(jet);
+    const sideX = -direction.y;
+    const sideY = direction.x;
+    const distance = .08 + bubble.userData.progress * 2.35;
+    const drift = Math.sin(waveTime * 5.2 + bubble.userData.phase + bubble.userData.progress * 4) * (.035 + bubble.userData.progress * .065);
+    bubble.position.set(
+      JET_X[jet] + direction.x * distance + sideX * drift,
+      NOZZLE_Y + .08 + direction.y * distance + sideY * drift,
+      NOZZLE_Z + Math.cos(waveTime * 4.4 + bubble.userData.phase) * .045
+    );
+    const pulse = bubble.userData.size * (.72 + Math.sin(waveTime * 6 + bubble.userData.phase) * .18);
+    bubble.scale.setScalar(pulse);
+  });
+}
+
 function updateJetEffects(dt) {
+  updateJetBubbles(dt);
   const active = input.jets.map((jet, index) => jet && !state.paused && !state.gameOver ? index : -1).filter((index) => index >= 0);
   if (!active.length) { jSoundTimer = 0; return; }
   jSoundTimer += dt;
@@ -1574,18 +1601,75 @@ let audioContext = null;
 let soundOn = storage.get('wrt_snd') !== '0';
 let musicOn = storage.get('wrt_mus') === '1';
 let musicTimer = 0;
+let musicMode = 'menu';
+let musicFilter = null;
+let musicOutput = null;
+let musicDelay = null;
+let musicDelayGain = null;
+const UNDERWATER_SCALE = [0, 2, 3, 5, 7, 10, 12];
+const UNDERWATER_ROOTS = [110, 116.54, 103.83, 123.47, 107.83];
+const UNDERWATER_MOTIFS = [
+  [0, 2, 4, 3, 1, 2, 5, 3, 0, 2, 3, 4],
+  [0, 1, 3, 5, 3, 2, 4, 1, 0, 2, 5, 3],
+  [2, 4, 5, 3, 1, 0, 2, 4, 3, 5, 2, 1],
+  [0, 3, 2, 5, 4, 2, 1, 3, 0, 2, 4, 5],
+  [1, 2, 4, 5, 3, 1, 0, 2, 3, 5, 4, 2]
+];
 function ensureAudio() { if (!AudioContextClass) return; if (!audioContext) audioContext = new AudioContextClass(); if (audioContext.state === 'suspended') audioContext.resume(); }
+function ensureMusicBus() {
+  if (!audioContext || musicFilter) return;
+  musicFilter = audioContext.createBiquadFilter();
+  musicFilter.type = 'lowpass';
+  musicFilter.frequency.value = 1650;
+  musicFilter.Q.value = .42;
+  musicOutput = audioContext.createGain(); musicOutput.gain.value = .42;
+  musicDelay = audioContext.createDelay(.32); musicDelay.delayTime.value = .12;
+  musicDelayGain = audioContext.createGain(); musicDelayGain.gain.value = .16;
+  musicFilter.connect(musicOutput); musicOutput.connect(audioContext.destination);
+  musicFilter.connect(musicDelay); musicDelay.connect(musicDelayGain); musicDelayGain.connect(audioContext.destination);
+}
 function tone(frequency, duration, volume = .08, type = 'sine') { if (!soundOn || !audioContext) return; const oscillator = audioContext.createOscillator(); const gain = audioContext.createGain(); oscillator.type = type; oscillator.frequency.value = frequency; gain.gain.setValueAtTime(volume, audioContext.currentTime); gain.gain.exponentialRampToValueAtTime(.001, audioContext.currentTime + duration); oscillator.connect(gain); gain.connect(audioContext.destination); oscillator.start(); oscillator.stop(audioContext.currentTime + duration); }
+function underwaterTone(frequency, duration, volume = .03, type = 'sine', detune = 0) {
+  if (!soundOn || !audioContext) return;
+  ensureMusicBus();
+  const now = audioContext.currentTime;
+  const oscillator = audioContext.createOscillator();
+  const gain = audioContext.createGain();
+  const lfo = audioContext.createOscillator();
+  const lfoGain = audioContext.createGain();
+  oscillator.type = type; oscillator.frequency.setValueAtTime(frequency, now); oscillator.detune.value = detune;
+  lfo.frequency.value = .22 + Math.random() * .12; lfoGain.gain.value = 2.5; lfo.connect(lfoGain); lfoGain.connect(oscillator.detune);
+  gain.gain.setValueAtTime(.0001, now); gain.gain.linearRampToValueAtTime(volume, now + .06); gain.gain.exponentialRampToValueAtTime(.0001, now + duration);
+  oscillator.connect(gain); gain.connect(musicFilter);
+  oscillator.start(now); lfo.start(now); oscillator.stop(now + duration + .04); lfo.stop(now + duration + .04);
+}
 function sfxJet() { tone(160 + Math.random() * 35, .06, .025, 'triangle'); }
 function sfxScore(combo = 1) { tone(420 + combo * 80, .16, .06, 'triangle'); if (combo > 1) window.setTimeout(() => tone(660 + combo * 70, .18, .05, 'sine'), 70); }
 function sfxRingRelease() { tone(130, .22, .07, 'sawtooth'); window.setTimeout(() => tone(94, .28, .05, 'sawtooth'), 100); }
 function sfxWin() { [523, 659, 784, 1047].forEach((frequency, index) => window.setTimeout(() => tone(frequency, .45, .08, 'triangle'), index * 130)); }
-function musicMenu() { if (musicOn) scheduleMusic([196, 261, 329, 392], 0); }
-function musicGame() { if (musicOn) scheduleMusic([130, 155, 196, 233], 0); }
-function musicWin() { if (musicOn) scheduleMusic([523, 659, 784, 1047], 0); }
-function scheduleMusic(notes, index) { if (!musicOn || !audioContext) return; window.clearTimeout(musicTimer); tone(notes[index % notes.length], .65, .018, 'sine'); musicTimer = window.setTimeout(() => scheduleMusic(notes, index + 1), 820); }
+function musicMenu() { if (musicOn) { musicMode = 'menu'; scheduleMusic(0); } }
+function musicGame() { if (musicOn) { musicMode = 'game'; scheduleMusic(0); } }
+function musicWin() { if (musicOn) { musicMode = 'win'; scheduleMusic(0); } }
+function scheduleMusic(index = 0) {
+  window.clearTimeout(musicTimer);
+  if (!musicOn || !audioContext) return;
+  ensureMusicBus();
+  const variant = musicMode === 'game' ? (currentLevel - 1) % UNDERWATER_MOTIFS.length : 0;
+  const motif = musicMode === 'win' ? [0, 2, 4, 6, 5, 6, 4, 2] : musicMode === 'menu' ? [0, 2, 3, 5, 3, 2, 0, 1] : UNDERWATER_MOTIFS[variant];
+  const root = musicMode === 'menu' ? 146.83 : musicMode === 'win' ? 261.63 : UNDERWATER_ROOTS[variant] * (currentLevel > 5 ? 1.0293 : 1);
+  const step = musicMode === 'win' ? .3 : musicMode === 'menu' ? .72 : .62;
+  const scaleIndex = motif[index % motif.length];
+  const octave = musicMode === 'game' && index % 12 > 8 ? 1 : 0;
+  const note = root * Math.pow(2, (UNDERWATER_SCALE[scaleIndex] + octave * 12) / 12);
+  underwaterTone(note, step * 1.15, musicMode === 'win' ? .034 : .027, 'sine', Math.sin(index * .8) * 4);
+  if (musicMode === 'game' && index % 3 === 0) underwaterTone(root * .5, step * 1.55, .012, 'triangle', -3);
+  if (musicMode === 'game' && index % 4 === 2) underwaterTone(root * 1.498, step * 1.1, .009, 'sine', 5);
+  if (musicMode === 'win' && index === 0) underwaterTone(root * .5, 1.8, .016, 'triangle');
+  if (musicFilter) musicFilter.frequency.setTargetAtTime(musicMode === 'game' ? 1450 + variant * 125 : 1750, audioContext.currentTime, .25);
+  musicTimer = window.setTimeout(() => scheduleMusic(index + 1), step * 1000);
+}
 $('bSnd').addEventListener('click', () => { ensureAudio(); soundOn = !soundOn; storage.set('wrt_snd', soundOn ? '1' : '0'); $('bSnd').textContent = soundOn ? '🔊' : '🔇'; });
-$('bMus').addEventListener('click', () => { ensureAudio(); musicOn = !musicOn; storage.set('wrt_mus', musicOn ? '1' : '0'); $('bMus').textContent = musicOn ? '♫' : '♪'; if (musicOn) musicMenu(); else window.clearTimeout(musicTimer); });
+$('bMus').addEventListener('click', () => { ensureAudio(); musicOn = !musicOn; storage.set('wrt_mus', musicOn ? '1' : '0'); $('bMus').textContent = musicOn ? '♫' : '♪'; if (musicOn) musicMenu(); else { window.clearTimeout(musicTimer); musicMode = 'off'; } });
 $('bSnd').textContent = soundOn ? '🔊' : '🔇'; $('bMus').textContent = musicOn ? '♫' : '♪';
 
 /* -------------------------------------------------------------------------- */

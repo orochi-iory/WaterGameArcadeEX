@@ -19,15 +19,15 @@ Water Game Arcade EX ya no es un canvas 2D: el tablero completo se renderiza con
 - 🌊 Agua con superficie animada, volumen, burbujas, reflejos y niebla.
 - 💍 Aros como mallas 3D reales, con volumen, materiales, brillo y rotación libre.
 - 🪄 Palos, soportes, luces, balizas y etiquetas de capacidad en el espacio 3D.
-- 💨 Chorros con conos de agua, oscilación, partículas y fuerzas físicas.
+- 💨 Chorros con oscilación, gotas, burbujas y fuerzas físicas, sin flechas visuales rígidas.
 - ⚙️ Física 3D con cuerpos rígidos Cannon-es: gravedad, flotación, drag, orientación, velocidad angular y colisiones de geometría real.
-- 🎯 Enceste con captura física suave: la circunferencia puede rozar la punta y el aro se guía sin teletransporte.
+- 🎯 Enceste con captura física suave: el contacto del diámetro interior guía el aro sin teletransporte ni captura por roce exterior.
 - 🎮 Diez niveles: cinco clásicos y cinco niveles con requisitos de color.
 - 🔥 Combos, bonus de tiempo, bonus de color perfecto y aros pesados al quedar ensartados.
 - 📱 Controles táctiles, teclado, giroscopio, vibración y pantalla completa.
 - 👁️ Cinco paletas accesibles con contrastes de color diferenciados.
 - 💾 Ranking local y sincronización global opcional con Firebase.
-- 🔊 Audio procedural para chorros, combos, salidas físicas, victoria y música ambiental.
+- 🔊 Audio procedural para chorros, combos, salidas físicas, victoria y una melodía ambiental submarina variable por nivel.
 
 ## 🎯 Cómo jugar
 
