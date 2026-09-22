@@ -27,6 +27,8 @@ const TAU = Math.PI * 2;
 const TOTAL_RINGS = 20;
 const MIN_PER_POLE = 5;
 const BASE_Y = -2.78;
+// La colisión coincide con la cara superior del floorTrim visible.
+const PHYSICS_FLOOR_TOP = BASE_Y - .0475;
 // El tanque ocupa todo el volumen jugable. WATER_Y se conserva como altura de
 // aparición para repartir los aros; WATER_TOP es la superficie real del agua.
 const WATER_Y = -1.72;
@@ -65,6 +67,9 @@ const RING_SEAT_STIFFNESS = 1.0;
 const RING_SEAT_DAMPING = .8;
 const RING_SEAT_HORIZONTAL_STIFFNESS = 4.8;
 const RING_SEAT_HORIZONTAL_DAMPING = 2.4;
+const RING_PAIR_MIN_DISTANCE = .5;
+const RING_PAIR_SEPARATION_STIFFNESS = 34;
+const RING_PAIR_SEPARATION_DAMPING = 7;
 const ringFlatQuaternion = new THREE.Quaternion().setFromEuler(new THREE.Euler(Math.PI / 2, 0, 0));
 const GRAVITY = -5.6;
 const NOZZLE_Y = BASE_Y - .02;
@@ -215,7 +220,7 @@ const physicsGround = new CANNON.Body({ mass: 0, material: tankPhysicsMaterial }
 // Conserva la cara superior en la misma cota que el suelo visual, pero con
 // más espesor hacia abajo para que un aro no pueda atravesarlo por tunneling.
 physicsGround.addShape(new CANNON.Box(new CANNON.Vec3(6, .22, 2.85)));
-physicsGround.position.set(0, BASE_Y - .31, .15);
+physicsGround.position.set(0, PHYSICS_FLOOR_TOP - .22, .15);
 physicsWorld.addBody(physicsGround);
 const physicsSideWalls = [];
 for (const x of [-5.94, 5.94]) {
@@ -1016,7 +1021,7 @@ function applyFloorContactSupport(body) {
   // recuperar un cuerpo que haya cruzado la superficie durante un paso discreto.
   const lowest = ringLowestPointY(body);
   const predictedLowest = lowest + Math.min(0, body.velocity.y) * physicsFixedStep;
-  const penetration = BASE_Y - .09 - Math.min(lowest, predictedLowest);
+  const penetration = PHYSICS_FLOOR_TOP - Math.min(lowest, predictedLowest);
   if (penetration <= 0) return;
   const supportForce = penetration * 420 - Math.min(0, body.velocity.y) * 48;
   body.force.y += Math.min(180, Math.max(0, supportForce));
@@ -1102,8 +1107,37 @@ function applyRingSeatForce(ring, body) {
   return true;
 }
 
+function applyRingPairSeparation() {
+  for (let firstIndex = 0; firstIndex < rings.length; firstIndex++) {
+    const first = rings[firstIndex];
+    if (!first.body) continue;
+    for (let secondIndex = firstIndex + 1; secondIndex < rings.length; secondIndex++) {
+      const second = rings[secondIndex];
+      if (!second.body) continue;
+      const sameSeatPole = first.scored && second.scored && first.seatPole === second.seatPole;
+      const firstSettled = sameSeatPole && Math.abs(first.body.position.x - first.seatPole.x) < .18 && Math.abs(first.body.position.y - first.seatTargetY) < .28;
+      const secondSettled = sameSeatPole && Math.abs(second.body.position.x - second.seatPole.x) < .18 && Math.abs(second.body.position.y - second.seatTargetY) < .28;
+      if (firstSettled && secondSettled) continue;
+      const dx = second.body.position.x - first.body.position.x;
+      const dy = second.body.position.y - first.body.position.y;
+      const distance = Math.hypot(dx, dy);
+      if (distance >= RING_PAIR_MIN_DISTANCE) continue;
+      const safeDistance = Math.max(distance, .001);
+      const nx = distance > .001 ? dx / safeDistance : (firstIndex % 2 ? -1 : 1);
+      const ny = distance > .001 ? dy / safeDistance : 0;
+      const relativeVelocity = (second.body.velocity.x - first.body.velocity.x) * nx + (second.body.velocity.y - first.body.velocity.y) * ny;
+      const separationForce = Math.max(0, (RING_PAIR_MIN_DISTANCE - distance) * RING_PAIR_SEPARATION_STIFFNESS - relativeVelocity * RING_PAIR_SEPARATION_DAMPING);
+      first.body.force.x -= nx * separationForce;
+      first.body.force.y -= ny * separationForce;
+      second.body.force.x += nx * separationForce;
+      second.body.force.y += ny * separationForce;
+    }
+  }
+}
+
 function applyCannonForces(dt) {
   const elapsed = state.elapsed;
+  applyRingPairSeparation();
   for (const ring of rings) {
     const body = ring.body;
     if (!body) continue;
@@ -1115,12 +1149,13 @@ function applyCannonForces(dt) {
     applyRingSeatLevelingAssist(ring, body);
     updateRingCapture(ring, body);
     const currentX = Math.sin(elapsed * .9 + body.position.y * .8) * .22 + Math.cos(elapsed * .55 + body.position.x * .35) * .1;
+    const controlMass = ring.scored ? body.mass : RING_MASS;
     body.force.x += (currentX - body.velocity.x) * RING_MASS * .42 * submerged;
-    body.force.x += state.tiltX * RING_MASS * 3.4;
-    // El control vertical vuelve a ser el centro de la jugabilidad: ↑ / ↓ y
-    // beta del giroscopio elevan o bajan el aro. Z no es un control: solo
-    // conserva el grosor volumétrico necesario para los contactos 3D.
-    body.force.y += -state.tiltY * RING_MASS * 4.4;
+    body.force.x += state.tiltX * controlMass * 3.4;
+    // El control vertical sigue siendo el centro de la jugabilidad: ↑ / ↓ y
+    // beta del giroscopio también pueden levantar un aro ensartado. Z no es
+    // un control: solo conserva el grosor volumétrico de los contactos 3D.
+    body.force.y += -state.tiltY * controlMass * 4.4;
     body.torque.x += -body.angularVelocity.x * (1.1 + submerged * 1.8);
     body.torque.z += -body.angularVelocity.z * (1.1 + submerged * 1.8);
 
