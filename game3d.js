@@ -1292,11 +1292,18 @@ function launchEscapingRing(ring, pole) {
   const escapeSide = Math.sign(body.position.x - pole.x) || (Math.random() < .5 ? -1 : 1);
   body.force.set(0, 0, 0);
   body.torque.set(0, 0, 0);
-  // La salida aplica únicamente un impulso de escape: la posición, la
-  // rotación y el resto de la trayectoria siguen siendo responsabilidad de Cannon.
+  // Un aro penalizado puede estar asentado muy abajo del palo. El impulso
+  // vertical se calcula para darle altura suficiente para superar la punta,
+  // pero sigue siendo un lanzamiento Cannon-es: no se corrige su posición ni
+  // se fija la trayectoria. Los aros que ya salen por la punta reciben como
+  // mínimo el impulso de escape original.
+  const distanceToTip = Math.max(0, BASE_Y + pole.h - body.position.y);
+  const launchClearance = clamp(distanceToTip + .35, .35, 3.65);
+  const launchVelocity = Math.sqrt(2 * Math.abs(GRAVITY) * launchClearance) + .35;
+  const upwardImpulse = clamp(launchVelocity * body.mass, .82, 6);
   body.applyImpulse(new CANNON.Vec3(
     escapeSide * (1.2 + Math.random() * .25) + pole.vX * .1,
-    .82 + Math.random() * .24,
+    upwardImpulse,
     0
   ), body.position);
   body.angularVelocity.x += (Math.random() - .5) * 2.2;
@@ -1698,9 +1705,26 @@ function showFullscreenInfo() { $('fsInfo').innerHTML = /iPhone|iPad|iPod/i.test
 function vibrate(pattern) { navigator.vibrate?.(pattern); }
 
 function bindHold(button, on, off) {
-  const start = (event) => { event.preventDefault(); button.setPointerCapture?.(event.pointerId); on(); };
-  const end = (event) => { event.preventDefault(); off(); };
-  button.addEventListener('pointerdown', start); button.addEventListener('pointerup', end); button.addEventListener('pointercancel', end); button.addEventListener('pointerleave', end); button.addEventListener('lostpointercapture', end);
+  let held = false;
+  const start = (event) => {
+    event.preventDefault();
+    if (held) return;
+    held = true;
+    button.setPointerCapture?.(event.pointerId);
+    on();
+  };
+  const end = (event) => {
+    event.preventDefault();
+    if (!held) return;
+    held = false;
+    off();
+  };
+  // No se libera en pointerleave: con pointer capture algunos navegadores
+  // emiten ese evento aunque el dedo siga manteniendo el botón pulsado.
+  button.addEventListener('pointerdown', start);
+  button.addEventListener('pointerup', end);
+  button.addEventListener('pointercancel', end);
+  button.addEventListener('lostpointercapture', end);
 }
 
 document.querySelectorAll('[data-jet]').forEach((button) => {
