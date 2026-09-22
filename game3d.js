@@ -919,9 +919,9 @@ function applyRingOrientationAssist(ring, body, submerged) {
   const stepDescent = clamp(previousDrop / .045, 0, 1);
   const descentTarget = Math.max(speedDescent, stepDescent);
   ring.descentAssist = lerp(ring.descentAssist, descentTarget, .18);
-  if (ring.descentAssist < .015 && !ring.capturePole && !ring.seatPole) return;
+  if (ring.descentAssist < .015) return;
   body.quaternion.vmult(ringLocalNormal, ringWorldNormal);
-  const captureBoost = ring.capturePole || ring.seatPole ? 1.3 : 1;
+  const captureBoost = ring.capturePole ? 1.3 : 1;
   const strength = RING_ORIENTATION_ASSIST * (.25 + ring.descentAssist * .75) * captureBoost * (.55 + submerged * .45);
   // n × up: torque that makes the annulus horizontal without freezing its
   // yaw, spin or collision response.
