@@ -43,7 +43,7 @@ Ensarta los **20 aros** en los tres palos. Para completar un nivel necesitas al 
 | Reiniciar | `R` | `↺` | — |
 | Menú | — | `☰` | — |
 
-El juego usa una configuración de volumen estrecho: los aros y los palos comparten el espacio X/Y, mientras Z conserva el grosor real necesario para resolver contactos. Mueve los aros en X/Y y haz que el diámetro interior toque la punta del palo; la captura solo se arma dentro del agujero, nunca por roces exteriores. Una vez ensartados pesan aproximadamente 3,25x más para que la inclinación continua no los levante con facilidad. La salida de los aros depende de la física Rapier y de impulsos físicos, no de teletransportes.
+El juego usa una configuración de volumen estrecho: los aros y los palos comparten el espacio X/Y, mientras Z conserva el grosor real necesario para resolver contactos. Mueve los aros en X/Y y haz que el diámetro interior toque la punta del palo; la captura solo se arma dentro del agujero, nunca por roces exteriores. Una vez ensartados pesan aproximadamente 3x más para que la inclinación continua no los levante con facilidad. La salida de los aros depende de la física Rapier y de impulsos físicos, no de teletransportes.
 
 ## 🏆 Puntuación
 

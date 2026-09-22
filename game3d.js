@@ -4,7 +4,7 @@ import * as PHYSICS from './vendor/rapier-physics.js';
 const $ = (id) => document.getElementById(id);
 // Referencia visible para distinguir rápidamente el build probado en una captura.
 // Incrementar este identificador en cada iteración funcional publicada.
-const BUILD_VERSION = 'R15';
+const BUILD_VERSION = 'R16';
 const MOBILE_DEVICE = /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent) || window.matchMedia?.('(pointer: coarse)').matches || window.innerWidth < 768;
 const WATER_GRID_X = MOBILE_DEVICE ? 24 : 48;
 const WATER_GRID_Y = MOBILE_DEVICE ? 10 : 18;
@@ -48,8 +48,8 @@ const RING_MASS = .72;
 const RING_COLLISION_GROUP = 1;
 const TANK_COLLISION_GROUP = 2;
 // Un aro asentado recupera un poco más de inercia que en la primera prueba:
-// pesa 3.25x, pero sigue pudiendo salir con un impulso físico Rapier.
-const RING_SEATED_MASS = RING_MASS * 3.25;
+// pesa 3x, pero sigue pudiendo salir con un impulso físico Rapier.
+const RING_SEATED_MASS = RING_MASS * 3;
 
 const RING_BUOYANCY_FORCE = 3.5;
 const POLE_SHAFT_TOP_RADIUS = .075;
@@ -67,7 +67,7 @@ const RING_CAPTURE_VERTICAL = RING_OUTER_RADIUS + POLE_TIP_RADIUS + .1;
 const RING_ENTRY_MAX_TILT = Math.PI / 3;
 const RING_ORIENTATION_ASSIST = .62;
 // La inclinación y los chorros son fuerzas del mismo tipo: no se multiplican
-// por la masa del aro asentado. Un aro con masa 3.25x recibe la misma fuerza y,
+// por la masa del aro asentado. Un aro con masa 3x recibe la misma fuerza y,
 // por tanto, acelera menos de forma natural.
 const RING_TILT_FORCE_X = RING_MASS * 4.8;
 const RING_TILT_FORCE_Y = RING_MASS * 9.2;
@@ -1052,7 +1052,7 @@ function applyRapierForces(dt) {
     // su giro libre y no se fuerza una postura horizontal.
     updateRingCapture(ring, body);
     const currentX = Math.sin(elapsed * .9 + body.position.y * .8) * .22 + Math.cos(elapsed * .55 + body.position.x * .35) * .1;
-    // La masa de la pila se conserva en 3.25x. La inclinación aplica una
+    // La masa de la pila se conserva en 3x. La inclinación aplica una
     // fuerza fija, igual que un chorro, en vez de multiplicarse por la masa:
     // Rapier deja que el aro asentado acelere menos por su propio peso.
     body.force.x += (currentX - body.velocity.x) * RING_MASS * .42 * submerged;
