@@ -42,9 +42,9 @@ const RING_COLLISION_TUBE = RING_TUBE;
 const RING_HOLE_RADIUS = RING_RADIUS - RING_TUBE;
 const RING_OUTER_RADIUS = RING_RADIUS + RING_TUBE;
 const RING_MASS = .72;
-// Un aro que ha tocado el interior del palo gana peso, pero conserva una
-// posibilidad real de volver a salir si un chorro lo levanta.
-const RING_SEATED_MASS = RING_MASS * 2;
+// Un aro asentado recupera un poco más de inercia que en la primera prueba:
+// pesa 2.5x, pero sigue pudiendo salir con un impulso físico Cannon-es.
+const RING_SEATED_MASS = RING_MASS * 2.5;
 
 const RING_BUOYANCY_FORCE = 3.5;
 const POLE_SHAFT_TOP_RADIUS = .075;
@@ -59,6 +59,7 @@ const RING_CAPTURE_RADIUS = RING_OUTER_RADIUS + POLE_TIP_RADIUS;
 // La captura ya no se activa por rozar el diámetro exterior del aro.
 const RING_INNER_CONTACT_RADIUS = RING_ENTRY_RADIUS + .03;
 const RING_CAPTURE_VERTICAL = RING_OUTER_RADIUS + POLE_TIP_RADIUS + .1;
+const RING_ENTRY_MAX_TILT = Math.PI / 3;
 const RING_ORIENTATION_ASSIST = .62;
 const RING_SEAT_MAX_TILT = Math.PI / 6;
 const RING_SEAT_LEVELING_STIFFNESS = 9;
@@ -70,9 +71,9 @@ const RING_SEAT_HORIZONTAL_DAMPING = 2.4;
 const RING_SEATED_CONTROL_ACCELERATION = 9;
 const TILT_PENALTY_ACTIVATION_SECONDS = 3;
 const TILT_PENALTY_RELEASE_RATE = 3;
-const RING_PAIR_MIN_DISTANCE = .5;
-const RING_PAIR_SEPARATION_STIFFNESS = 34;
-const RING_PAIR_SEPARATION_DAMPING = 7;
+const RING_PAIR_MIN_DISTANCE = .46;
+const RING_PAIR_SEPARATION_STIFFNESS = 18;
+const RING_PAIR_SEPARATION_DAMPING = 5;
 const FLOOR_SUPPORT_STIFFNESS = 720;
 const FLOOR_SUPPORT_DAMPING = 90;
 const FLOOR_SUPPORT_MAX_FORCE = 320;
@@ -222,6 +223,9 @@ physicsWorld.defaultContactMaterial.restitution = .34;
 // Contactos lubricados: el aro conserva el rebote, pero no pierde toda la
 // velocidad al rozar un palo, una pared o la base.
 physicsWorld.addContactMaterial(new CANNON.ContactMaterial(ringPhysicsMaterial, tankPhysicsMaterial, { friction: .004, restitution: .46 }));
+// Dos aros no deben rebotar como pelotas ni quedarse enganchados por la
+// fricción de sus colliders compuestos; el suelo conserva su rebote separado.
+physicsWorld.addContactMaterial(new CANNON.ContactMaterial(ringPhysicsMaterial, ringPhysicsMaterial, { friction: .002, restitution: .06 }));
 const physicsGround = new CANNON.Body({ mass: 0, material: tankPhysicsMaterial });
 // Conserva la cara superior en la misma cota que el suelo visual, pero con
 // más espesor hacia abajo para que un aro no pueda atravesarlo por tunneling.
@@ -1040,7 +1044,6 @@ const floorShapeCenter = new CANNON.Vec3();
 const floorShapeAxisX = new CANNON.Vec3();
 const floorShapeAxisY = new CANNON.Vec3();
 const floorShapeAxisZ = new CANNON.Vec3();
-const pairWorldNormal = new CANNON.Vec3();
 function submergedFraction(y) {
   return clamp((WATER_TOP - y + RING_TUBE) / (RING_TUBE * 2.2), 0, 1);
 }
@@ -1191,14 +1194,6 @@ function applyRingSeatForce(ring, body) {
   return true;
 }
 
-function ringSeatIsStable(ring) {
-  if (!ring.scored || !ring.seatPole || !ring.body) return false;
-  ring.body.quaternion.vmult(ringLocalNormal, pairWorldNormal);
-  return Math.abs(ring.body.position.x - ring.seatPole.x) < .18
-    && Math.abs(ring.body.position.y - ring.seatTargetY) < .28
-    && pairWorldNormal.y > Math.cos(RING_SEAT_MAX_TILT);
-}
-
 function applyRingPairSeparation() {
   for (let firstIndex = 0; firstIndex < rings.length; firstIndex++) {
     const first = rings[firstIndex];
@@ -1206,10 +1201,15 @@ function applyRingPairSeparation() {
     for (let secondIndex = firstIndex + 1; secondIndex < rings.length; secondIndex++) {
       const second = rings[secondIndex];
       if (!second.body) continue;
-      const sameSeatPole = first.scored && second.scored && first.seatPole === second.seatPole;
-      const firstSettled = sameSeatPole && ringSeatIsStable(first);
-      const secondSettled = sameSeatPole && ringSeatIsStable(second);
-      if (firstSettled && secondSettled) continue;
+      // Los aros asentados del mismo palo ya tienen su separación vertical
+      // resuelta por el apilado y por los contactos Cannon. Aplicar aquí una
+      // fuerza lateral/vertical entre ellos competía con ese apilado y podía
+      // lanzar la pila o formar enlaces artificiales.
+      if (first.scored && second.scored && first.seatPole === second.seatPole) continue;
+      // Durante un lanzamiento la trayectoria la gobiernan el impulso y las
+      // colisiones reales; esta fuerza auxiliar no debe convertir la salida en
+      // un rebote en cadena contra los otros aros.
+      if (first.escapePole || second.escapePole) continue;
       const dx = second.body.position.x - first.body.position.x;
       const dy = second.body.position.y - first.body.position.y;
       const distance = Math.hypot(dx, dy);
@@ -1241,7 +1241,11 @@ function applyCannonForces(dt) {
     applyRingSeatLevelingAssist(ring, body);
     updateRingCapture(ring, body);
     const currentX = Math.sin(elapsed * .9 + body.position.y * .8) * .22 + Math.cos(elapsed * .55 + body.position.x * .35) * .1;
-    const controlMass = ring.scored ? body.mass : RING_MASS;
+    // El control se expresa como una fuerza de aro normal, no como una fuerza
+    // que crece con la masa asentada. Así el aumento a 2.5x sí compensa la
+    // inclinación continua, mientras la expulsión temporizada conserva su
+    // impulso Cannon-es independiente.
+    const controlMass = RING_MASS;
     body.force.x += (currentX - body.velocity.x) * RING_MASS * .42 * submerged;
     body.force.x += state.tiltX * controlMass * 3.4;
     // El control vertical sigue siendo el centro de la jugabilidad: ↑ / ↓ y
@@ -1424,6 +1428,14 @@ function checkSeatedRingExits() {
   }
 }
 
+function ringIsEntryAligned(ring) {
+  if (!ring.body) return false;
+  ring.body.quaternion.vmult(ringLocalNormal, ringWorldNormal);
+  // Un aro vertical o enganchado por el lateral no puede convertir un roce
+  // casual con la punta en un enceste; debe cruzarla razonablemente plano.
+  return Math.abs(ringWorldNormal.y) > Math.cos(RING_ENTRY_MAX_TILT);
+}
+
 function checkPhysicsPoleEntries() {
   for (const ring of rings) {
     const body = ring.body;
@@ -1434,6 +1446,7 @@ function checkPhysicsPoleEntries() {
       // del contacto interior; nunca la ventana exterior de un simple roce.
       const allowedRadius = ring.capturePole === pole ? RING_INNER_CONTACT_RADIUS : RING_ENTRY_RADIUS;
       if (!ringCrossedPoleTip(ring, pole, BASE_Y + pole.h, allowedRadius)) continue;
+      if (ring.capturePole !== pole && !ringIsEntryAligned(ring)) continue;
       registerPhysicsScore(ring, pole);
       break;
     }
