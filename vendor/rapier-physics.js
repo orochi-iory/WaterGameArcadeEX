@@ -226,6 +226,9 @@ function colliderDescriptor(shape, offset, material, collisionGroups) {
   descriptor.setFriction(material?.friction ?? .018);
   descriptor.setRestitution(material?.restitution ?? .34);
   descriptor.setCollisionGroups(collisionGroups);
+  // A microscopic contact skin keeps adjacent torus lobes separated without
+  // changing the visible ring radius or introducing a positional correction.
+  if (material?.name === 'ring' && shape.kind === 'ball') descriptor.setContactSkin(.0015);
   return descriptor;
 }
 
@@ -233,6 +236,8 @@ export class World {
   constructor(options = {}) {
     const gravity = options.gravity || new Vec3(0, -9.81, 0);
     this._world = new RAPIER.World({ x: gravity.x, y: gravity.y, z: gravity.z });
+    this._world.numInternalPgsIterations = 2;
+    this._world.maxCcdSubsteps = 2;
     this.gravity = gravity;
     this.broadphase = new SAPBroadphase(this);
     this.allowSleep = true;
@@ -258,7 +263,7 @@ export class World {
         .setLinvel(body.velocity.x, body.velocity.y, body.velocity.z)
         .setAngvel({ x: body.angularVelocity.x, y: body.angularVelocity.y, z: body.angularVelocity.z });
     if (!body._isFixed) {
-      desc.setLinearDamping(body._linearDamping).setAngularDamping(body._angularDamping).setCanSleep(body._allowSleep).setCcdEnabled(true);
+      desc.setLinearDamping(body._linearDamping).setAngularDamping(body._angularDamping).setCanSleep(body._allowSleep).setCcdEnabled(true).setSoftCcdPrediction(.08);
     }
     body._raw = this._world.createRigidBody(desc);
     body._world = this;
