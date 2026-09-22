@@ -4,7 +4,7 @@ import * as CANNON from './vendor/cannon-es.js';
 const $ = (id) => document.getElementById(id);
 // Referencia visible para distinguir rápidamente el build probado en una captura.
 // Incrementar este identificador en cada iteración funcional publicada.
-const BUILD_VERSION = 'R5';
+const BUILD_VERSION = 'R6';
 const MOBILE_DEVICE = /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent) || window.matchMedia?.('(pointer: coarse)').matches || window.innerWidth < 768;
 const WATER_GRID_X = MOBILE_DEVICE ? 24 : 48;
 const WATER_GRID_Y = MOBILE_DEVICE ? 10 : 18;
@@ -1177,11 +1177,10 @@ function applyCannonForces(dt) {
     applyRingSeatLevelingAssist(ring, body);
     updateRingCapture(ring, body);
     const currentX = Math.sin(elapsed * .9 + body.position.y * .8) * .22 + Math.cos(elapsed * .55 + body.position.x * .35) * .1;
-    // El control se expresa como una fuerza de aro normal, no como una fuerza
-    // que crece con la masa asentada. Así el aumento a 2.5x sí compensa la
-    // inclinación continua, mientras la expulsión temporizada conserva su
-    // impulso Cannon-es independiente.
-    const controlMass = RING_MASS;
+    // La masa de la pila se conserva en 2.5x, pero el control de inclinación
+    // debe seguir aplicando la aceleración completa a un aro asentado. El
+    // chorro, en cambio, sigue siendo una fuerza física y sí nota ese peso.
+    const controlMass = ring.scored ? body.mass : RING_MASS;
     body.force.x += (currentX - body.velocity.x) * RING_MASS * .42 * submerged;
     body.force.x += state.tiltX * controlMass * 3.4;
     // El control vertical sigue siendo el centro de la jugabilidad: ↑ / ↓ y
