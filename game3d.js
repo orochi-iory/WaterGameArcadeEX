@@ -30,6 +30,8 @@ const BASE_Y = -2.78;
 // aparición para repartir los aros; WATER_TOP es la superficie real del agua.
 const WATER_Y = -1.72;
 const WATER_TOP = 2.55;
+// Render y física 2.5D: una lámina estrecha, no un cubo navegable.
+const PLAY_DEPTH = 1.1;
 const RING_STEP = .18;
 const RING_LOCK_SPEED = 1.55;
 const RING_RADIUS = 0.27;
@@ -195,7 +197,7 @@ for (const x of [-5.85, 5.85]) {
 }
 // La profundidad se limita al mismo orden de magnitud que la base: las
 // caras interiores quedan a Z = ±.48, justo alrededor del radio de .48.
-for (const z of [-.56, .56]) {
+for (const z of [-(PLAY_DEPTH / 2 + .01), PLAY_DEPTH / 2 + .01]) {
   const wall = new CANNON.Body({ mass: 0, material: tankPhysicsMaterial });
   wall.addShape(new CANNON.Box(new CANNON.Vec3(6, 3.1, .08)));
   wall.position.set(0, -.1, z); physicsWorld.addBody(wall); physicsSideWalls.push(wall);
@@ -203,7 +205,7 @@ for (const z of [-.56, .56]) {
 // Techo físico por encima del palo más alto. Impide que un chorro saque los
 // aros del encuadre sin bloquear la entrada por la punta superior.
 const physicsCeiling = new CANNON.Body({ mass: 0, material: tankPhysicsMaterial });
-physicsCeiling.addShape(new CANNON.Box(new CANNON.Vec3(6, .08, .56)));
+physicsCeiling.addShape(new CANNON.Box(new CANNON.Vec3(6, .08, PLAY_DEPTH / 2 + .01)));
 physicsCeiling.position.set(0, 3.55, 0);
 physicsWorld.addBody(physicsCeiling);
 const physicsFixedStep = 1 / 60;
@@ -324,12 +326,12 @@ const rockMaterials = [
 });
 
 const floorMaterial = new THREE.MeshStandardMaterial({ color: 0x17657b, roughness: .55, metalness: .08 });
-const floor = new THREE.Mesh(new THREE.BoxGeometry(12, .22, 5.7), floorMaterial);
-floor.position.set(0, BASE_Y - .2, .15);
+const floor = new THREE.Mesh(new THREE.BoxGeometry(12, .22, PLAY_DEPTH + .28), floorMaterial);
+floor.position.set(0, BASE_Y - .2, 0);
 floor.receiveShadow = !MOBILE_DEVICE;
 stageGroup.add(floor);
-const floorTrim = new THREE.Mesh(new THREE.BoxGeometry(12, .035, 5.76), new THREE.MeshStandardMaterial({ color: 0x35d2bd, emissive: 0x063f4a, emissiveIntensity: .32, roughness: .25, metalness: .08 }));
-floorTrim.position.set(0, BASE_Y - .065, .15);
+const floorTrim = new THREE.Mesh(new THREE.BoxGeometry(12, .035, PLAY_DEPTH + .34), new THREE.MeshStandardMaterial({ color: 0x35d2bd, emissive: 0x063f4a, emissiveIntensity: .32, roughness: .25, metalness: .08 }));
+floorTrim.position.set(0, BASE_Y - .065, 0);
 stageGroup.add(floorTrim);
 
 const tankHeight = WATER_TOP - BASE_Y;
@@ -337,10 +339,10 @@ const waterVolumeMaterial = MOBILE_DEVICE
   ? new THREE.MeshBasicMaterial({ color: 0x2ad0ef, transparent: true, opacity: .045, depthWrite: false, side: THREE.DoubleSide })
   : new THREE.MeshPhysicalMaterial({ color: 0x2ad0ef, roughness: .18, metalness: .02, transmission: .08, transparent: true, opacity: .075, depthWrite: false, side: THREE.DoubleSide });
 const waterVolume = new THREE.Mesh(
-  new THREE.BoxGeometry(11.7, tankHeight, 4.95),
+  new THREE.BoxGeometry(11.7, tankHeight, PLAY_DEPTH),
   waterVolumeMaterial
 );
-waterVolume.position.set(0, BASE_Y + tankHeight / 2, .1);
+waterVolume.position.set(0, BASE_Y + tankHeight / 2, 0);
 waterVolume.receiveShadow = !MOBILE_DEVICE;
 stageGroup.add(waterVolume);
 
@@ -383,12 +385,12 @@ const waterBackdrop = new THREE.Mesh(
   new THREE.PlaneGeometry(11.7, tankHeight, WATER_GRID_X, BACKDROP_GRID_Y),
   new THREE.MeshBasicMaterial({ map: makeWaterTexture(), transparent: true, opacity: .78, depthWrite: false, side: THREE.DoubleSide })
 );
-waterBackdrop.position.set(0, BASE_Y + tankHeight / 2, -1.88);
+waterBackdrop.position.set(0, BASE_Y + tankHeight / 2, -PLAY_DEPTH / 2 - .01);
 stageGroup.add(waterBackdrop);
 const waterBackdropBaseZ = new Float32Array(waterBackdrop.geometry.attributes.position.count);
 for (let i = 0; i < waterBackdropBaseZ.length; i++) waterBackdropBaseZ[i] = waterBackdrop.geometry.attributes.position.getZ(i);
 
-const waterGeometry = new THREE.PlaneGeometry(11.7, 4.95, WATER_GRID_X, WATER_GRID_Y);
+const waterGeometry = new THREE.PlaneGeometry(11.7, PLAY_DEPTH, WATER_GRID_X, WATER_GRID_Y);
 waterGeometry.rotateX(-Math.PI / 2);
 const waterBaseZ = new Float32Array(waterGeometry.attributes.position.count);
 for (let i = 0; i < waterGeometry.attributes.position.count; i++) waterBaseZ[i] = waterGeometry.attributes.position.getZ(i);
@@ -396,25 +398,25 @@ const waterSurfaceMaterial = MOBILE_DEVICE
   ? new THREE.MeshBasicMaterial({ color: 0x63e7f4, transparent: true, opacity: .16, depthWrite: false, side: THREE.DoubleSide })
   : new THREE.MeshPhysicalMaterial({ color: 0x63e7f4, emissive: 0x0b6d91, emissiveIntensity: .8, roughness: .1, metalness: .12, transparent: true, opacity: .24, depthWrite: false, side: THREE.DoubleSide });
 const waterSurface = new THREE.Mesh(waterGeometry, waterSurfaceMaterial);
-waterSurface.position.set(0, WATER_TOP, .1);
+waterSurface.position.set(0, WATER_TOP, 0);
 waterSurface.receiveShadow = !MOBILE_DEVICE;
 stageGroup.add(waterSurface);
 
 const edgeMaterial = new THREE.MeshStandardMaterial({ color: 0x55e7e0, emissive: 0x0c5f7e, emissiveIntensity: .72, roughness: .18, metalness: .08 });
 for (const x of [-5.98, 5.98]) {
-  const edge = new THREE.Mesh(new THREE.BoxGeometry(.08, tankHeight + .28, 5.1), edgeMaterial);
-  edge.position.set(x, BASE_Y + tankHeight / 2, .08);
+  const edge = new THREE.Mesh(new THREE.BoxGeometry(.08, tankHeight + .28, PLAY_DEPTH + .18), edgeMaterial);
+  edge.position.set(x, BASE_Y + tankHeight / 2, 0);
   edge.castShadow = true;
   stageGroup.add(edge);
 }
 const backRail = new THREE.Mesh(new THREE.BoxGeometry(11.95, .055, .055), edgeMaterial);
-backRail.position.set(0, WATER_TOP, -1.95);
+backRail.position.set(0, WATER_TOP, -PLAY_DEPTH / 2);
 stageGroup.add(backRail);
 const plasticRimMaterial = new THREE.MeshStandardMaterial({ color: 0x2bd6bd, emissive: 0x07534e, emissiveIntensity: .38, roughness: .2, metalness: .06 });
-const topRim = new THREE.Mesh(new THREE.BoxGeometry(12.05, .16, 5.18), plasticRimMaterial);
-topRim.position.set(0, WATER_TOP + .08, .08); topRim.castShadow = true; stageGroup.add(topRim);
-const bottomRim = new THREE.Mesh(new THREE.BoxGeometry(12.05, .14, 5.18), plasticRimMaterial);
-bottomRim.position.set(0, BASE_Y - .03, .08); bottomRim.castShadow = true; stageGroup.add(bottomRim);
+const topRim = new THREE.Mesh(new THREE.BoxGeometry(12.05, .16, PLAY_DEPTH + .22), plasticRimMaterial);
+topRim.position.set(0, WATER_TOP + .08, 0); topRim.castShadow = true; stageGroup.add(topRim);
+const bottomRim = new THREE.Mesh(new THREE.BoxGeometry(12.05, .14, PLAY_DEPTH + .22), plasticRimMaterial);
+bottomRim.position.set(0, BASE_Y - .03, 0); bottomRim.castShadow = true; stageGroup.add(bottomRim);
 
 const bubbleMaterial = MOBILE_DEVICE
   ? new THREE.MeshBasicMaterial({ color: 0xc8f7ff, transparent: true, opacity: .24, depthWrite: false })
@@ -423,7 +425,7 @@ const bubbleGroup = new THREE.Group();
 effectGroup.add(bubbleGroup);
 for (let i = 0; i < BUBBLE_COUNT; i++) {
   const bubble = new THREE.Mesh(new THREE.SphereGeometry(.025 + Math.random() * .045, MOBILE_DEVICE ? 5 : 8, MOBILE_DEVICE ? 5 : 8), bubbleMaterial);
-  bubble.position.set((Math.random() - .5) * 10.8, BASE_Y + .16 + Math.random() * (tankHeight - .38), -.8 + Math.random() * 2.1);
+  bubble.position.set((Math.random() - .5) * 10.8, BASE_Y + .16 + Math.random() * (tankHeight - .38), -PLAY_DEPTH / 2 + Math.random() * PLAY_DEPTH);
   bubble.userData.speed = .05 + Math.random() * .13;
   bubble.userData.phase = Math.random() * TAU;
   bubbleGroup.add(bubble);
@@ -444,7 +446,7 @@ for (let j = 0; j < 3; j++) {
   const nozzleMaterial = new THREE.MeshStandardMaterial({ color: 0x20333d, metalness: .75, roughness: .2, emissive: JET_COLORS[j], emissiveIntensity: .1 });
   const nozzle = new THREE.Mesh(new THREE.CylinderGeometry(.17, .22, .24, MOBILE_DEVICE ? 10 : 18), nozzleMaterial);
   nozzle.rotation.x = Math.PI / 2;
-  nozzle.position.set(JET_X[j], NOZZLE_Y, .72);
+  nozzle.position.set(JET_X[j], NOZZLE_Y, PLAY_DEPTH / 2 - .08);
   nozzle.castShadow = true;
   effectGroup.add(nozzle);
   nozzles.push(nozzle);
@@ -456,7 +458,7 @@ for (let j = 0; j < 3; j++) {
     new THREE.ConeGeometry(.31, 4.7, MOBILE_DEVICE ? 10 : 20, 1, true),
     beamMaterial
   );
-  beam.position.set(JET_X[j], NOZZLE_Y + 2.35, .58);
+  beam.position.set(JET_X[j], NOZZLE_Y + 2.35, PLAY_DEPTH / 2 - .12);
   effectGroup.add(beam);
   jetBeams.push(beam);
 }
@@ -575,6 +577,7 @@ function createRingPhysicsBody(ring) {
   const body = new CANNON.Body({ mass: RING_MASS, material: ringPhysicsMaterial });
   body.linearDamping = .16;
   body.angularDamping = .24;
+  body.linearFactor.set(1, 1, 0); // 2.5D: Z es grosor de contacto, no un carril de juego.
   body.allowSleep = false;
   const segments = MOBILE_DEVICE ? 12 : 16;
   const tangentHalfLength = RING_RADIUS * Math.sin(Math.PI / segments) * 1.18;
@@ -634,7 +637,7 @@ function resetRings() {
       const side = Math.random() < .5 ? -1 : 1;
       ring.x = spawnPole.baseX + side * (.84 + Math.random() * .14);
       ring.y = BASE_Y + .35 + Math.random() * (WATER_TOP - BASE_Y - 1.05);
-      ring.z = (Math.random() - .5) * .16;
+      ring.z = 0;
       while (poles.some((pole) => Math.hypot(ring.x - pole.baseX, ring.z) < .84)) {
         ring.x += side * .08;
       }
@@ -740,7 +743,7 @@ function updateWater(dt) {
     if (bubble.position.y > WATER_TOP - .12) {
       bubble.position.y = BASE_Y + .13;
       bubble.position.x = (Math.random() - .5) * 10.7;
-      bubble.position.z = -.8 + Math.random() * 2.1;
+      bubble.position.z = -PLAY_DEPTH / 2 + Math.random() * PLAY_DEPTH;
     }
     const pulse = .8 + Math.sin(waveTime * 2 + index) * .2;
     bubble.scale.setScalar(pulse);
@@ -749,11 +752,9 @@ function updateWater(dt) {
 
 function jetDirection(index) {
   const swing = Math.sin(state.elapsed * 1.8 + index * 2.1) * .36 + state.tiltX * .045;
-  return new THREE.Vector3(
-    Math.sin(swing),
-    Math.cos(swing),
-    Math.sin(state.elapsed * 1.15 + index * 1.7) * .12 + state.tiltY * .08
-  ).normalize();
+  // El chorro trabaja en el plano X/Y. El grosor Z existe solo para que
+  // Cannon pueda resolver contactos entre cuerpos con volumen.
+  return new THREE.Vector3(Math.sin(swing), Math.cos(swing), 0).normalize();
 }
 
 function updateJetVisuals(dt) {
@@ -763,7 +764,7 @@ function updateJetVisuals(dt) {
     const nozzle = nozzles[j];
     const direction = jetDirection(j);
     const length = 4.7;
-    beam.position.set(JET_X[j] + direction.x * length / 2, NOZZLE_Y + direction.y * length / 2, .58);
+    beam.position.set(JET_X[j] + direction.x * length / 2, NOZZLE_Y + direction.y * length / 2, PLAY_DEPTH / 2 - .12);
     beam.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), direction);
     beam.material.opacity = lerp(beam.material.opacity, active ? .24 : 0, Math.min(1, dt * 13));
     beam.material.emissiveIntensity = active ? 1.35 + Math.sin(state.elapsed * 18) * .25 : .5;
@@ -786,9 +787,9 @@ function spawnJetParticles(index) {
   for (let i = 0; i < (MOBILE_DEVICE ? 3 : 5); i++) {
     const spread = (Math.random() - .5) * .22;
     particles.push({
-      x: JET_X[index] + spread, y: NOZZLE_Y + .16, z: .55 + (Math.random() - .5) * .16,
+      x: JET_X[index] + spread, y: NOZZLE_Y + .16, z: PLAY_DEPTH / 2 - .1 + (Math.random() - .5) * .04,
       vx: direction.x * (1.8 + Math.random() * 1.8) + (Math.random() - .5) * .65,
-      vy: direction.y * (4.2 + Math.random() * 2.5), vz: direction.z * (2.1 + Math.random() * 1.2) + (Math.random() - .5) * .5,
+      vy: direction.y * (4.2 + Math.random() * 2.5), vz: (Math.random() - .5) * .12,
       life: .46 + Math.random() * .5, maxLife: .9, size: .6 + Math.random() * .6
     });
   }
@@ -916,16 +917,13 @@ function applyCannonForces(dt) {
     if (ring.locked) continue;
     const activeFactor = ring.threading ? .18 : 1;
     body.force.y += submerged * RING_BUOYANCY_FORCE;
-    const currentX = Math.sin(elapsed * .9 + body.position.y * .8 + body.position.z * 1.7) * .22 + Math.cos(elapsed * .55 + body.position.x * .35) * .1;
-    const currentZ = Math.cos(elapsed * .8 + body.position.x * .6) * .16 + Math.sin(elapsed * .47 + body.position.y) * .08;
+    const currentX = Math.sin(elapsed * .9 + body.position.y * .8) * .22 + Math.cos(elapsed * .55 + body.position.x * .35) * .1;
     body.force.x += (currentX - body.velocity.x) * RING_MASS * .42 * submerged;
-    body.force.z += (currentZ - body.velocity.z) * RING_MASS * .42 * submerged;
     body.force.x += state.tiltX * RING_MASS * 3.4;
     // El control vertical vuelve a ser el centro de la jugabilidad: ↑ / ↓ y
-    // beta del giroscopio elevan o bajan el aro. Z sigue siendo físico, pero
-    // solo recibe una componente pequeña dentro del carril estrecho.
+    // beta del giroscopio elevan o bajan el aro. Z no es un control: solo
+    // conserva el grosor volumétrico necesario para los contactos 3D.
     body.force.y += -state.tiltY * RING_MASS * 4.4;
-    body.force.z += state.tiltY * RING_MASS * .7;
     body.torque.x += -body.angularVelocity.x * (1.1 + submerged * 1.8);
     body.torque.z += -body.angularVelocity.z * (1.1 + submerged * 1.8);
 
@@ -940,8 +938,8 @@ function applyCannonForces(dt) {
       if (widthFalloff <= 0 || body.position.y < NOZZLE_Y - .25) continue;
       const heightFalloff = clamp(1 - dy / 5.25, .16, 1);
       const falloff = Math.pow(widthFalloff * heightFalloff, .82) * activeFactor;
-      cannonForce.set(direction.x * 7.8 * falloff, direction.y * 10.8 * falloff, direction.z * 7.8 * falloff);
-      cannonPoint.set((JET_X[j] - body.position.x) * .5, -.24, -body.position.z * .5);
+      cannonForce.set(direction.x * 7.8 * falloff, direction.y * 10.8 * falloff, 0);
+      cannonPoint.set((JET_X[j] - body.position.x) * .5, -.24, 0);
       body.applyForce(cannonForce, cannonPoint);
     }
   }

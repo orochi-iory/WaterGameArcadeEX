@@ -42,7 +42,7 @@ Ensarta los **20 aros** en los tres palos. Para completar un nivel necesitas al 
 | Reiniciar | `R` | `↺` | — |
 | Menú | — | `☰` | — |
 
-El eje de profundidad sigue siendo físico, pero está limitado a un carril estrecho alrededor de las bases. La jugabilidad principal vuelve a ser mover los aros en X/Y y hacer que crucen la punta del palo; mantén el sensor y los chorros suaves para no activar la penalización de tensión.
+El juego usa una configuración 2.5D: los aros y los palos comparten el mismo plano X/Y, mientras Z conserva únicamente el grosor necesario para resolver contactos. Mueve los aros en X/Y y haz que crucen la punta del palo; mantén el sensor y los chorros suaves para no activar la penalización de tensión.
 
 ## 🏆 Puntuación
 
