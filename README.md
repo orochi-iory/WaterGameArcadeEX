@@ -43,7 +43,7 @@ Ensarta los **20 aros** en los tres palos. Para completar un nivel necesitas al 
 | Reiniciar | `R` | `↺` | — |
 | Menú | — | `☰` | — |
 
-El juego usa una configuración 2.5D: los aros y los palos comparten el mismo plano X/Y, mientras Z conserva únicamente el grosor necesario para resolver contactos. Mueve los aros en X/Y y haz que el diámetro interior toque la punta del palo; la guía solo centra el aro desde ese contacto físico, sin capturar roces exteriores. Una vez ensartados pesan aproximadamente 2,5x más para que la inclinación continua no los levante con facilidad. La salida de los aros depende de la física Cannon-es y no de teletransportes.
+El juego usa una configuración 2.5D: los aros y los palos comparten el mismo plano X/Y, mientras Z conserva únicamente el grosor necesario para resolver contactos. Mueve los aros en X/Y y haz que el diámetro interior toque la punta del palo; la guía solo centra el aro desde ese contacto físico, sin capturar roces exteriores. Una vez ensartados pesan aproximadamente 3x más para que la inclinación continua no los levante con facilidad. La salida de los aros depende de la física Cannon-es y no de teletransportes.
 
 ## 🏆 Puntuación
 

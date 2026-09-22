@@ -4,7 +4,7 @@ import * as CANNON from './vendor/cannon-es.js';
 const $ = (id) => document.getElementById(id);
 // Referencia visible para distinguir rápidamente el build probado en una captura.
 // Incrementar este identificador en cada iteración funcional publicada.
-const BUILD_VERSION = 'R6';
+const BUILD_VERSION = 'R7';
 const MOBILE_DEVICE = /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent) || window.matchMedia?.('(pointer: coarse)').matches || window.innerWidth < 768;
 const WATER_GRID_X = MOBILE_DEVICE ? 24 : 48;
 const WATER_GRID_Y = MOBILE_DEVICE ? 10 : 18;
@@ -46,8 +46,8 @@ const RING_HOLE_RADIUS = RING_RADIUS - RING_TUBE;
 const RING_OUTER_RADIUS = RING_RADIUS + RING_TUBE;
 const RING_MASS = .72;
 // Un aro asentado recupera un poco más de inercia que en la primera prueba:
-// pesa 2.5x, pero sigue pudiendo salir con un impulso físico Cannon-es.
-const RING_SEATED_MASS = RING_MASS * 2.5;
+// pesa 3x, pero sigue pudiendo salir con un impulso físico Cannon-es.
+const RING_SEATED_MASS = RING_MASS * 3;
 
 const RING_BUOYANCY_FORCE = 3.5;
 const POLE_SHAFT_TOP_RADIUS = .075;
@@ -75,6 +75,10 @@ const RING_SEATED_CONTROL_ACCELERATION = 9;
 const RING_PAIR_MIN_DISTANCE = .46;
 const RING_PAIR_SEPARATION_STIFFNESS = 18;
 const RING_PAIR_SEPARATION_DAMPING = 5;
+// Límites de velocidad de salida aplicados mediante un impulso de frenado;
+// evitan que un aro conserve una aceleración extrema al abandonar un palo.
+const RING_RELEASE_MAX_UPWARD_SPEED = 2.4;
+const RING_RELEASE_MAX_HORIZONTAL_SPEED = 3.2;
 const FLOOR_SUPPORT_STIFFNESS = 720;
 const FLOOR_SUPPORT_DAMPING = 90;
 const FLOOR_SUPPORT_MAX_FORCE = 320;
@@ -234,24 +238,27 @@ physicsGround.addShape(new CANNON.Box(new CANNON.Vec3(6, .22, 2.85)));
 physicsGround.position.set(0, PHYSICS_FLOOR_TOP - .22, .15);
 physicsWorld.addBody(physicsGround);
 const physicsSideWalls = [];
-for (const x of [-5.94, 5.94]) {
+// Colliders gruesos y desplazados hacia fuera: conservan la misma cara
+// interior visible, pero no se atraviesan cuando un aro llega con velocidad.
+for (const x of [-6.06, 6.06]) {
   const wall = new CANNON.Body({ mass: 0, material: tankPhysicsMaterial });
-  wall.addShape(new CANNON.Box(new CANNON.Vec3(.08, 3.1, 2.7)));
+  wall.addShape(new CANNON.Box(new CANNON.Vec3(.2, 3.2, 2.7)));
   wall.position.set(x, -.1, .15); physicsWorld.addBody(wall); physicsSideWalls.push(wall);
 }
 // La profundidad se limita al mismo orden de magnitud que la base: las
 // caras interiores quedan a Z = ±.48, justo alrededor del radio de .48.
-for (const z of [-(PLAY_DEPTH / 2 + .01), PLAY_DEPTH / 2 + .01]) {
+for (const z of [-(PLAY_DEPTH / 2 + .1), PLAY_DEPTH / 2 + .1]) {
   const wall = new CANNON.Body({ mass: 0, material: tankPhysicsMaterial });
-  wall.addShape(new CANNON.Box(new CANNON.Vec3(6, 3.1, .08)));
+  wall.addShape(new CANNON.Box(new CANNON.Vec3(6.2, 3.2, .18)));
   wall.position.set(0, -.1, z); physicsWorld.addBody(wall); physicsSideWalls.push(wall);
 }
-// Techo físico invisible justo sobre la superficie. Impide que un chorro
-// saque los aros del encuadre sin convertirse en un elemento visual.
+// Techo físico invisible grueso justo sobre la superficie. Impide que un
+// impulso de salida atraviese el encuadre por tunneling sin ser un elemento
+// visual adicional.
 const physicsCeiling = new CANNON.Body({ mass: 0, material: tankPhysicsMaterial });
-physicsCeiling.addShape(new CANNON.Box(new CANNON.Vec3(6, .08, PLAY_DEPTH / 2 + .01)));
-// Límite superior invisible, apenas por encima de la superficie visible.
-physicsCeiling.position.set(0, WATER_TOP + .10, 0);
+physicsCeiling.addShape(new CANNON.Box(new CANNON.Vec3(6.2, .24, PLAY_DEPTH / 2 + .18)));
+// La cara inferior conserva la cota de la superficie visible.
+physicsCeiling.position.set(0, WATER_TOP + .24, 0);
 physicsWorld.addBody(physicsCeiling);
 const physicsFixedStep = 1 / 60;
 let physicsAccumulator = 0;
@@ -1231,9 +1238,18 @@ function launchEscapingRing(ring, pole) {
   const escapeSide = Math.sign(body.position.x - pole.x) || (Math.random() < .5 ? -1 : 1);
   body.force.set(0, 0, 0);
   body.torque.set(0, 0, 0);
+  // Si el aro llegó a la punta con mucha velocidad por la inclinación, se
+  // aplica un impulso físico contrario antes del pequeño lanzamiento lateral.
+  // No se recoloca el cuerpo ni se fija su trayectoria: solo se elimina la
+  // inercia extrema que podía atravesar el techo y hacer desaparecer el aro.
+  const upwardExcess = Math.max(0, body.velocity.y - RING_RELEASE_MAX_UPWARD_SPEED);
+  if (upwardExcess > 0) body.applyImpulse(new CANNON.Vec3(0, -upwardExcess * body.mass, 0), body.position);
+  const horizontalSpeed = Math.abs(body.velocity.x);
+  const horizontalExcess = Math.max(0, horizontalSpeed - RING_RELEASE_MAX_HORIZONTAL_SPEED);
+  if (horizontalExcess > 0) body.applyImpulse(new CANNON.Vec3(-Math.sign(body.velocity.x) * horizontalExcess * body.mass, 0, 0), body.position);
   // La salida normal ocurre al cruzar la punta: basta el impulso de escape
   // original. La posición, la rotación y la trayectoria siguen siendo de
-  // Cannon-es, sin el lanzamiento reforzado que usaba la antigua mecánica.
+  // Cannon-es.
   body.applyImpulse(new CANNON.Vec3(
     escapeSide * (1.2 + Math.random() * .25) + pole.vX * .1,
     .82 + Math.random() * .24,
