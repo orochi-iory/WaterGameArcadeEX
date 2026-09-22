@@ -32,44 +32,44 @@ const WATER_Y = -1.72;
 const WATER_TOP = 2.55;
 // Render y física 2.5D: una lámina estrecha, no un cubo navegable.
 const PLAY_DEPTH = 1.1;
-const RING_STEP = .18;
-const RING_LOCK_SPEED = 1.55;
 const RING_RADIUS = 0.27;
 const RING_TUBE = .065;
+const RING_STACK_STEP = RING_TUBE * 2 + .015;
+const RING_COLLISION_TUBE = RING_TUBE;
 const RING_HOLE_RADIUS = RING_RADIUS - RING_TUBE;
 const RING_MASS = .72;
 const RING_BUOYANCY_FORCE = 3.5;
+const POLE_SHAFT_RADIUS = .12;
 const POLE_TIP_RADIUS = .11;
-// Radio máximo en el que la punta puede entrar físicamente por el hueco.
-// No hay tolerancia visual extra: fuera de este radio Cannon colisiona.
-const RING_CAPTURE_RADIUS = Math.max(.06, RING_HOLE_RADIUS - POLE_TIP_RADIUS);
+// Radio geométrico de entrada: el centro del aro solo puede cruzar la punta
+// si el volumen de su hueco deja sitio para la esfera de la punta. No es una
+// zona visual ni una marca: Cannon sigue resolviendo el contacto real.
+const RING_ENTRY_RADIUS = Math.max(.01, RING_HOLE_RADIUS - POLE_TIP_RADIUS);
 const ringFlatQuaternion = new THREE.Quaternion().setFromEuler(new THREE.Euler(Math.PI / 2, 0, 0));
 const GRAVITY = -5.6;
 const NOZZLE_Y = BASE_Y + 0.12;
 const JET_X = [-3.35, 0, 3.35];
 const JET_COLORS = [0xff6b6b, 0x3fe2aa, 0x5bc8ff];
-const GLYPHS = ['●', '■', '▲', '◆'];
-
 const PALETTES = [
   { name: 'Normal', desc: 'Visión normal', colors: [
-    { name: 'Bermellón', hex: '#e85b5b', glyph: '●' }, { name: 'Azul', hex: '#42b9f2', glyph: '■' },
-    { name: 'Verde', hex: '#43d29c', glyph: '▲' }, { name: 'Dorado', hex: '#f0b84f', glyph: '◆' }
+    { name: 'Bermellón', hex: '#e85b5b' }, { name: 'Azul', hex: '#42b9f2' },
+    { name: 'Verde', hex: '#43d29c' }, { name: 'Dorado', hex: '#f0b84f' }
   ]},
   { name: 'Deuteranopia', desc: 'Rojo-verde', colors: [
-    { name: 'Naranja', hex: '#f0a23a', glyph: '●' }, { name: 'Azul', hex: '#4ba9f2', glyph: '■' },
-    { name: 'Rosa', hex: '#de81bc', glyph: '▲' }, { name: 'Crema', hex: '#f3df72', glyph: '◆' }
+    { name: 'Naranja', hex: '#f0a23a' }, { name: 'Azul', hex: '#4ba9f2' },
+    { name: 'Rosa', hex: '#de81bc' }, { name: 'Crema', hex: '#f3df72' }
   ]},
   { name: 'Protanopia', desc: 'Ceguera al rojo', colors: [
-    { name: 'Azul', hex: '#4ba9f2', glyph: '●' }, { name: 'Naranja', hex: '#f0a23a', glyph: '■' },
-    { name: 'Magenta', hex: '#d47ac0', glyph: '▲' }, { name: 'Cian', hex: '#70d7f4', glyph: '◆' }
+    { name: 'Azul', hex: '#4ba9f2' }, { name: 'Naranja', hex: '#f0a23a' },
+    { name: 'Magenta', hex: '#d47ac0' }, { name: 'Cian', hex: '#70d7f4' }
   ]},
   { name: 'Tritanopia', desc: 'Azul-amarillo', colors: [
-    { name: 'Rojo', hex: '#ef6868', glyph: '●' }, { name: 'Magenta', hex: '#d47ac0', glyph: '■' },
-    { name: 'Verde', hex: '#43d29c', glyph: '▲' }, { name: 'Gris', hex: '#a8b2bc', glyph: '◆' }
+    { name: 'Rojo', hex: '#ef6868' }, { name: 'Magenta', hex: '#d47ac0' },
+    { name: 'Verde', hex: '#43d29c' }, { name: 'Gris', hex: '#a8b2bc' }
   ]},
   { name: 'Alto contraste', desc: 'Máxima diferenciación', colors: [
-    { name: 'Blanco', hex: '#ffffff', glyph: '●' }, { name: 'Rojo', hex: '#ff3030', glyph: '■' },
-    { name: 'Azul', hex: '#315cff', glyph: '▲' }, { name: 'Amarillo', hex: '#fff000', glyph: '◆' }
+    { name: 'Blanco', hex: '#ffffff' }, { name: 'Rojo', hex: '#ff3030' },
+    { name: 'Azul', hex: '#315cff' }, { name: 'Amarillo', hex: '#fff000' }
   ]}
 ];
 
@@ -182,9 +182,11 @@ physicsWorld.solver.iterations = MOBILE_DEVICE ? 6 : 10;
 physicsWorld.solver.tolerance = .001;
 const ringPhysicsMaterial = new CANNON.Material('ring');
 const tankPhysicsMaterial = new CANNON.Material('tank');
-physicsWorld.defaultContactMaterial.friction = .18;
-physicsWorld.defaultContactMaterial.restitution = .28;
-physicsWorld.addContactMaterial(new CANNON.ContactMaterial(ringPhysicsMaterial, tankPhysicsMaterial, { friction: .18, restitution: .28 }));
+physicsWorld.defaultContactMaterial.friction = .04;
+physicsWorld.defaultContactMaterial.restitution = .38;
+// La geometría de Cannon resuelve el deslizamiento; no se fija el aro con
+// ninguna posición auxiliar ni con una marca visual.
+physicsWorld.addContactMaterial(new CANNON.ContactMaterial(ringPhysicsMaterial, tankPhysicsMaterial, { friction: .015, restitution: .45 }));
 const physicsGround = new CANNON.Body({ mass: 0, material: tankPhysicsMaterial });
 physicsGround.addShape(new CANNON.Box(new CANNON.Vec3(6, .11, 2.85)));
 physicsGround.position.set(0, BASE_Y - .2, .15);
@@ -463,20 +465,6 @@ for (let j = 0; j < 3; j++) {
   jetBeams.push(beam);
 }
 
-const glyphTextureCache = new Map();
-function glyphTexture(text, dark = false) {
-  const key = `${text}-${dark}`;
-  if (glyphTextureCache.has(key)) return glyphTextureCache.get(key);
-  const c = document.createElement('canvas'); c.width = 64; c.height = 64;
-  const ctx = c.getContext('2d');
-  ctx.clearRect(0, 0, 64, 64);
-  ctx.fillStyle = dark ? 'rgba(0,16,30,.74)' : 'rgba(255,255,255,.74)';
-  ctx.font = '700 36px Arial'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(text, 32, 33);
-  const texture = new THREE.CanvasTexture(c); texture.colorSpace = THREE.SRGBColorSpace;
-  glyphTextureCache.set(key, texture);
-  return texture;
-}
-
 function roundedRect(ctx, x, y, width, height, radius) {
   if (typeof ctx.roundRect === 'function') { ctx.roundRect(x, y, width, height, radius); return; }
   const r = Math.min(radius, width / 2, height / 2);
@@ -490,10 +478,10 @@ function labelSprite(text, color = '#8deeff') {
   ctx.fillStyle = 'rgba(3,16,28,.78)';
   roundedRect(ctx, 8, 9, 240, 46, 14); ctx.fill();
   ctx.strokeStyle = color; ctx.globalAlpha = .65; ctx.lineWidth = 2; ctx.stroke(); ctx.globalAlpha = 1;
-  ctx.fillStyle = color; ctx.font = '700 25px monospace'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(text, 128, 33);
+  ctx.fillStyle = color; ctx.font = '700 30px monospace'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(text, 128, 33);
   const texture = new THREE.CanvasTexture(c); texture.colorSpace = THREE.SRGBColorSpace;
   const sprite = new THREE.Sprite(new THREE.SpriteMaterial({ map: texture, transparent: true, depthTest: false }));
-  sprite.scale.set(.84, .21, 1);
+  sprite.scale.set(1.02, .26, 1);
   sprite.userData.canvas = c;
   sprite.userData.texture = texture;
   return sprite;
@@ -504,7 +492,7 @@ function updateLabel(sprite, text, color = '#8deeff') {
   ctx.clearRect(0, 0, c.width, c.height);
   ctx.fillStyle = 'rgba(3,16,28,.78)'; roundedRect(ctx, 8, 9, 240, 46, 14); ctx.fill();
   ctx.strokeStyle = color; ctx.globalAlpha = .65; ctx.lineWidth = 2; ctx.stroke(); ctx.globalAlpha = 1;
-  ctx.fillStyle = color; ctx.font = '700 25px monospace'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(text, 128, 33);
+  ctx.fillStyle = color; ctx.font = '700 30px monospace'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(text, 128, 33);
   sprite.userData.texture.needsUpdate = true;
 }
 
@@ -522,7 +510,7 @@ function clearGroup(group) {
 function createPole(def) {
   const group = new THREE.Group();
   group.position.set(def.x, BASE_Y, 0);
-  const capacity = Math.max(5, Math.floor((def.h - .18) / RING_STEP));
+  const capacity = Math.max(5, Math.floor((def.h - .18) / RING_STACK_STEP));
   const hasRequirement = def.rc !== undefined;
   const reqColor = hasRequirement ? PALETTES[paletteIndex].colors[def.rc].hex : '#b4e6f5';
   const shaftMaterial = new THREE.MeshStandardMaterial({ color: reqColor, emissive: reqColor, emissiveIntensity: hasRequirement ? .52 : .3, roughness: .28, metalness: .08, transparent: true, opacity: .96 });
@@ -541,12 +529,12 @@ function createPole(def) {
   beacon.position.set(0, def.h + .12, 0); group.add(beacon);
   const label = labelSprite('0/5', hasRequirement ? reqColor : '#8deeff');
   label.position.set(0, def.h + .45, .12); group.add(label);
-  const reqLabel = hasRequirement ? labelSprite(`${PALETTES[paletteIndex].colors[def.rc].glyph} 0/${def.rn}`, reqColor) : null;
-  if (reqLabel) { reqLabel.scale.set(.84, .19, 1); reqLabel.position.set(0, -.22, .13); group.add(reqLabel); }
+  const reqLabel = hasRequirement ? labelSprite(`0/${def.rn}`, reqColor) : null;
+  if (reqLabel) { reqLabel.scale.set(.96, .23, 1); reqLabel.position.set(0, -.24, .13); group.add(reqLabel); }
   poleGroup.add(group);
   return {
     group, shaft, top, beacon, label, reqLabel, x: def.x, baseX: def.x, h: def.h, spd: def.spd || 0, phase: Math.random() * TAU,
-    capacity, reqColor: hasRequirement ? def.rc : -1, reqCount: def.rn || 0, rings: [], pending: [], stress: 0, rejectCd: 0, lastColor: -1, combo: 0, vX: 0
+    capacity, reqColor: hasRequirement ? def.rc : -1, reqCount: def.rn || 0, rings: [], stress: 0, rejectCd: 0, lastColor: -1, combo: 0, vX: 0, previousX: def.x
   };
 }
 
@@ -559,15 +547,10 @@ function createRing(ci, index) {
   // Un aro real cae plano sobre un palo vertical: el agujero mira hacia arriba.
   // El eje Z del TorusGeometry se gira al eje Y para que no quede de canto.
   mesh.rotation.set(Math.PI / 2, 0, 0);
-  const glyph = new THREE.Sprite(new THREE.SpriteMaterial({ map: glyphTexture(info.glyph, ['#ffffff', '#f3df72', '#fff000'].includes(info.hex.toLowerCase())), transparent: true, depthTest: false }));
-  glyph.userData.shared = true;
-  glyph.scale.set(.21, .21, 1); glyph.position.set(0, .095, 0); mesh.add(glyph);
-  const marker = new THREE.Mesh(new THREE.SphereGeometry(.045, MOBILE_DEVICE ? 5 : 8, MOBILE_DEVICE ? 4 : 6), new THREE.MeshBasicMaterial({ color: 0xffffff }));
-  marker.position.set(RING_RADIUS * .78, 0, 0); mesh.add(marker);
   ringGroup.add(mesh);
   return {
-    mesh, marker, ci, color: info.hex, glyph: info.glyph, index, x: 0, y: 0, z: 0,
-    scored: false, threading: false, locked: false, locking: false, pole: null, stackIndex: -1, lockTargetY: 0, points: 0,
+    mesh, ci, color: info.hex, index, x: 0, y: 0, z: 0, previousX: 0, previousY: 0, previousZ: 0,
+    scored: false, pole: null, points: 0,
     angle: Math.random() * TAU, spin: (Math.random() - .5) * 1.4,
     pitch: (Math.random() - .5) * .12, roll: (Math.random() - .5) * .12
   };
@@ -579,17 +562,20 @@ function createRingPhysicsBody(ring) {
   body.angularDamping = .24;
   body.linearFactor.set(1, 1, 0); // 2.5D: Z es grosor de contacto, no un carril de juego.
   body.allowSleep = false;
-  const segments = MOBILE_DEVICE ? 12 : 16;
-  const tangentHalfLength = RING_RADIUS * Math.sin(Math.PI / segments) * 1.18;
+  // El aro es un compuesto de segmentos que sigue el toro visual. Hay más
+  // lados que antes para que el hueco físico no sea una aproximación grosera.
+  const segments = MOBILE_DEVICE ? 20 : 28;
+  const tangentHalfLength = RING_RADIUS * Math.sin(Math.PI / segments);
   for (let i = 0; i < segments; i++) {
     const angle = i / segments * TAU;
     const offset = new CANNON.Vec3(Math.cos(angle) * RING_RADIUS, 0, Math.sin(angle) * RING_RADIUS);
-    const shape = new CANNON.Box(new CANNON.Vec3(RING_TUBE * 1.08, RING_TUBE * .8, tangentHalfLength));
+    const shape = new CANNON.Box(new CANNON.Vec3(RING_COLLISION_TUBE, RING_TUBE, tangentHalfLength));
     const rotation = new CANNON.Quaternion();
     rotation.setFromAxisAngle(new CANNON.Vec3(0, 1, 0), angle);
     body.addShape(shape, offset, rotation);
   }
   body.position.set(ring.x, ring.y, ring.z);
+  ring.previousX = body.position.x; ring.previousY = body.position.y; ring.previousZ = body.position.z;
   body.quaternion.setFromEuler(ring.pitch, ring.angle, ring.roll, 'XYZ');
   body.angularVelocity.set((Math.random() - .5) * .5, ring.spin, (Math.random() - .5) * .5);
   body.userData = { ring };
@@ -600,10 +586,10 @@ function createRingPhysicsBody(ring) {
 
 function createPolePhysicsBody(pole) {
   const body = new CANNON.Body({ mass: 0, material: tankPhysicsMaterial });
-  const shaft = new CANNON.Cylinder(.075, .12, pole.h, MOBILE_DEVICE ? 8 : 12);
+  const shaft = new CANNON.Cylinder(.075, POLE_SHAFT_RADIUS, pole.h, MOBILE_DEVICE ? 8 : 12);
   body.addShape(shaft, new CANNON.Vec3(0, pole.h / 2, 0));
   body.addShape(new CANNON.Sphere(POLE_TIP_RADIUS), new CANNON.Vec3(0, pole.h, 0));
-  body.addShape(new CANNON.Cylinder(.42, .48, .18, MOBILE_DEVICE ? 8 : 12), new CANNON.Vec3(0, .09, 0));
+  body.addShape(new CANNON.Cylinder(.38, .48, .18, MOBILE_DEVICE ? 8 : 12), new CANNON.Vec3(0, .09, 0));
   body.position.set(pole.x, BASE_Y, 0);
   body.userData = { pole };
   physicsWorld.addBody(body);
@@ -664,7 +650,7 @@ function updatePoleLabel(pole) {
   if (pole.reqLabel) {
     const req = PALETTES[paletteIndex].colors[pole.reqColor];
     const count = pole.rings.filter((ring) => ring.ci === pole.reqColor).length;
-    const reqText = `${req.glyph} ${count}/${pole.reqCount}`;
+    const reqText = `${count}/${pole.reqCount}`;
     const reqColor = count >= pole.reqCount ? '#52e4ae' : req.hex;
     const reqKey = `${reqText}|${reqColor}`;
     if (pole._reqLabelKey !== reqKey) {
@@ -855,6 +841,7 @@ function submergedFraction(y) {
 function updatePhysicsPoleMotion(dt) {
   for (const pole of poles) {
     const previousX = pole.x;
+    pole.previousX = previousX;
     if (pole.spd) {
       pole.phase += pole.spd * dt;
       pole.x = pole.baseX + Math.sin(pole.phase) * .94;
@@ -914,8 +901,6 @@ function applyCannonForces(dt) {
     const body = ring.body;
     if (!body) continue;
     const submerged = submergedFraction(body.position.y);
-    if (ring.locked) continue;
-    const activeFactor = ring.threading ? .18 : 1;
     body.force.y += submerged * RING_BUOYANCY_FORCE;
     const currentX = Math.sin(elapsed * .9 + body.position.y * .8) * .22 + Math.cos(elapsed * .55 + body.position.x * .35) * .1;
     body.force.x += (currentX - body.velocity.x) * RING_MASS * .42 * submerged;
@@ -937,17 +922,12 @@ function applyCannonForces(dt) {
       const dy = Math.max(0, body.position.y - NOZZLE_Y);
       if (widthFalloff <= 0 || body.position.y < NOZZLE_Y - .25) continue;
       const heightFalloff = clamp(1 - dy / 5.25, .16, 1);
-      const falloff = Math.pow(widthFalloff * heightFalloff, .82) * activeFactor;
+      const falloff = Math.pow(widthFalloff * heightFalloff, .82);
       cannonForce.set(direction.x * 7.8 * falloff, direction.y * 10.8 * falloff, 0);
       cannonPoint.set((JET_X[j] - body.position.x) * .5, -.24, 0);
       body.applyForce(cannonForce, cannonPoint);
     }
   }
-}
-
-function removePendingRing(ring, pole) {
-  const index = pole.pending.indexOf(ring);
-  if (index >= 0) pole.pending.splice(index, 1);
 }
 
 function rebuildPoleCombo(pole) {
@@ -958,39 +938,27 @@ function rebuildPoleCombo(pole) {
   for (let index = pole.rings.length - 1; index >= 0 && pole.rings[index].ci === last.ci; index--) pole.combo++;
 }
 
-function makeRingKinematic(ring) {
+function launchEjectedRing(ring, pole) {
   const body = ring.body;
-  body.type = CANNON.Body.KINEMATIC;
-  body.mass = 0;
-  body.updateMassProperties();
+  const escapeSide = Math.sign(body.position.x - pole.x) || (Math.random() < .5 ? -1 : 1);
   body.force.set(0, 0, 0);
   body.torque.set(0, 0, 0);
-  body.angularVelocity.set(0, 0, 0);
-  body.velocity.set(0, -RING_LOCK_SPEED, 0);
-  body.collisionResponse = true;
-  body.wakeUp();
-}
-
-function makeRingDynamic(ring, pole) {
-  const body = ring.body;
-  body.type = CANNON.Body.DYNAMIC;
-  body.mass = RING_MASS;
-  body.updateMassProperties();
-  body.force.set(0, 0, 0);
-  body.torque.set(0, 0, 0);
-  body.velocity.set(pole?.vX * .15 + (Math.random() - .5) * .65, .85 + Math.random() * .45, (Math.random() - .5) * .55);
-  body.angularVelocity.set((Math.random() - .5) * 2.2, (Math.random() - .5) * 2.8, (Math.random() - .5) * 2.2);
-  body.collisionResponse = true;
+  // La penalización solo aplica un impulso: la posición, la rotación y el
+  // resto de la trayectoria siguen siendo responsabilidad de Cannon.
+  body.applyImpulse(new CANNON.Vec3(
+    escapeSide * (1.2 + Math.random() * .25) + pole.vX * .1,
+    .82 + Math.random() * .24,
+    0
+  ), body.position);
+  body.angularVelocity.x += (Math.random() - .5) * 2.2;
+  body.angularVelocity.y += (Math.random() - .5) * 2.8;
+  body.angularVelocity.z += (Math.random() - .5) * 2.2;
   body.wakeUp();
 }
 
 function registerPhysicsScore(ring, pole) {
-  removePendingRing(ring, pole);
-  ring.threading = false; ring.scored = true; ring.locked = true; ring.locking = true; ring.pole = pole;
-  ring.stackIndex = pole.rings.length;
-  ring.lockTargetY = BASE_Y + .24 + ring.stackIndex * RING_STEP;
+  ring.scored = true; ring.pole = pole;
   pole.rings.push(ring);
-  makeRingKinematic(ring);
   const combo = pole.lastColor === ring.ci ? pole.combo + 1 : 1;
   pole.lastColor = ring.ci; pole.combo = combo; ring.points = 100 * combo;
   state.score += ring.points; state.currentCombo = Math.max(state.currentCombo, combo);
@@ -1006,19 +974,22 @@ function registerPhysicsScore(ring, pole) {
   }
 }
 
-function ejectPoleRing(ring, fromPenalty = false) {
-  if (!ring || !ring.scored || !ring.pole) return;
-  const pole = ring.pole;
+function detachScoredRing(ring, pole, launch = false) {
   const index = pole.rings.indexOf(ring);
   if (index >= 0) pole.rings.splice(index, 1);
   state.score = Math.max(0, state.score - (ring.points || 100));
-  ring.scored = false; ring.locked = false; ring.locking = false; ring.threading = false;
-  ring.pole = null; ring.stackIndex = -1; ring.lockTargetY = 0; ring.points = 0;
-  makeRingDynamic(ring, pole);
+  ring.scored = false; ring.pole = null; ring.points = 0;
   rebuildPoleCombo(pole);
   if (state.winQueued) { state.winQueued = false; window.clearTimeout(state.winTimer); state.winTimer = 0; }
-  if (fromPenalty) { sfxFail(); showToast('TENSIÓN · ARO EXPULSADO'); vibrate(35); }
+  if (launch) launchEjectedRing(ring, pole);
   updateUI(true); updatePoleLabel(pole);
+}
+
+function ejectPoleRing(ring, fromPenalty = false) {
+  if (!ring || !ring.scored || !ring.pole) return;
+  const pole = ring.pole;
+  detachScoredRing(ring, pole, true);
+  if (fromPenalty) { sfxFail(); showToast('TENSIÓN · ARO EXPULSADO'); vibrate(35); }
 }
 
 function ejectAllFromPole(pole) {
@@ -1026,54 +997,43 @@ function ejectAllFromPole(pole) {
   sfxFail(); showToast('TENSIÓN MÁXIMA · PALO VACÍO'); vibrate([40, 25, 70]);
 }
 
+function ringCrossedPoleTip(ring, pole, thresholdY) {
+  const body = ring.body;
+  const previousY = Number.isFinite(ring.previousY) ? ring.previousY : body.position.y;
+  const drop = previousY - body.position.y;
+  // Se comprueba el cruce del plano central de la punta, no una posición
+  // recolocada después. El radio se calcula con el hueco y la esfera reales.
+  if (body.position.y >= thresholdY || previousY < thresholdY || drop <= .0001) return false;
+  const crossingT = clamp((previousY - thresholdY) / drop, 0, 1);
+  const previousPoleX = Number.isFinite(pole.previousX) ? pole.previousX : pole.x;
+  const crossingX = lerp(ring.previousX, body.position.x, crossingT);
+  const crossingZ = lerp(ring.previousZ, body.position.z, crossingT);
+  const crossingPoleX = lerp(previousPoleX, pole.x, crossingT);
+  return Math.hypot(crossingX - crossingPoleX, crossingZ) <= RING_ENTRY_RADIUS;
+}
+
 function checkPhysicsPoleEntries() {
   for (const ring of rings) {
     const body = ring.body;
     if (!body || ring.scored) continue;
-    if (ring.threading) {
-      const pole = ring.pole;
-      const horizontal = Math.hypot(body.position.x - pole.x, body.position.z);
-      // En cuanto el cuerpo cruza por debajo de la esfera de la punta, el
-      // enceste ya cuenta. No se espera a que repose ni se recoloca el aro.
-      if (body.position.y < BASE_Y + pole.h - .03 && horizontal < .18) registerPhysicsScore(ring, pole);
-      else if (body.position.y > BASE_Y + pole.h + .28 && horizontal > .24) {
-        ring.threading = false; ring.pole = null; removePendingRing(ring, pole);
-      }
-      continue;
-    }
-    if (body.velocity.y >= -.04) continue;
     for (const pole of poles) {
-      if (pole.rings.length + pole.pending.length >= pole.capacity) continue;
-      const topY = BASE_Y + pole.h;
-      const dx = body.position.x - pole.x;
-      const radial = Math.hypot(dx, body.position.z);
-      if (body.position.y < topY - .14 || body.position.y > topY + .48 || radial > RING_CAPTURE_RADIUS) continue;
-      ring.threading = true; ring.pole = pole; ring.stackIndex = pole.rings.length + pole.pending.length;
-      pole.pending.push(ring); body.wakeUp();
+      if (pole.rings.length >= pole.capacity) continue;
+      if (!ringCrossedPoleTip(ring, pole, BASE_Y + pole.h)) continue;
+      registerPhysicsScore(ring, pole);
       break;
     }
   }
 }
 
-function advanceLockedRings() {
-  for (const ring of rings) {
-    if (!ring.locked || !ring.body) continue;
+function reconcileScoredRings() {
+  const releaseRadius = RING_RADIUS + POLE_SHAFT_RADIUS + .06;
+  for (const ring of [...rings]) {
+    if (!ring.scored || !ring.pole || !ring.body) continue;
     const pole = ring.pole;
-    ring.body.velocity.x = pole?.vX || 0;
-    ring.body.velocity.z = 0;
-    ring.body.velocity.y = ring.locking ? -RING_LOCK_SPEED : 0;
-  }
-}
-
-function finishLockedRings() {
-  for (const ring of rings) {
-    if (!ring.locked || !ring.locking || !ring.body) continue;
-    if (ring.body.position.y > ring.lockTargetY) continue;
-    ring.body.position.y = ring.lockTargetY;
-    ring.body.velocity.set(0, 0, 0);
-    ring.locking = false;
-    ring.body.aabbNeedsUpdate = true;
-    ring.body.updateAABB();
+    const radial = Math.hypot(ring.body.position.x - pole.x, ring.body.position.z);
+    const belowTank = ring.body.position.y < BASE_Y - .42;
+    const outsidePole = radial > releaseRadius;
+    if (belowTank || outsidePole) detachScoredRing(ring, pole, false);
   }
 }
 
@@ -1092,11 +1052,16 @@ function stepCannonPhysics(dt) {
   let steps = 0;
   while (physicsAccumulator >= physicsFixedStep && steps < 4) {
     updatePhysicsPoleMotion(physicsFixedStep);
-    advanceLockedRings();
     applyCannonForces(physicsFixedStep);
+    for (const ring of rings) {
+      if (!ring.body) continue;
+      ring.previousX = ring.body.position.x;
+      ring.previousY = ring.body.position.y;
+      ring.previousZ = ring.body.position.z;
+    }
     physicsWorld.step(physicsFixedStep);
     checkPhysicsPoleEntries();
-    finishLockedRings();
+    reconcileScoredRings();
     physicsAccumulator -= physicsFixedStep; steps++;
   }
   syncPhysicsToScene();
@@ -1427,7 +1392,7 @@ function buildPaletteGrid() {
   $('palGrid').innerHTML = '';
   PALETTES.forEach((palette, index) => {
     const card = document.createElement('div'); card.className = `palette-card${index === paletteIndex ? ' active' : ''}`;
-    card.innerHTML = `<div class="palette-name">${palette.name}<br><span class="palette-desc">${palette.desc}</span></div><div class="palette-dots">${palette.colors.map((color) => `<span class="palette-dot" style="background:${color.hex};color:${['#ffffff', '#f3df72', '#fff000'].includes(color.hex.toLowerCase()) ? '#112' : '#fff'}">${color.glyph}</span>`).join('')}</div>`;
+    card.innerHTML = `<div class="palette-name">${palette.name}<br><span class="palette-desc">${palette.desc}</span></div><div class="palette-dots">${palette.colors.map((color) => `<span class="palette-dot" style="background:${color.hex}" aria-label="${color.name}"></span>`).join('')}</div>`;
     card.addEventListener('click', () => { paletteIndex = index; storage.set('wrt_pal', String(index)); buildPaletteGrid(); initGame(currentLevel); state.paused = true; });
     $('palGrid').appendChild(card);
   });
