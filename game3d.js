@@ -58,6 +58,9 @@ const RING_CAPTURE_RADIUS = RING_OUTER_RADIUS + POLE_TIP_RADIUS;
 const RING_INNER_CONTACT_RADIUS = RING_ENTRY_RADIUS + .03;
 const RING_CAPTURE_VERTICAL = RING_OUTER_RADIUS + POLE_TIP_RADIUS + .1;
 const RING_ORIENTATION_ASSIST = .62;
+const RING_SEAT_MAX_TILT = Math.PI / 6;
+const RING_SEAT_LEVELING_STIFFNESS = 9;
+const RING_SEAT_LEVELING_DAMPING = 2.2;
 const RING_SEAT_STIFFNESS = 1.0;
 const RING_SEAT_DAMPING = .8;
 const RING_SEAT_HORIZONTAL_STIFFNESS = 4.8;
@@ -956,6 +959,11 @@ const cannonForce = new CANNON.Vec3();
 const cannonPoint = new CANNON.Vec3();
 const ringLocalNormal = new CANNON.Vec3(0, 1, 0);
 const ringWorldNormal = new CANNON.Vec3();
+const floorShapeQuaternion = new CANNON.Quaternion();
+const floorShapeCenter = new CANNON.Vec3();
+const floorShapeAxisX = new CANNON.Vec3();
+const floorShapeAxisY = new CANNON.Vec3();
+const floorShapeAxisZ = new CANNON.Vec3();
 function submergedFraction(y) {
   return clamp((WATER_TOP - y + RING_TUBE) / (RING_TUBE * 2.2), 0, 1);
 }
@@ -985,15 +993,33 @@ function updatePhysicsPoleMotion(dt) {
   physicsWorld.broadphase.dirty = true;
 }
 
+function ringLowestPointY(body) {
+  let lowest = Infinity;
+  for (let index = 0; index < body.shapes.length; index++) {
+    const shape = body.shapes[index];
+    const halfExtents = shape.halfExtents;
+    if (!halfExtents) continue;
+    body.quaternion.mult(body.shapeOrientations[index], floorShapeQuaternion);
+    body.quaternion.vmult(body.shapeOffsets[index], floorShapeCenter);
+    floorShapeAxisX.set(halfExtents.x, 0, 0); floorShapeQuaternion.vmult(floorShapeAxisX, floorShapeAxisX);
+    floorShapeAxisY.set(0, halfExtents.y, 0); floorShapeQuaternion.vmult(floorShapeAxisY, floorShapeAxisY);
+    floorShapeAxisZ.set(0, 0, halfExtents.z); floorShapeQuaternion.vmult(floorShapeAxisZ, floorShapeAxisZ);
+    const extentY = Math.abs(floorShapeAxisX.y) + Math.abs(floorShapeAxisY.y) + Math.abs(floorShapeAxisZ.y);
+    lowest = Math.min(lowest, body.position.y + floorShapeCenter.y - extentY);
+  }
+  return lowest;
+}
+
 function applyFloorContactSupport(body) {
   // El contacto Cannon sigue siendo la defensa principal. Esta fuerza física
-  // solo entra si el centro ya ha penetrado la cota de reposo del aro, para
-  // recuperar un cuerpo que haya cruzado el suelo durante un paso discreto.
-  const floorRestY = BASE_Y - .09 + RING_TUBE;
-  const penetration = floorRestY - body.position.y;
+  // solo entra si la geometría inferior del aro ya ha penetrado el suelo, para
+  // recuperar un cuerpo que haya cruzado la superficie durante un paso discreto.
+  const lowest = ringLowestPointY(body);
+  const predictedLowest = lowest + Math.min(0, body.velocity.y) * physicsFixedStep;
+  const penetration = BASE_Y - .09 - Math.min(lowest, predictedLowest);
   if (penetration <= 0) return;
-  const supportForce = penetration * 180 - Math.min(0, body.velocity.y) * 24;
-  body.force.y += Math.min(90, Math.max(0, supportForce));
+  const supportForce = penetration * 420 - Math.min(0, body.velocity.y) * 48;
+  body.force.y += Math.min(180, Math.max(0, supportForce));
 }
 
 function applyRingOrientationAssist(ring, body, submerged) {
@@ -1015,6 +1041,20 @@ function applyRingOrientationAssist(ring, body, submerged) {
   body.torque.z += ringWorldNormal.x * strength;
   body.torque.x += -body.angularVelocity.x * (.24 + strength * .22);
   body.torque.z += -body.angularVelocity.z * (.24 + strength * .22);
+}
+
+function applyRingSeatLevelingAssist(ring, body) {
+  if (!ring.scored || !ring.seatPole) return;
+  body.quaternion.vmult(ringLocalNormal, ringWorldNormal);
+  const tilt = Math.acos(clamp(ringWorldNormal.y, -1, 1));
+  const softStart = RING_SEAT_MAX_TILT * .55;
+  if (tilt <= softStart) return;
+  const excessTilt = tilt - softStart;
+  const strength = Math.min(12, excessTilt * RING_SEAT_LEVELING_STIFFNESS);
+  // Ayuda física hacia la horizontal solo cuando se acerca al límite de 30°.
+  // El yaw y el giro sobre el propio eje quedan libres.
+  body.torque.x += -ringWorldNormal.z * strength - body.angularVelocity.x * RING_SEAT_LEVELING_DAMPING;
+  body.torque.z += ringWorldNormal.x * strength - body.angularVelocity.z * RING_SEAT_LEVELING_DAMPING;
 }
 
 function updateRingCapture(ring, body) {
@@ -1072,6 +1112,7 @@ function applyCannonForces(dt) {
     applyFloorContactSupport(body);
     body.force.y += submerged * RING_BUOYANCY_FORCE;
     applyRingOrientationAssist(ring, body, submerged);
+    applyRingSeatLevelingAssist(ring, body);
     updateRingCapture(ring, body);
     const currentX = Math.sin(elapsed * .9 + body.position.y * .8) * .22 + Math.cos(elapsed * .55 + body.position.x * .35) * .1;
     body.force.x += (currentX - body.velocity.x) * RING_MASS * .42 * submerged;
