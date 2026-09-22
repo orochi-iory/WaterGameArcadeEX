@@ -4,7 +4,7 @@ import * as CANNON from './vendor/cannon-es.js';
 const $ = (id) => document.getElementById(id);
 // Referencia visible para distinguir rápidamente el build probado en una captura.
 // Incrementar este identificador en cada iteración funcional publicada.
-const BUILD_VERSION = 'R7';
+const BUILD_VERSION = 'R8';
 const MOBILE_DEVICE = /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent) || window.matchMedia?.('(pointer: coarse)').matches || window.innerWidth < 768;
 const WATER_GRID_X = MOBILE_DEVICE ? 24 : 48;
 const WATER_GRID_Y = MOBILE_DEVICE ? 10 : 18;
@@ -72,9 +72,6 @@ const RING_SEAT_DAMPING = .8;
 const RING_SEAT_HORIZONTAL_STIFFNESS = 4.8;
 const RING_SEAT_HORIZONTAL_DAMPING = 2.4;
 const RING_SEATED_CONTROL_ACCELERATION = 9;
-const RING_PAIR_MIN_DISTANCE = .46;
-const RING_PAIR_SEPARATION_STIFFNESS = 18;
-const RING_PAIR_SEPARATION_DAMPING = 5;
 // Límites de velocidad de salida aplicados mediante un impulso de frenado;
 // evitan que un aro conserve una aceleración extrema al abandonar un palo.
 const RING_RELEASE_MAX_UPWARD_SPEED = 2.4;
@@ -219,23 +216,23 @@ scene.fog = new THREE.Fog(0x06182d, 8, 20);
 const physicsWorld = new CANNON.World({ gravity: new CANNON.Vec3(0, GRAVITY, 0) });
 physicsWorld.broadphase = new CANNON.SAPBroadphase(physicsWorld);
 physicsWorld.allowSleep = true;
-physicsWorld.solver.iterations = MOBILE_DEVICE ? 10 : 16;
+physicsWorld.solver.iterations = MOBILE_DEVICE ? 14 : 24;
 physicsWorld.solver.tolerance = .00025;
 const ringPhysicsMaterial = new CANNON.Material('ring');
 const tankPhysicsMaterial = new CANNON.Material('tank');
 physicsWorld.defaultContactMaterial.friction = .018;
 physicsWorld.defaultContactMaterial.restitution = .34;
-// Contactos lubricados: el aro conserva el rebote, pero no pierde toda la
-// velocidad al rozar un palo, una pared o la base.
-physicsWorld.addContactMaterial(new CANNON.ContactMaterial(ringPhysicsMaterial, tankPhysicsMaterial, { friction: .004, restitution: .46 }));
+// Contactos lubricados y de rebote corto: un aro no debe convertirse en una
+// pelota al tocar un palo, una pared o la base.
+physicsWorld.addContactMaterial(new CANNON.ContactMaterial(ringPhysicsMaterial, tankPhysicsMaterial, { friction: .004, restitution: .12 }));
 // Dos aros no deben rebotar como pelotas ni quedarse enganchados por la
 // fricción de sus colliders compuestos; el suelo conserva su rebote separado.
 physicsWorld.addContactMaterial(new CANNON.ContactMaterial(ringPhysicsMaterial, ringPhysicsMaterial, { friction: .002, restitution: .06 }));
 const physicsGround = new CANNON.Body({ mass: 0, material: tankPhysicsMaterial });
 // Conserva la cara superior en la misma cota que el suelo visual, pero con
 // más espesor hacia abajo para que un aro no pueda atravesarlo por tunneling.
-physicsGround.addShape(new CANNON.Box(new CANNON.Vec3(6, .22, 2.85)));
-physicsGround.position.set(0, PHYSICS_FLOOR_TOP - .22, .15);
+physicsGround.addShape(new CANNON.Box(new CANNON.Vec3(6, .32, 2.85)));
+physicsGround.position.set(0, PHYSICS_FLOOR_TOP - .32, .15);
 physicsWorld.addBody(physicsGround);
 const physicsSideWalls = [];
 // Colliders gruesos y desplazados hacia fuera: conservan la misma cara
@@ -260,7 +257,7 @@ physicsCeiling.addShape(new CANNON.Box(new CANNON.Vec3(6.2, .24, PLAY_DEPTH / 2 
 // La cara inferior conserva la cota de la superficie visible.
 physicsCeiling.position.set(0, WATER_TOP + .24, 0);
 physicsWorld.addBody(physicsCeiling);
-const physicsFixedStep = 1 / 60;
+const physicsFixedStep = MOBILE_DEVICE ? 1 / 75 : 1 / 90;
 let physicsAccumulator = 0;
 const camera = new THREE.PerspectiveCamera(48, 1, .1, 100);
 camera.position.set(0, .05, 14.8);
@@ -669,13 +666,14 @@ function handleRingPoleContact(ring, event) {
 
 function createRingPhysicsBody(ring) {
   const body = new CANNON.Body({ mass: RING_MASS, material: ringPhysicsMaterial });
-  body.linearDamping = .10;
-  body.angularDamping = .15;
+  body.linearDamping = .16;
+  body.angularDamping = .24;
   body.linearFactor.set(1, 1, 0); // 2.5D: Z es grosor de contacto, no un carril de juego.
   body.allowSleep = false;
-  // El aro es un compuesto de segmentos que sigue el toro visual. Hay más
-  // lados que antes para que el hueco físico no sea una aproximación grosera.
-  const segments = MOBILE_DEVICE ? 20 : 28;
+  // El aro es un compuesto de segmentos que sigue el toro visual. Una malla
+  // física más contenida reduce las parejas de contacto y evita que los aros
+  // se enganchen entre sí sin cambiar la geometría visible.
+  const segments = MOBILE_DEVICE ? 16 : 20;
   const tangentHalfLength = RING_RADIUS * Math.sin(Math.PI / segments);
   for (let i = 0; i < segments; i++) {
     const angle = i / segments * TAU;
@@ -1137,42 +1135,8 @@ function applyRingSeatForce(ring, body) {
   return true;
 }
 
-function applyRingPairSeparation() {
-  for (let firstIndex = 0; firstIndex < rings.length; firstIndex++) {
-    const first = rings[firstIndex];
-    if (!first.body) continue;
-    for (let secondIndex = firstIndex + 1; secondIndex < rings.length; secondIndex++) {
-      const second = rings[secondIndex];
-      if (!second.body) continue;
-      // Los aros asentados del mismo palo ya tienen su separación vertical
-      // resuelta por el apilado y por los contactos Cannon. Aplicar aquí una
-      // fuerza lateral/vertical entre ellos competía con ese apilado y podía
-      // lanzar la pila o formar enlaces artificiales.
-      if (first.scored && second.scored && first.seatPole === second.seatPole) continue;
-      // Durante un lanzamiento la trayectoria la gobiernan el impulso y las
-      // colisiones reales; esta fuerza auxiliar no debe convertir la salida en
-      // un rebote en cadena contra los otros aros.
-      if (first.escapePole || second.escapePole) continue;
-      const dx = second.body.position.x - first.body.position.x;
-      const dy = second.body.position.y - first.body.position.y;
-      const distance = Math.hypot(dx, dy);
-      if (distance >= RING_PAIR_MIN_DISTANCE) continue;
-      const safeDistance = Math.max(distance, .001);
-      const nx = distance > .001 ? dx / safeDistance : (firstIndex % 2 ? -1 : 1);
-      const ny = distance > .001 ? dy / safeDistance : 0;
-      const relativeVelocity = (second.body.velocity.x - first.body.velocity.x) * nx + (second.body.velocity.y - first.body.velocity.y) * ny;
-      const separationForce = Math.max(0, (RING_PAIR_MIN_DISTANCE - distance) * RING_PAIR_SEPARATION_STIFFNESS - relativeVelocity * RING_PAIR_SEPARATION_DAMPING);
-      first.body.force.x -= nx * separationForce;
-      first.body.force.y -= ny * separationForce;
-      second.body.force.x += nx * separationForce;
-      second.body.force.y += ny * separationForce;
-    }
-  }
-}
-
 function applyCannonForces(dt) {
   const elapsed = state.elapsed;
-  applyRingPairSeparation();
   for (const ring of rings) {
     const body = ring.body;
     if (!body) continue;
