@@ -16,7 +16,7 @@
 
 **AQUA-07** mezcla la carcasa colorida de un juguete infantil de agua con la instrumentación de un submarino experimental. El tablero se dibuja con Three.js y los cuerpos rígidos se resuelven con Rapier 3D/WASM local.
 
-La referencia visible actual es **BUILD R18**.
+La referencia visible actual es **BUILD R21**.
 
 - Pantalla de observación con brillo, visor y lectura de instrumentos.
 - Casco oscuro remachado, señalética de laboratorio y panel de control de juguete.
@@ -84,8 +84,9 @@ La captura es estricta:
 2. El aro debe descender razonablemente alineado.
 3. La comprobación usa el diámetro interior, nunca el diámetro exterior.
 4. Un roce lateral no puntúa ni cambia la masa.
-5. El contacto físico con el palo permanece activo después de la captura.
-6. Una salida por encima de la punta usa un impulso físico; no hay salto por teletransporte.
+5. Si el cruce de plano queda oculto por un subpaso CCD, un contacto interior ya situado bajo la punta puede completar la captura; el radio sigue siendo el interior del agujero.
+6. El contacto físico con el palo permanece activo después de la captura.
+7. Una salida por encima de la punta usa un impulso físico; no hay salto por teletransporte.
 
 Solo durante el descenso existe una asistencia angular muy suave para que un aro que llega de canto pueda ladearse y descansar. Cuando deja de descender, conserva libremente su giro y orientación.
 
@@ -174,7 +175,7 @@ El progreso y el ranking local funcionan sin configuración. La integración opc
 
 Para conectar otro proyecto, sustituye `FIREBASE_CONFIG` en `game3d.js` y habilita Authentication anónima y Firestore.
 
-## Validación de la BUILD R20
+## Validación de la BUILD R21
 
 ```text
 node --check game3d.js

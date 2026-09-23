@@ -4,7 +4,7 @@ import * as PHYSICS from './vendor/rapier-physics.js';
 const $ = (id) => document.getElementById(id);
 // Referencia visible para distinguir rápidamente el build probado en una captura.
 // Incrementar este identificador en cada iteración funcional publicada.
-const BUILD_VERSION = 'R20';
+const BUILD_VERSION = 'R21';
 const MOBILE_DEVICE = /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent) || window.matchMedia?.('(pointer: coarse)').matches || window.innerWidth < 768;
 const WATER_GRID_X = MOBILE_DEVICE ? 24 : 48;
 const WATER_GRID_Y = MOBILE_DEVICE ? 10 : 18;
@@ -67,6 +67,7 @@ const RING_INNER_CONTACT_RADIUS = RING_ENTRY_RADIUS + .03;
 const RING_CAPTURE_VERTICAL = RING_OUTER_RADIUS + POLE_TIP_RADIUS + .1;
 const RING_SEATED_EXIT_RADIUS = RING_CAPTURE_RADIUS + .08;
 const RING_ENTRY_MAX_TILT = Math.PI / 3;
+const RING_ENTRY_SETTLE_VELOCITY = .65;
 const RING_ORIENTATION_ASSIST = .12;
 // Fuerza de agua aplicada en el borde del aro asentado para romper el
 // contacto con el eje/base. Sigue usando la masa real del RigidBody: no es un
@@ -1017,7 +1018,7 @@ function updateRingCapture(ring, body) {
   if (ring.scored) return;
   // Rapier resuelve el contacto del palo; la captura solo se arma cuando el
   // centro ya está dentro del agujero, nunca por el diámetro exterior.
-  if (!ring.capturePole && body.velocity.y <= .2) {
+  if (!ring.capturePole) {
     const candidate = poles.find((pole) => {
       if (pole.rings.length >= pole.capacity) return false;
       const topY = BASE_Y + pole.h;
@@ -1035,8 +1036,7 @@ function updateRingCapture(ring, body) {
   if (pole.rings.length >= pole.capacity
     || body.position.y < topY - RING_CAPTURE_VERTICAL - .12
     || body.position.y > topY + RING_CAPTURE_VERTICAL + .12
-    || radial > RING_INNER_CONTACT_RADIUS + .16
-    || body.velocity.y > .2) {
+    || radial > RING_INNER_CONTACT_RADIUS + .16) {
     clearRingPoleCapture(ring);
     return;
   }
@@ -1208,6 +1208,19 @@ function ringCrossedPoleTip(ring, pole, thresholdY, allowedRadius = RING_ENTRY_R
   return Math.hypot(crossingX - crossingPoleX, crossingZ) <= allowedRadius;
 }
 
+function ringIsInsidePoleEntryWindow(ring, pole, thresholdY, allowedRadius) {
+  const body = ring.body;
+  const radial = Math.hypot(body.position.x - pole.x, body.position.z);
+  const lowerY = thresholdY - RING_CAPTURE_VERTICAL - .18;
+  // Fallback for a valid interior contact whose plane crossing was hidden by
+  // a CCD substep or by a nearly resting contact. It remains narrow in Y and
+  // uses the interior radius, so a lateral exterior rub cannot score.
+  return body.position.y >= lowerY
+    && body.position.y <= thresholdY + .04
+    && radial <= allowedRadius
+    && body.velocity.y <= RING_ENTRY_SETTLE_VELOCITY;
+}
+
 function ringCrossedPoleTipUpward(ring, pole, thresholdY, allowedRadius = RING_CAPTURE_RADIUS) {
   const body = ring.body;
   const previousY = Number.isFinite(ring.previousY) ? ring.previousY : body.position.y;
@@ -1271,7 +1284,10 @@ function checkPhysicsPoleEntries() {
       // La captura ayuda a centrar, pero solo admite la tolerancia estrecha
       // del contacto interior; nunca la ventana exterior de un simple roce.
       const allowedRadius = ring.capturePole === pole ? RING_INNER_CONTACT_RADIUS : RING_ENTRY_RADIUS;
-      if (!ringCrossedPoleTip(ring, pole, BASE_Y + pole.h, allowedRadius)) continue;
+      const thresholdY = BASE_Y + pole.h;
+      const crossedTip = ringCrossedPoleTip(ring, pole, thresholdY, allowedRadius);
+      const interiorContact = !crossedTip && ringIsInsidePoleEntryWindow(ring, pole, thresholdY, allowedRadius);
+      if (!crossedTip && !interiorContact) continue;
       if (ring.capturePole !== pole && !ringIsEntryAligned(ring)) continue;
       registerPhysicsScore(ring, pole);
       break;
