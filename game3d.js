@@ -4,7 +4,7 @@ import * as PHYSICS from './vendor/rapier-physics.js';
 const $ = (id) => document.getElementById(id);
 // Referencia visible para distinguir rápidamente el build probado en una captura.
 // Incrementar este identificador en cada iteración funcional publicada.
-const BUILD_VERSION = 'R16';
+const BUILD_VERSION = 'R17';
 const MOBILE_DEVICE = /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent) || window.matchMedia?.('(pointer: coarse)').matches || window.innerWidth < 768;
 const WATER_GRID_X = MOBILE_DEVICE ? 24 : 48;
 const WATER_GRID_Y = MOBILE_DEVICE ? 10 : 18;
@@ -206,23 +206,14 @@ scene.fog = new THREE.Fog(0x06182d, 8, 20);
 /* Rapier rigid-body world                                                     */
 /* -------------------------------------------------------------------------- */
 const physicsWorld = new PHYSICS.World({ gravity: new PHYSICS.Vec3(0, GRAVITY, 0) });
-physicsWorld.broadphase = new PHYSICS.SAPBroadphase(physicsWorld);
-physicsWorld.allowSleep = true;
 physicsWorld.solver.iterations = MOBILE_DEVICE ? 10 : 16;
 physicsWorld.solver.tolerance = .00025;
 const ringPhysicsMaterial = new PHYSICS.Material('ring');
 const tankPhysicsMaterial = new PHYSICS.Material('tank');
+// Contactos lubricados y de rebote corto: Rapier recibe estos coeficientes
+// directamente en cada collider, sin tablas de materiales globales.
 ringPhysicsMaterial.friction = .002; ringPhysicsMaterial.restitution = .06;
 tankPhysicsMaterial.friction = .004; tankPhysicsMaterial.restitution = .12;
-physicsWorld.defaultContactMaterial.friction = .018;
-physicsWorld.defaultContactMaterial.restitution = .34;
-// Contactos lubricados y de rebote corto: un aro no debe convertirse en una
-// pelota al tocar un palo, una pared o la base.
-physicsWorld.addContactMaterial(new PHYSICS.ContactMaterial(ringPhysicsMaterial, tankPhysicsMaterial, { friction: .004, restitution: .12 }));
-// Los aros conservan contactos físicos entre sí, pero con fricción y rebote
-// mínimos. La geometría de cada toro usa esferas suaves para evitar que bordes
-// de cajas compuestas se enganchen y se lancen mutuamente.
-physicsWorld.addContactMaterial(new PHYSICS.ContactMaterial(ringPhysicsMaterial, ringPhysicsMaterial, { friction: .002, restitution: .06 }));
 const physicsGround = new PHYSICS.Body({ mass: 0, material: tankPhysicsMaterial });
 physicsGround.collisionFilterGroup = TANK_COLLISION_GROUP;
 physicsGround.collisionFilterMask = RING_COLLISION_GROUP;
@@ -231,7 +222,6 @@ physicsGround.collisionFilterMask = RING_COLLISION_GROUP;
 physicsGround.addShape(new PHYSICS.Box(new PHYSICS.Vec3(6, .32, 2.85)));
 physicsGround.position.set(0, PHYSICS_FLOOR_TOP - .32, .15);
 physicsWorld.addBody(physicsGround);
-const physicsSideWalls = [];
 // Colliders gruesos y desplazados hacia fuera: conservan la misma cara
 // interior visible, pero no se atraviesan cuando un aro llega con velocidad.
 for (const x of [-6.06, 6.06]) {
@@ -239,7 +229,7 @@ for (const x of [-6.06, 6.06]) {
   wall.collisionFilterGroup = TANK_COLLISION_GROUP;
   wall.collisionFilterMask = RING_COLLISION_GROUP;
   wall.addShape(new PHYSICS.Box(new PHYSICS.Vec3(.2, 3.2, 2.7)));
-  wall.position.set(x, -.1, .15); physicsWorld.addBody(wall); physicsSideWalls.push(wall);
+  wall.position.set(x, -.1, .15); physicsWorld.addBody(wall);
 }
 // La profundidad se limita al mismo orden de magnitud que la base: las
 // caras interiores quedan a Z = ±.48, justo alrededor del radio de .48.
@@ -248,18 +238,12 @@ for (const z of [-(PLAY_DEPTH / 2 + .1), PLAY_DEPTH / 2 + .1]) {
   wall.collisionFilterGroup = TANK_COLLISION_GROUP;
   wall.collisionFilterMask = RING_COLLISION_GROUP;
   wall.addShape(new PHYSICS.Box(new PHYSICS.Vec3(6.2, 3.2, .18)));
-  wall.position.set(0, -.1, z); physicsWorld.addBody(wall); physicsSideWalls.push(wall);
+  wall.position.set(0, -.1, z); physicsWorld.addBody(wall);
 }
-// Techo físico invisible grueso justo sobre la superficie. Impide que un
-// impulso de salida atraviese el encuadre por tunneling sin ser un elemento
-// visual adicional.
-const physicsCeiling = new PHYSICS.Body({ mass: 0, material: tankPhysicsMaterial });
-physicsCeiling.collisionFilterGroup = TANK_COLLISION_GROUP;
-physicsCeiling.collisionFilterMask = RING_COLLISION_GROUP;
-physicsCeiling.addShape(new PHYSICS.Box(new PHYSICS.Vec3(6.2, .24, PLAY_DEPTH / 2 + .18)));
-// La cara inferior conserva la cota de la superficie visible.
-physicsCeiling.position.set(0, WATER_TOP + .24, 0);
-physicsWorld.addBody(physicsCeiling);
+// No hay techo físico: en el juguete el agua superior es abierta y un chorro
+// no debe dejar un aro pegado a una tapa invisible. Rapier usa CCD para evitar
+// atravesar el suelo, las paredes o los palos; el límite superior visual no se
+// convierte en una pared artificial.
 const physicsFixedStep = MOBILE_DEVICE ? 1 / 75 : 1 / 90;
 let physicsAccumulator = 0;
 const camera = new THREE.PerspectiveCamera(48, 1, .1, 100);
@@ -684,7 +668,6 @@ function createPolePhysicsBody(pole) {
   body.addShape(new PHYSICS.Sphere(POLE_TIP_RADIUS), new PHYSICS.Vec3(0, pole.h, 0));
   body.addShape(new PHYSICS.Cylinder(.38, .48, .18, MOBILE_DEVICE ? 12 : 24), new PHYSICS.Vec3(0, .09, 0));
   body.position.set(pole.x, BASE_Y, 0);
-  body.userData = { pole };
   physicsWorld.addBody(body);
   pole.body = body;
   physicsPoleBodies.push(body);

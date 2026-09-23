@@ -67,18 +67,6 @@ export class Material {
   constructor(name = '') { this.name = name; this.friction = .018; this.restitution = .34; }
 }
 
-export class ContactMaterial {
-  constructor(materialA, materialB, options = {}) {
-    this.materialA = materialA; this.materialB = materialB;
-    this.friction = options.friction ?? .018;
-    this.restitution = options.restitution ?? .34;
-  }
-}
-
-export class SAPBroadphase {
-  constructor(world) { this.world = world; this.dirty = false; }
-}
-
 function groups(group, mask) {
   return ((group & 0xffff) << 16) | (mask & 0xffff);
 }
@@ -102,7 +90,6 @@ export class Body {
     this.quaternion = new Quaternion();
     this.shapes = [];
     this.shapeOffsets = [];
-    this.shapeOrientations = [];
     this._linearDamping = .01;
     this._angularDamping = .01;
     this._allowSleep = true;
@@ -110,7 +97,6 @@ export class Body {
     this._collisionFilterMask = 0xffff;
     this._raw = null;
     this._world = null;
-    this.userData = {};
     this._inertiaRatio = { x: .0395, y: .073, z: .0395 };
   }
 
@@ -130,14 +116,11 @@ export class Body {
   get collisionFilterMask() { return this._collisionFilterMask; }
   set collisionFilterMask(value) { this._collisionFilterMask = value; }
 
-  addShape(shape, offset = new Vec3(), orientation = new Quaternion()) {
+  addShape(shape, offset = new Vec3()) {
     this.shapes.push(shape);
     this.shapeOffsets.push(offset.clone());
-    this.shapeOrientations.push(orientation.clone());
     return shape;
   }
-
-  addEventListener() { /* Rapier's event queue is not needed for strict tip crossing. */ }
 
   setMassProperties() { this._setMassProperties(); }
   updateMassProperties() { this._setMassProperties(); }
@@ -239,13 +222,10 @@ export class World {
     this._world.numInternalPgsIterations = 2;
     this._world.maxCcdSubsteps = 2;
     this.gravity = gravity;
-    this.broadphase = new SAPBroadphase(this);
-    this.allowSleep = true;
+    this.broadphase = { dirty: false };
     this.solver = { iterations: 8, tolerance: .0001 };
-    this.defaultContactMaterial = { friction: .018, restitution: .34 };
     this._bodies = new Set();
   }
-  addContactMaterial() { /* Rapier uses collider friction/restitution directly. */ }
   addBody(body) {
     const desc = body._isFixed
       ? RAPIER.RigidBodyDesc.fixed()
@@ -267,7 +247,6 @@ export class World {
     }
     body._raw = this._world.createRigidBody(desc);
     body._world = this;
-    body._raw.userData = body.userData;
     const interactionGroups = groups(body.collisionFilterGroup, body.collisionFilterMask);
     for (let index = 0; index < body.shapes.length; index++) {
       const descriptor = colliderDescriptor(body.shapes[index], body.shapeOffsets[index], body.material, interactionGroups);

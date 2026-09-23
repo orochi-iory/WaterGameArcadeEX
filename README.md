@@ -1,115 +1,193 @@
-# 💧 Water Game Arcade EX · 3D
+# AQUA-07 · Water Game Arcade EX
 
 <div align="center">
 
-![Water Game Arcade EX](https://img.shields.io/badge/Water_Game-Arcade_EX-blue?style=for-the-badge)
+![Water Game Arcade EX](https://img.shields.io/badge/AQUA--07-Water_Game_Arcade_EX-4de6e7?style=for-the-badge)
 ![Three.js](https://img.shields.io/badge/Three.js-0.160-black?style=for-the-badge&logo=threedotjs)
-![WebGL](https://img.shields.io/badge/WebGL-2.0-orange?style=for-the-badge)
+![Rapier](https://img.shields.io/badge/Rapier-3D_WASM-ffcf66?style=for-the-badge)
 
-**El clásico juguete de aros acuáticos, convertido en una experiencia 3D para navegador.**
+**El juguete clásico de aros acuáticos dentro de un mini submarino futurista.**
 
 </div>
 
 ---
 
-## ✨ Qué cambió
+## Concepto
 
-Water Game Arcade EX ya no es un canvas 2D: el tablero completo se renderiza con **Three.js y WebGL** dentro de una carcasa arcade responsive.
+**AQUA-07** mezcla la carcasa colorida de un juguete infantil de agua con la instrumentación de un submarino experimental. El tablero se dibuja con Three.js y los cuerpos rígidos se resuelven con Rapier 3D/WASM local.
 
-- 🌊 Agua con superficie animada, volumen, burbujas, reflejos y niebla.
-- 💍 Aros como mallas 3D reales, con volumen, materiales, brillo y rotación libre.
-- 🪄 Palos, soportes, luces, balizas y etiquetas de capacidad en el espacio 3D.
-- 💨 Chorros con oscilación, gotas, burbujas y fuerzas físicas, sin flechas visuales rígidas.
-- ⚙️ Física 3D con cuerpos rígidos Rapier: gravedad, flotación, drag, orientación, velocidad angular y colisiones de geometría real.
-- 🎯 Enceste con captura física suave: el contacto del diámetro interior guía el aro sin teletransporte ni captura por roce exterior.
-- 🎮 Diez niveles: cinco clásicos y cinco niveles con requisitos de color.
-- 🔥 Combos, bonus de tiempo, bonus de color perfecto y aros pesados al quedar ensartados.
-- 📱 Controles táctiles, teclado, giroscopio, vibración y pantalla completa.
-- 👁️ Cinco paletas accesibles con contrastes de color diferenciados.
-- 💾 Ranking local y sincronización global opcional con Firebase.
-- 🔊 Audio procedural para chorros, combos, salidas físicas, victoria y una melodía ambiental submarina variable por nivel.
+La referencia visible actual es **BUILD R17**.
 
-## 🎯 Cómo jugar
+- Pantalla de observación con brillo, visor y lectura de instrumentos.
+- Casco oscuro remachado, señalética de laboratorio y panel de control de juguete.
+- Tres chorros de colores, botones de presión y controles de inclinación.
+- Aros 3D con colisión, rotación, masa, inercia y contactos reales.
+- Música procedural submarina y efectos de agua generados en el navegador.
 
-Ensarta los **20 aros** en los tres palos. Para completar un nivel necesitas al menos **5 aros en cada palo**. En los niveles 6–10, cada palo también pide una cantidad mínima de un color concreto.
+## Cómo jugar
 
-| Acción | Teclado | Pantalla táctil | Mando |
+Ensarta los **20 aros** en los tres palos. Para completar un nivel hacen falta al menos **5 aros en cada palo**. Los niveles 6–10 también añaden objetivos de color.
+
+| Acción | Teclado | Panel táctil | Mando |
 | --- | --- | --- | --- |
 | Chorro izquierdo | `A` | Botón rojo | Botón frontal 1 |
 | Chorro central | `S` | Botón verde | Botón frontal 2 |
 | Chorro derecho | `D` | Botón azul | Botón frontal 3 |
-| Inclinar izquierda/derecha | `←` / `→` | Botones laterales | Cruceta / stick izquierdo |
-| Mover arriba/abajo | `↑` / `↓` | Botones dorados | Cruceta / stick izquierdo |
+| Inclinación X | `←` / `→` | Botones laterales | Cruceta / stick izquierdo |
+| Inclinación Y | `↑` / `↓` | Botones dorados | Cruceta / stick izquierdo |
 | Reiniciar | `R` | `↺` | — |
 | Menú | — | `☰` | — |
 
-El juego usa una configuración de volumen estrecho: los aros y los palos comparten el espacio X/Y, mientras Z conserva el grosor real necesario para resolver contactos. Mueve los aros en X/Y y haz que el diámetro interior toque la punta del palo; la captura solo se arma dentro del agujero, nunca por roces exteriores. Una vez ensartados pesan aproximadamente 3x más para que la inclinación continua no los levante con facilidad. La salida de los aros depende de la física Rapier y de impulsos físicos, no de teletransportes.
+Mantén pulsado un control para aplicar fuerza. Al soltarlo, la entrada vuelve progresivamente a cero. En móvil se puede activar el giroscopio y calibrarlo desde el indicador `GYRO`.
 
-## 🏆 Puntuación
+## Mecánica física
+
+### Motor
+
+La simulación usa **Rapier 3D 0.20.0**, distribuido localmente en `vendor/rapier.mjs`. No depende de un CDN ni de Cannon-es.
+
+- Gravedad: `-5.6`.
+- Paso fijo: `1/90` en escritorio y `1/75` en móvil.
+- Solver Rapier: 16 iteraciones en escritorio, 10 en móvil y 2 subiteraciones PGS.
+- CCD activado en los aros, con dos subpasos y soft-CCD para evitar atravesar suelo, palos o paredes.
+- Contactos aro-aro activos en todo momento.
+- Fricción y restitución bajas para evitar rebotes violentos y enganches.
+- El eje Z está libre: no existe un carril cinemático. Las paredes laterales únicamente delimitan el volumen estrecho del tanque.
+
+### Colliders
+
+- Cada aro utiliza una corona de esferas distribuidas sobre su toro visible: 16 en escritorio y 12 en móvil.
+- Las esferas tienen una piel de contacto mínima para mantener separados los aros sin corregir su posición visualmente.
+- El palo usa una envolvente convexa trapezoidal que conserva la conicidad visible, una esfera en la punta y un collider para la base.
+- El suelo conserva la misma cota que la plataforma visible y tiene espesor físico hacia abajo.
+- Las paredes laterales y de profundidad son gruesas para evitar tunneling.
+- **No hay techo físico invisible:** el borde superior del visor no aprisiona los aros. Rapier usa CCD en las superficies que sí participan en la jugabilidad.
+
+### Masa e inclinación
+
+```js
+const RING_MASS = .72;
+const RING_SEATED_MASS = RING_MASS * 3;
+```
+
+Cuando un aro entra en el interior de un palo, Rapier recibe una masa e inercia tres veces mayores. La inclinación y los chorros aplican fuerzas fijas; no se multiplican artificialmente por la masa del aro. Por tanto, un aro asentado acelera menos de forma natural, pero sigue pudiendo salir si recibe suficiente fuerza o impulso.
+
+Los aros no se teletransportan ni se recolocan al puntuar. El apilado final se produce por contacto entre colliders, suelo, palo y gravedad.
+
+### Captura y salida
+
+La captura es estricta:
+
+1. El centro del aro debe aproximarse al interior del agujero.
+2. El aro debe descender razonablemente alineado.
+3. La comprobación usa el diámetro interior, nunca el diámetro exterior.
+4. Un roce lateral no puntúa ni cambia la masa.
+5. El contacto físico con el palo permanece activo después de la captura.
+6. Una salida por encima de la punta usa un impulso físico; no hay salto por teletransporte.
+
+Solo durante el descenso existe una asistencia angular muy suave para que un aro que llega de canto pueda ladearse y descansar. Cuando deja de descender, conserva libremente su giro y orientación.
+
+### Chorros
+
+Los chorros son fuerzas físicas aplicadas en el centro de masa del aro. No aplican un brazo artificial desde debajo del toro, por lo que no deberían producir un giro extraño ni agarrar el aro al palo únicamente por la posición de la boquilla.
+
+La flotación, la amortiguación, la turbulencia y la resistencia angular pertenecen a la capa de agua. No hay penalización temporizada ni expulsiones rojas ocultas.
+
+## Niveles y puntuación
+
+Hay diez niveles:
+
+- **1–5:** niveles clásicos con distintas alturas y movimiento.
+- **6–10:** objetivos de color, palos móviles y combinaciones más exigentes.
+
+Puntuación:
 
 - Aro base: **100 puntos**.
-- Combo x2, x3, x4…: multiplica los puntos del siguiente aro del mismo color.
+- Combo por color: multiplica el siguiente aro consecutivo.
 - Cinco aros del mismo color en un palo: **+500**.
 - Dos combos de color en un palo: **+1500**.
-- Bonus de tiempo: hasta **+2000**.
-- Requisitos de color de los niveles 6–10: bonus adicional.
+- Bonus de tiempo al completar el nivel.
+- Bonus adicional por cumplir requisitos de color.
 
-## ▶️ Ejecutar
+## Interfaz y accesibilidad
 
-Es un proyecto estático. No hay bundler ni instalación obligatoria: Three.js y Rapier están incluidos localmente como módulos ES en `vendor/`, por lo que el juego puede arrancar aunque el CDN esté bloqueado.
+La interfaz actual se ha rehecho como un panel de submarino futurista con detalles de juguete:
+
+- visor de observación con marco de escotilla;
+- casco oscuro con remaches, telemetría y etiquetas de laboratorio;
+- HUD de profundidad con tiempo, puntos, aros y combo;
+- botones blandos de colores para los chorros;
+- controles dorados para la inclinación;
+- menú, tutorial, ranking local/global, perfil y pantalla completa;
+- paletas Normal, Deuteranopia, Protanopia, Tritanopia y Alto contraste;
+- cada aro conserva una forma visual además del color;
+- controles táctiles con `pointer capture` para que no se queden pulsados accidentalmente;
+- teclado y mando con limpieza de estado al reiniciar.
+
+## Audio
+
+El audio es procedural y opcional:
+
+- chorros y burbujas;
+- contactos y salidas físicas;
+- combos y victoria;
+- melodía submarina ligera y variable por nivel.
+
+No se incluyen canciones ni muestras externas. El navegador necesita una interacción del usuario para activar el contexto de audio.
+
+## Ejecutar localmente
+
+Es una aplicación estática con módulos ES locales:
 
 ```bash
-# Opción recomendada
 python3 -m http.server 8080
-
-# después abre http://localhost:8080
 ```
 
-También puedes usar cualquier servidor estático compatible con módulos ES. Abrir `index.html` directamente con `file://` puede bloquear los imports por las políticas CORS del navegador.
+Abre después [http://localhost:8080](http://localhost:8080). No abras `index.html` directamente con `file://`, porque el navegador puede bloquear los imports de módulos y el WASM.
 
-## ☁️ Firebase opcional
+Para probar el preview de esta sesión:
 
-El ranking funciona en local sin configuración adicional. El archivo `game3d.js` conserva la integración opcional con Firebase para autenticación anónima, progreso y ranking global. Si Firebase no está disponible, la interfaz cambia automáticamente a **Solo local** sin impedir jugar.
+```bash
+python3 -m http.server 4173 --bind 0.0.0.0
+```
 
-Para usar otro proyecto, sustituye `FIREBASE_CONFIG` en `game3d.js` y habilita:
-
-1. Authentication → Anonymous.
-2. Firestore Database.
-3. Lectura pública del leaderboard y escritura autenticada para usuarios anónimos.
-
-## 🧱 Arquitectura
+## Arquitectura
 
 ```text
-index.html          → carcasa arcade, HUD, menús, tutorial y controles
-styles.css          → diseño responsive, overlays y estética de hardware acuático
-game3d.js           → escena Three.js, física Rapier, audio, persistencia y Firebase opcional
-vendor/three.module.js → runtime local de Three.js 0.160.0
-vendor/rapier.mjs      → runtime local WASM de Rapier 3D 0.20.0
-vendor/rapier-physics.js → adaptador de cuerpos, colliders y fuerzas para el juego
-vendor/RAPIER-LICENSE   → licencia Apache-2.0 de Rapier
-vendor/THREE-LICENSE   → licencia MIT de Three.js
+index.html                  → carcasa, visor, HUD, controles, menús y tutorial
+styles.css                  → tema de submarino futurista + juguete acuático
+game3d.js                   → Three.js, gameplay, niveles, audio, Firebase y bucle físico
+vendor/three.module.js      → runtime local de Three.js 0.160.0
+vendor/rapier.mjs           → runtime WASM local de Rapier 3D 0.20.0
+vendor/rapier-physics.js    → adaptador ligero de cuerpos y colliders Rapier
+vendor/RAPIER-LICENSE       → licencia Apache-2.0 de Rapier
+vendor/THREE-LICENSE        → licencia MIT de Three.js
 ```
 
-La escena utiliza materiales y geometría procedurales, por lo que no necesita modelos 3D ni imágenes externas. El canvas WebGL se adapta al tamaño real de la pantalla del juguete mediante `ResizeObserver`.
+`vendor/rapier-physics.js` traduce las necesidades pequeñas del juego —vectores mutables, fuerzas acumuladas, colliders compuestos, masas e impulsos— a la API de Rapier. No modifica posiciones ni quaternions para resolver contactos.
 
-## ♿ Accesibilidad
+## Persistencia y Firebase
 
-Desde **Accesibilidad** puedes cambiar entre Normal, Deuteranopia, Protanopia, Tritanopia y Alto contraste. Cada aro incluye además una forma visual: círculo, cuadrado, triángulo o rombo.
+El progreso y el ranking local funcionan sin configuración. La integración opcional de Firebase conserva autenticación anónima, progreso y ranking global. Si Firebase no está disponible, la interfaz pasa a modo **Solo local** sin bloquear la partida.
 
-## 📱 Giroscopio
+Para conectar otro proyecto, sustituye `FIREBASE_CONFIG` en `game3d.js` y habilita Authentication anónima y Firestore.
 
-En un dispositivo compatible:
+## Validación de la BUILD R17
 
-1. Pulsa **Activar giroscopio** desde el menú.
-2. Mantén el teléfono en tu posición de juego.
-3. Toca **GYRO ⊙** para calibrar el centro.
+```text
+node --check game3d.js
+node --check vendor/rapier-physics.js
+git diff --check
+Preview HTTP 200
+Prueba aislada de contactos y apilado Rapier
+```
 
-## 📜 Licencia
+## Licencia
 
-El proyecto se distribuye bajo la licencia indicada en [LICENSE](LICENSE).
+El proyecto se distribuye bajo la licencia indicada en [LICENSE](LICENSE). Rapier y Three.js conservan sus licencias en `vendor/`.
 
-## 👤 Créditos
+## Créditos
 
 **Creado por:** [orochi_iory](https://github.com/orochi-iory)
 
-**Desarrollado con:** asistencia de IA y Three.js.
+**Desarrollado con:** asistencia de IA, Three.js y Rapier.

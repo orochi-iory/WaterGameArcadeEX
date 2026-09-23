@@ -6,8 +6,8 @@
   <meta name="theme-color" content="#030913">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-title" content="Water Arcade 3D">
-  <meta name="description" content="Water Game Arcade EX — el juguete de aros acuáticos convertido a una experiencia 3D con Three.js.">
-  <title>Water Game Arcade EX · 3D</title>
+  <meta name="description" content="AQUA-07 Water Game Arcade EX — un juguete de aros acuáticos en un submarino futurista, con Three.js y Rapier.">
+  <title>AQUA-07 · Water Game Arcade EX</title>
   <link rel="stylesheet" href="./styles.css">
 </head>
 <body>
@@ -21,7 +21,7 @@
         </div>
       </div>
       <div class="site-status">
-        <div class="build-chip" id="buildVersion" title="Referencia de versión">BUILD R16</div>
+        <div class="build-chip" id="buildVersion" title="Referencia de versión">BUILD R17</div>
         <div class="engine-chip"><span class="status-dot"></span><b>RAPIER</b> / WASM</div>
       </div>
     </header>
@@ -82,7 +82,7 @@
             <div class="logo-3d"><div class="logo-core">💧</div></div>
             <h1 class="title">WATER GAME</h1>
             <h2 class="subtitle">ARCADE <b>EX</b></h2>
-            <div class="menu-sub">el clásico juguete de aros · ahora en 3D</div>
+            <div class="menu-sub">juguete acuático de bolsillo · laboratorio SUB-07</div>
             <div class="level-select" id="lvSel"></div>
             <button class="menu-button button-green" id="mPlay">🎮 JUGAR NIVEL <span id="menuLevel">1</span></button>
             <button class="menu-button button-blue" id="mTut">📖 TUTORIAL 3D</button>
@@ -145,12 +145,12 @@
 
         <!-- Tutorial interactivo -->
         <div id="tutOv" class="overlay">
-          <div class="tutorial-step active"><div class="tutorial-icon">🌊</div><h3>Bienvenido a la versión 3D</h3><p>El tablero ahora vive dentro de una escena WebGL: agua, profundidad, luces, reflejos y aros con volumen.</p><div class="tutorial-box">Tu objetivo sigue siendo el mismo: ensartar los 20 aros en los 3 palos.</div></div>
-          <div class="tutorial-step"><div class="tutorial-icon">🎯</div><h3>Apunta con los chorros</h3><p>Los chorros oscilan en 3D. Mantén pulsados A, S o D, o los tres primeros botones del mando, para impulsar los aros desde abajo.</p><div class="tutorial-box"><b style="color:#ff6b6b">A</b> izquierda · <b style="color:#3fe2aa">S</b> centro · <b style="color:#5bc8ff">D</b> derecha · mando: botones frontales</div></div>
+          <div class="tutorial-step active"><div class="tutorial-icon">🛟</div><h3>Bienvenido al SUB-07</h3><p>El juguete vive dentro de un mini submarino: agua, profundidad, luces, reflejos y aros con volumen en una escena WebGL.</p><div class="tutorial-box">Tu objetivo sigue siendo el mismo: ensartar los 20 aros en los 3 palos.</div></div>
+          <div class="tutorial-step"><div class="tutorial-icon">🚿</div><h3>Apunta con los chorros</h3><p>Los chorros aplican fuerzas en el centro de masa del aro. Mantén pulsados A, S o D para impulsarlos desde abajo sin brazos de giro artificiales.</p><div class="tutorial-box"><b style="color:#ff7373">A</b> izquierda · <b style="color:#5ce5b1">S</b> centro · <b style="color:#63cfff">D</b> derecha · mando: botones frontales</div></div>
           <div class="tutorial-step"><div class="tutorial-icon">📐</div><h3>Inclina el tablero</h3><p>Usa las flechas o los controles inferiores. En móvil puedes activar el giroscopio y tocar GYRO para calibrar el centro.</p><div class="tutorial-box">← → desplazan en X; ↑ ↓ elevan o bajan los aros.</div></div>
-          <div class="tutorial-step"><div class="tutorial-icon">🧭</div><h3>Cruza la punta del palo</h3><p>El juego es 2.5D: aros y palos comparten el mismo plano X/Y. El eje Z solo conserva el grosor de los cuerpos para resolver contactos.</p><div class="tutorial-box">Alinea el aro de forma aproximada: cuando la circunferencia roce la punta al descender, la captura física lo guiará suavemente hasta el palo.</div></div>
+          <div class="tutorial-step"><div class="tutorial-icon">🧭</div><h3>Cruza la punta del palo</h3><p>Rapier resuelve el volumen estrecho en 3D: el eje Z no está bloqueado, solo limitado por las paredes laterales del tanque.</p><div class="tutorial-box">Alinea el agujero con la punta y desciende: la captura solo se arma dentro del diámetro interior y no por un roce exterior.</div></div>
           <div class="tutorial-step"><div class="tutorial-icon">🌈</div><h3>Combos y color perfecto</h3><p>Encadena el mismo color para subir el multiplicador. Coloca 5 o más aros del mismo color en un palo para conseguir bonus.</p><div class="tutorial-box">Cada nivel de color te pide una combinación distinta.</div></div>
-          <div class="tutorial-step"><div class="tutorial-icon">🎮</div><h3>¡Listo para jugar!</h3><p>Completa el nivel con al menos 5 aros en cada palo. Los niveles 6–10 añaden requisitos de color.</p><div class="tutorial-box" style="color:#3fe2aa">20 aros · 3 palos · física 3D · buena suerte</div></div>
+          <div class="tutorial-step"><div class="tutorial-icon">🎮</div><h3>¡Listo para jugar!</h3><p>Completa el nivel con al menos 5 aros en cada palo. Los niveles 6–10 añaden requisitos de color.</p><div class="tutorial-box" style="color:#5ce5b1">20 aros · 3 palos · Rapier 3D · buena suerte</div></div>
           <div class="tutorial-dots" id="tutDots"></div>
           <div class="tutorial-nav"><button class="back-button" id="tutSkip">✕ CERRAR</button><button class="menu-button button-green" id="tutNext">SIGUIENTE →</button></div>
         </div>
