@@ -2,9 +2,22 @@ import * as THREE from './vendor/three.module.js';
 import * as PHYSICS from './vendor/rapier-physics.js';
 
 const $ = (id) => document.getElementById(id);
+let runtimeFailure = null;
+function reportRuntimeFailure(error) {
+  if (runtimeFailure) return;
+  runtimeFailure = error;
+  const message = String(error?.message || error || 'error desconocido').replace(/\s+/g, ' ').slice(0, 140);
+  console.error('[AQUA-07]', error);
+  const chip = $('buildVersion');
+  if (chip) { chip.textContent = `BUILD ${BUILD_VERSION} !`; chip.title = `Error de ejecución: ${message}`; }
+  const toast = $('toast');
+  if (toast) { toast.textContent = `3D: ${message}`; toast.classList.add('show'); }
+}
+window.addEventListener('error', (event) => reportRuntimeFailure(event.error || event.message));
+window.addEventListener('unhandledrejection', (event) => reportRuntimeFailure(event.reason));
 // Referencia visible para distinguir rápidamente el build probado en una captura.
 // Incrementar este identificador en cada iteración funcional publicada.
-const BUILD_VERSION = 'R26';
+const BUILD_VERSION = 'R27';
 const MOBILE_DEVICE = /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent) || window.matchMedia?.('(pointer: coarse)').matches || window.innerWidth < 768;
 const WATER_GRID_X = MOBILE_DEVICE ? 24 : 48;
 const WATER_GRID_Y = MOBILE_DEVICE ? 10 : 18;
@@ -1962,7 +1975,18 @@ if ('ResizeObserver' in window) new ResizeObserver(resizeRenderer).observe(water
 function renderLoop(timestamp) {
   if (!state.lastFrame) state.lastFrame = timestamp;
   const dt = Math.min(.034, Math.max(.001, (timestamp - state.lastFrame) / 1000)); state.lastFrame = timestamp;
-  updateGame(dt); renderer.render(scene, camera); requestAnimationFrame(renderLoop);
+  try {
+    updateGame(dt);
+  } catch (error) {
+    state.paused = true;
+    reportRuntimeFailure(error);
+  }
+  try {
+    renderer.render(scene, camera);
+  } catch (error) {
+    reportRuntimeFailure(error);
+  }
+  requestAnimationFrame(renderLoop);
 }
 
 /* Initial state */
