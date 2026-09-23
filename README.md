@@ -16,7 +16,7 @@
 
 **AQUA-07** mezcla la carcasa colorida de un juguete infantil de agua con la instrumentación de un submarino experimental. El tablero se dibuja con Three.js y los cuerpos rígidos se resuelven con Rapier 3D/WASM local.
 
-La referencia visible actual es **BUILD R24**.
+La referencia visible actual es **BUILD R25**.
 
 - Pantalla de observación con brillo, visor y lectura de instrumentos.
 - Casco oscuro remachado, señalética de laboratorio y panel de control de juguete.
@@ -38,7 +38,7 @@ Ensarta los **20 aros** en los tres palos. Para completar un nivel hacen falta a
 | Reiniciar | `R` | `↺` | — |
 | Menú | — | `☰` | — |
 
-Mantén pulsado un control para aplicar fuerza. Al soltarlo, la entrada vuelve progresivamente a cero. En móvil se puede activar el giroscopio y calibrarlo desde el indicador `GYRO`.
+Mantén pulsado un control para aplicar fuerza. Al soltarlo, la entrada vuelve progresivamente a cero. En móvil se puede activar el giroscopio y calibrarlo desde el indicador `GYRO`; una sacudida breve aplica un pequeño impulso horizontal físico a los aros libres para facilitar el siguiente enceste.
 
 ## Mecánica física
 
@@ -101,7 +101,7 @@ La flotación, la amortiguación, la turbulencia y la resistencia angular perten
 Hay diez niveles:
 
 - **1–5:** niveles clásicos con distintas alturas y movimiento.
-- **6–10:** objetivos de color, palos móviles y combinaciones más exigentes.
+- **6–10:** objetivos de color, palos móviles y combinaciones más exigentes; en móvil, los palos de los niveles 5 y 10 conservan una separación horizontal ampliada.
 
 Puntuación:
 
@@ -184,7 +184,7 @@ git diff --check
 Preview HTTP 200
 Prueba Rapier de fuerza por paso, guard superior bajo y breakaway asentado
 Prueba aislada de contactos, apilado y masa 4.5x Rapier
-Prueba de layout responsive del tutorial, selector de niveles sin scroll y panel móvil en escritorio
+Prueba de layout responsive del tutorial, selector de niveles sin scroll, panel móvil en escritorio y asistencia de sacudida móvil
 ```
 
 ## Licencia

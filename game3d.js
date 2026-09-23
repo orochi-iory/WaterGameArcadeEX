@@ -4,7 +4,7 @@ import * as PHYSICS from './vendor/rapier-physics.js';
 const $ = (id) => document.getElementById(id);
 // Referencia visible para distinguir rápidamente el build probado en una captura.
 // Incrementar este identificador en cada iteración funcional publicada.
-const BUILD_VERSION = 'R24';
+const BUILD_VERSION = 'R25';
 const MOBILE_DEVICE = /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent) || window.matchMedia?.('(pointer: coarse)').matches || window.innerWidth < 768;
 const WATER_GRID_X = MOBILE_DEVICE ? 24 : 48;
 const WATER_GRID_Y = MOBILE_DEVICE ? 10 : 18;
@@ -81,6 +81,13 @@ const RING_SEATED_BREAKAWAY_FORCE = 15;
 // reserva para vencer el contacto cuando el jugador insiste.
 const RING_TILT_FORCE_X = RING_MASS * 4.8;
 const RING_TILT_FORCE_Y = RING_MASS * 5.8;
+// Reajuste móvil opcional al detectar una sacudida: solo aplica un pequeño
+// impulso horizontal a los aros libres. No cambia posiciones ni toca los
+// aros asentados; Rapier conserva la masa y resuelve el desplazamiento.
+const RING_SHAKE_IMPULSE = .12;
+const RING_SHAKE_DIRECTION_IMPULSE = .035;
+const RING_SHAKE_COOLDOWN = 1.15;
+const RING_SHAKE_ENERGY_THRESHOLD = 15;
 const ringFlatQuaternion = new THREE.Quaternion().setFromEuler(new THREE.Euler(Math.PI / 2, 0, 0));
 const GRAVITY = -5.6;
 const NOZZLE_Y = BASE_Y - .02;
@@ -119,7 +126,7 @@ const LEVELS = [
   { name: 'Alturas', poles: [{ x: -3.2, h: 2.2, spd: 0 }, { x: 0, h: 3.36, spd: 0 }, { x: 3.2, h: 2.2, spd: 0 }] },
   { name: 'Escalera', poles: [{ x: -3.35, h: 3.25, spd: 0 }, { x: 0, h: 2.55, spd: 0 }, { x: 3.35, h: 2.0, spd: 0 }] },
   { name: 'Movimiento', poles: [{ x: -2.9, h: 2.25, spd: 0 }, { x: 0, h: 3.1, spd: .75 }, { x: 2.9, h: 2.25, spd: 0 }] },
-  { name: 'Caos', poles: [{ x: -3.35, h: 2.35, spd: 1.1 }, { x: 0, h: 3.25, spd: .62 }, { x: 3.35, h: 2.2, spd: 1.38 }] },
+  { name: 'Caos', poles: [{ x: -3.35, mobileX: -4.05, h: 2.35, spd: 1.1 }, { x: 0, h: 3.25, spd: .62 }, { x: 3.35, mobileX: 4.05, h: 2.2, spd: 1.38 }] },
   { name: 'Colores', poles: [
     { x: -2.75, h: 2.55, spd: 0, rc: 0, rn: 3 }, { x: 0, h: 3.28, spd: 0, rc: 1, rn: 3 }, { x: 2.75, h: 2.55, spd: 0, rc: 2, rn: 3 }
   ]},
@@ -133,7 +140,7 @@ const LEVELS = [
     { x: -2.9, h: 2.25, spd: 0, rc: 1, rn: 3 }, { x: 0, h: 3.1, spd: .78, rc: 2, rn: 4 }, { x: 2.9, h: 2.25, spd: 0, rc: 3, rn: 3 }
   ]},
   { name: 'Maestro', poles: [
-    { x: -3.35, h: 2.35, spd: 1.1, rc: 0, rn: 3 }, { x: 0, h: 3.25, spd: .62, rc: 1, rn: 4 }, { x: 3.35, h: 2.2, spd: 1.38, rc: 2, rn: 3 }
+    { x: -3.35, mobileX: -4.05, h: 2.35, spd: 1.1, rc: 0, rn: 3 }, { x: 0, h: 3.25, spd: .62, rc: 1, rn: 4 }, { x: 3.35, mobileX: 4.05, h: 2.2, spd: 1.38, rc: 2, rn: 3 }
   ]}
 ];
 const TOTAL_LEVELS = LEVELS.length - 1;
@@ -585,8 +592,9 @@ function clearGroup(group) {
 }
 
 function createPole(def) {
+  const baseX = MOBILE_DEVICE && Number.isFinite(def.mobileX) ? def.mobileX : def.x;
   const group = new THREE.Group();
-  group.position.set(def.x, BASE_Y, 0);
+  group.position.set(baseX, BASE_Y, 0);
   const capacity = Math.max(5, Math.floor((def.h - .18) / RING_STACK_STEP));
   const hasRequirement = def.rc !== undefined;
   const reqColor = hasRequirement ? PALETTES[paletteIndex].colors[def.rc].hex : '#b4e6f5';
@@ -610,8 +618,8 @@ function createPole(def) {
   if (reqLabel) { reqLabel.scale.set(.96, .23, 1); reqLabel.position.set(0, -.24, .13); group.add(reqLabel); }
   poleGroup.add(group);
   return {
-    group, shaft, top, beacon, label, reqLabel, x: def.x, baseX: def.x, h: def.h, spd: def.spd || 0, phase: Math.random() * TAU,
-    capacity, reqColor: hasRequirement ? def.rc : -1, reqCount: def.rn || 0, rings: [], lastColor: -1, combo: 0, vX: 0, previousX: def.x
+    group, shaft, top, beacon, label, reqLabel, x: baseX, baseX, h: def.h, spd: def.spd || 0, motionRange: def.motionRange ?? .94, phase: Math.random() * TAU,
+    capacity, reqColor: hasRequirement ? def.rc : -1, reqCount: def.rn || 0, rings: [], lastColor: -1, combo: 0, vX: 0, previousX: baseX
   };
 }
 
@@ -778,6 +786,7 @@ function initGame(level = currentLevel) {
   currentLevel = clamp(level, 1, maxLevel);
   storage.set('wrt_current_level', String(currentLevel));
   state.score = 0; state.elapsed = 0; state.tiltX = 0; state.tiltY = 0; state.gameOver = false; state.winQueued = false; window.clearTimeout(state.winTimer); state.winTimer = 0; state.currentCombo = 1;
+  latestMotionSample = null; shakeEnergy = 0; shakeCooldown = 0;
   input.jets.fill(false);
   input.pointerJets.fill(false); input.keyboardJets.fill(false); input.gamepadJets.fill(false);
   input.keys = {}; input.pointerKeys = {}; input.keyboardKeys = {}; input.gamepadKeys = {};
@@ -950,6 +959,60 @@ function updateTilt(dt) {
   vFill.style.width = `${hy}px`; vFill.style.left = `${state.tiltY < 0 ? verticalWidth - hy : verticalWidth}px`;
 }
 
+function triggerShakeAssist(direction = lastShakeDirection) {
+  if (!MOBILE_DEVICE || state.paused || state.gameOver || shakeCooldown > 0) return;
+  const shakeDirection = Math.sign(direction) || lastShakeDirection;
+  lastShakeDirection = shakeDirection;
+  const availablePoles = poles.filter((pole) => pole.rings.length < pole.capacity);
+  let nudged = 0;
+  for (const ring of rings) {
+    const body = ring.body;
+    // Un aro asentado o en contacto de captura no debe recibir la ayuda: el
+    // jugador sigue teniendo que sacarlo con inclinación o chorros reales.
+    if (!body || ring.scored || ring.capturePole || !availablePoles.length) continue;
+    let nearestPole = availablePoles[0];
+    let nearestDistance = Math.abs(body.position.x - nearestPole.x);
+    for (let index = 1; index < availablePoles.length; index++) {
+      const pole = availablePoles[index];
+      const distance = Math.abs(body.position.x - pole.x);
+      if (distance < nearestDistance) { nearestPole = pole; nearestDistance = distance; }
+    }
+    const towardPole = clamp(nearestPole.x - body.position.x, -1, 1);
+    const directionWeight = .35 + clamp(nearestDistance / 1.5, 0, 1) * .65;
+    const horizontalImpulse = towardPole * RING_SHAKE_IMPULSE
+      + shakeDirection * RING_SHAKE_DIRECTION_IMPULSE * directionWeight;
+    physicsImpulse.set(horizontalImpulse, 0, 0);
+    // Es un impulso único sobre el RigidBody: no hay teletransporte, clamp ni
+    // carril. La masa real del aro determina cuánto cambia su velocidad.
+    body.applyImpulse(physicsImpulse, body.position);
+    nudged++;
+  }
+  if (!nudged) return;
+  shakeCooldown = RING_SHAKE_COOLDOWN;
+  shakeEnergy = 0;
+  showToast('↔ REAJUSTE HORIZONTAL');
+  vibrate(10);
+}
+
+function onMotion(event) {
+  const linear = event.acceleration;
+  const includingGravity = event.accelerationIncludingGravity;
+  const source = linear && Number.isFinite(linear.x) && Number.isFinite(linear.y) && Number.isFinite(linear.z)
+    ? linear : includingGravity;
+  if (!source || !Number.isFinite(source.x) || !Number.isFinite(source.y) || !Number.isFinite(source.z)) return;
+  const sample = { x: source.x, y: source.y, z: source.z };
+  if (!latestMotionSample) { latestMotionSample = sample; return; }
+  const deltaX = sample.x - latestMotionSample.x;
+  const deltaY = sample.y - latestMotionSample.y;
+  const deltaZ = sample.z - latestMotionSample.z;
+  latestMotionSample = sample;
+  if (state.paused || state.gameOver || shakeCooldown > 0) { shakeEnergy = 0; return; }
+  shakeEnergy = Math.max(0, shakeEnergy * .82 + Math.hypot(deltaX, deltaY, deltaZ));
+  if (shakeEnergy < RING_SHAKE_ENERGY_THRESHOLD) return;
+  const direction = Math.abs(deltaX) > .25 ? deltaX : (Math.abs(sample.x) > .25 ? sample.x : lastShakeDirection);
+  triggerShakeAssist(direction);
+}
+
 function countColorCombos(pole) {
   const counts = {};
   for (const ring of pole.rings) counts[ring.ci] = (counts[ring.ci] || 0) + 1;
@@ -962,6 +1025,7 @@ function colorRequirementsMet() {
 }
 
 const physicsForce = new PHYSICS.Vec3();
+const physicsImpulse = new PHYSICS.Vec3();
 const physicsTorque = new PHYSICS.Vec3();
 const physicsPoint = new PHYSICS.Vec3();
 const ringLocalNormal = new PHYSICS.Vec3(0, 1, 0);
@@ -976,7 +1040,7 @@ function updatePhysicsPoleMotion(dt) {
     pole.previousX = previousX;
     if (pole.spd) {
       pole.phase += pole.spd * dt;
-      pole.x = pole.baseX + Math.sin(pole.phase) * .94;
+      pole.x = pole.baseX + Math.sin(pole.phase) * pole.motionRange;
       pole.vX = (pole.x - previousX) / Math.max(dt, .001);
       pole.group.position.x = pole.x - pole.baseX;
     } else {
@@ -1338,6 +1402,7 @@ function updateCamera(dt) {
 function updateGame(dt) {
   updateGamepad();
   updateCamera(dt);
+  shakeCooldown = Math.max(0, shakeCooldown - dt);
   if (state.paused || state.gameOver) {
     updateWater(dt);
     updateJetVisuals(dt);
@@ -1755,7 +1820,7 @@ $('bMus').addEventListener('click', () => { ensureAudio(); musicOn = !musicOn; s
 $('bSnd').textContent = soundOn ? '🔊' : '🔇'; $('bMus').textContent = musicOn ? '♫' : '♪';
 
 /* -------------------------------------------------------------------------- */
-/* Gyroscope                                                                  */
+/* Gyroscope + motion shake                                                  */
 /* -------------------------------------------------------------------------- */
 
 function calibrateGyro() { gyroOffset = { gamma: latestOrientation.gamma, beta: latestOrientation.beta - 60 }; $('gyroInd').classList.add('calibrating'); window.setTimeout(() => $('gyroInd').classList.remove('calibrating'), 500); tone(800, .12, .08); }
@@ -1766,18 +1831,48 @@ function onOrientation(event) {
   state.tiltX = clamp((latestOrientation.gamma - gyroOffset.gamma) / 25, -1, 1);
   state.tiltY = clamp((latestOrientation.beta - 60 - gyroOffset.beta) / 28, -1, 1);
 }
+function enableMotion() {
+  if (!('DeviceMotionEvent' in window) || input.motion) return;
+  input.motion = true;
+  window.addEventListener('devicemotion', onMotion, { passive: true });
+}
 function enableGyro() {
-  input.gyro = true; window.addEventListener('deviceorientation', onOrientation); $('mGyro').textContent = '✅ GIROSCOPIO ACTIVO'; $('mGyro').classList.remove('button-red'); $('mGyro').classList.add('button-green'); $('gyroInd').classList.add('visible'); $('gyroDot').classList.add('on');
-  $('tRow').style.opacity = '.42'; showToast('Giroscopio activado');
+  if (!input.gyro) {
+    input.gyro = true;
+    window.addEventListener('deviceorientation', onOrientation);
+    $('mGyro').textContent = '✅ GIROSCOPIO ACTIVO'; $('mGyro').classList.remove('button-red'); $('mGyro').classList.add('button-green'); $('gyroInd').classList.add('visible'); $('gyroDot').classList.add('on');
+    $('tRow').style.opacity = '.42'; showToast('Giroscopio activado');
+  }
 }
 function setupGyro() {
-  if (!('DeviceOrientationEvent' in window)) return;
-  if (typeof DeviceOrientationEvent.requestPermission === 'function') {
-    $('mGyro').style.display = 'block'; $('mGyro').addEventListener('click', () => DeviceOrientationEvent.requestPermission().then((result) => { if (result === 'granted') enableGyro(); }).catch(() => showToast('Permiso de giroscopio rechazado')));
+  const hasOrientation = 'DeviceOrientationEvent' in window;
+  const hasMotion = 'DeviceMotionEvent' in window;
+  if (!hasOrientation && !hasMotion) return;
+  const orientationApi = window.DeviceOrientationEvent;
+  const motionApi = window.DeviceMotionEvent;
+  const orientationNeedsPermission = typeof orientationApi?.requestPermission === 'function';
+  const motionNeedsPermission = typeof motionApi?.requestPermission === 'function';
+  if (orientationNeedsPermission || motionNeedsPermission) {
+    $('mGyro').style.display = 'block';
+    $('mGyro').textContent = hasOrientation ? '📐 ACTIVAR GIROSCOPIO' : '📱 ACTIVAR SACUDIDA';
+    $('mGyro').addEventListener('click', () => {
+      const requests = [];
+      if (orientationNeedsPermission) requests.push(orientationApi.requestPermission().then((result) => ({ type: 'orientation', granted: result === 'granted' })));
+      if (motionNeedsPermission) requests.push(motionApi.requestPermission().then((result) => ({ type: 'motion', granted: result === 'granted' })));
+      Promise.all(requests).then((results) => {
+        const orientationGranted = hasOrientation && (!orientationNeedsPermission || results.some((item) => item.type === 'orientation' && item.granted));
+        const motionGranted = hasMotion && (!motionNeedsPermission || results.some((item) => item.type === 'motion' && item.granted));
+        if (orientationGranted) enableGyro();
+        if (motionGranted) enableMotion();
+        if (!orientationGranted && motionGranted) showToast('Sacudida móvil activada');
+        if (!orientationGranted && !motionGranted) showToast('Permiso de sensores rechazado');
+      }).catch(() => showToast('Permiso de sensores rechazado'));
+    });
   } else {
-    window.addEventListener('deviceorientation', (event) => { if (event.gamma != null || event.beta != null) { enableGyro(); } }, { once: true });
+    if (hasMotion) enableMotion();
+    if (hasOrientation) window.addEventListener('deviceorientation', (event) => { if (event.gamma != null || event.beta != null) enableGyro(); }, { once: true });
   }
-  $('gyroInd').addEventListener('click', calibrateGyro);
+  if (hasOrientation) $('gyroInd').addEventListener('click', calibrateGyro);
 }
 
 /* -------------------------------------------------------------------------- */
