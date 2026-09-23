@@ -16,7 +16,7 @@
 
 **AQUA-07** mezcla la carcasa colorida de un juguete infantil de agua con la instrumentación de un submarino experimental. El tablero se dibuja con Three.js y los cuerpos rígidos se resuelven con Rapier 3D/WASM local.
 
-La referencia visible actual es **BUILD R17**.
+La referencia visible actual es **BUILD R18**.
 
 - Pantalla de observación con brillo, visor y lectura de instrumentos.
 - Casco oscuro remachado, señalética de laboratorio y panel de control de juguete.
@@ -61,7 +61,8 @@ La simulación usa **Rapier 3D 0.20.0**, distribuido localmente en `vendor/rapie
 - El palo usa una envolvente convexa trapezoidal que conserva la conicidad visible, una esfera en la punta y un collider para la base.
 - El suelo conserva la misma cota que la plataforma visible y tiene espesor físico hacia abajo.
 - Las paredes laterales y de profundidad son gruesas para evitar tunneling.
-- **No hay techo físico invisible:** el borde superior del visor no aprisiona los aros. Rapier usa CCD en las superficies que sí participan en la jugabilidad.
+- Un guard superior físico queda por encima del agua y separado del marco visual: evita que un aro atraviese el tanque sin convertir el borde del visor en una tapa pegajosa. Usa fricción nula y restitución corta.
+- Rapier usa CCD en las superficies que participan en la jugabilidad; no hay correcciones manuales de posición para rescatar un aro.
 
 ### Masa e inclinación
 
@@ -164,7 +165,7 @@ vendor/RAPIER-LICENSE       → licencia Apache-2.0 de Rapier
 vendor/THREE-LICENSE        → licencia MIT de Three.js
 ```
 
-`vendor/rapier-physics.js` traduce las necesidades pequeñas del juego —vectores mutables, fuerzas acumuladas, colliders compuestos, masas e impulsos— a la API de Rapier. No modifica posiciones ni quaternions para resolver contactos.
+`vendor/rapier-physics.js` expone vectores mutables, colliders compuestos, masas, fuerzas, torques e impulsos directos sobre los `RigidBody` de Rapier. Las fuerzas y torques se reinician explícitamente después de cada integración, porque la API nativa de Rapier los conserva entre pasos. Los cuerpos dinámicos nunca reciben una posición o quaternion manual para resolver contactos; solo los fixtures fijos que se mueven sincronizan su estado.
 
 ## Persistencia y Firebase
 
@@ -172,13 +173,14 @@ El progreso y el ranking local funcionan sin configuración. La integración opc
 
 Para conectar otro proyecto, sustituye `FIREBASE_CONFIG` en `game3d.js` y habilita Authentication anónima y Firestore.
 
-## Validación de la BUILD R17
+## Validación de la BUILD R18
 
 ```text
 node --check game3d.js
 node --check vendor/rapier-physics.js
 git diff --check
 Preview HTTP 200
+Prueba Rapier de fuerza por paso y guard superior CCD
 Prueba aislada de contactos y apilado Rapier
 ```
 

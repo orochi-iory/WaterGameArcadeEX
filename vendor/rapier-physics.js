@@ -85,8 +85,6 @@ export class Body {
     this.position = new Vec3();
     this.velocity = new Vec3();
     this.angularVelocity = new Vec3();
-    this.force = new Vec3();
-    this.torque = new Vec3();
     this.quaternion = new Quaternion();
     this.shapes = [];
     this.shapeOffsets = [];
@@ -140,11 +138,25 @@ export class Body {
     if (!this._raw) return;
     this._raw.addForceAtPoint({ x: force.x, y: force.y, z: force.z }, { x: point.x, y: point.y, z: point.z }, true);
   }
+  applyTorque(torque) {
+    if (!this._raw) return;
+    this._raw.addTorque({ x: torque.x, y: torque.y, z: torque.z }, true);
+  }
+  applyAngularImpulse(impulse) {
+    if (!this._raw) return;
+    this._raw.applyTorqueImpulse({ x: impulse.x, y: impulse.y, z: impulse.z }, true);
+    this.syncFromPhysics();
+  }
   applyImpulse(impulse, point = this.position) {
     if (!this._raw) return;
     if (point) this._raw.applyImpulseAtPoint({ x: impulse.x, y: impulse.y, z: impulse.z }, { x: point.x, y: point.y, z: point.z }, true);
     else this._raw.applyImpulse({ x: impulse.x, y: impulse.y, z: impulse.z }, true);
     this.syncFromPhysics();
+  }
+  resetAppliedForces() {
+    if (!this._raw || this._isFixed) return;
+    this._raw.resetForces(false);
+    this._raw.resetTorques(false);
   }
   wakeUp() { this._raw?.wakeUp(); }
 
@@ -160,24 +172,10 @@ export class Body {
     this.quaternion.set(rotation.x, rotation.y, rotation.z, rotation.w);
   }
 
-  commitManualState() {
-    if (!this._raw) return;
-    if (this._isFixed) {
-      this._raw.setTranslation({ x: this.position.x, y: this.position.y, z: this.position.z }, true);
-      this._raw.setLinvel({ x: this.velocity.x, y: this.velocity.y, z: this.velocity.z }, true);
-    } else {
-      // External impulses update the cached velocity immediately. This keeps
-      // direct angular nudges used by the game in the Rapier body as well.
-      this._raw.setAngvel({ x: this.angularVelocity.x, y: this.angularVelocity.y, z: this.angularVelocity.z }, true);
-    }
-    if (this.force.x || this.force.y || this.force.z) {
-      this._raw.addForce({ x: this.force.x, y: this.force.y, z: this.force.z }, true);
-    }
-    if (this.torque.x || this.torque.y || this.torque.z) {
-      this._raw.addTorque({ x: this.torque.x, y: this.torque.y, z: this.torque.z }, true);
-    }
-    this.force.set(0, 0, 0);
-    this.torque.set(0, 0, 0);
+  syncFixedState() {
+    if (!this._raw || !this._isFixed) return;
+    this._raw.setTranslation({ x: this.position.x, y: this.position.y, z: this.position.z }, true);
+    this._raw.setLinvel({ x: this.velocity.x, y: this.velocity.y, z: this.velocity.z }, true);
   }
 }
 
@@ -265,8 +263,18 @@ export class World {
     this._world.timestep = dt;
     this.solver.iterations = Math.max(1, this.solver.iterations | 0);
     this._world.numSolverIterations = this.solver.iterations;
-    for (const body of this._bodies) body.commitManualState();
+    // Only moving tank fixtures are synchronized from the scene. Dynamic rings
+    // never receive a cached position, velocity, force, or torque: Rapier owns
+    // their full state and integrates the direct API calls made this step.
+    for (const body of this._bodies) body.syncFixedState();
     this._world.step();
-    for (const body of this._bodies) body.syncFromPhysics();
+    // Rapier keeps addForce/addTorque active until explicitly reset. The game
+    // treats each call as a per-step impulse-like force, so clear the native
+    // accumulators after this integration and before the next frame builds its
+    // new force set.
+    for (const body of this._bodies) {
+      body.syncFromPhysics();
+      body.resetAppliedForces();
+    }
   }
 }

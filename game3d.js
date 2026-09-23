@@ -4,7 +4,7 @@ import * as PHYSICS from './vendor/rapier-physics.js';
 const $ = (id) => document.getElementById(id);
 // Referencia visible para distinguir rápidamente el build probado en una captura.
 // Incrementar este identificador en cada iteración funcional publicada.
-const BUILD_VERSION = 'R17';
+const BUILD_VERSION = 'R18';
 const MOBILE_DEVICE = /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent) || window.matchMedia?.('(pointer: coarse)').matches || window.innerWidth < 768;
 const WATER_GRID_X = MOBILE_DEVICE ? 24 : 48;
 const WATER_GRID_Y = MOBILE_DEVICE ? 10 : 18;
@@ -65,19 +65,19 @@ const RING_CAPTURE_RADIUS = RING_OUTER_RADIUS + POLE_TIP_RADIUS;
 const RING_INNER_CONTACT_RADIUS = RING_ENTRY_RADIUS + .03;
 const RING_CAPTURE_VERTICAL = RING_OUTER_RADIUS + POLE_TIP_RADIUS + .1;
 const RING_ENTRY_MAX_TILT = Math.PI / 3;
-const RING_ORIENTATION_ASSIST = .62;
+const RING_ORIENTATION_ASSIST = .12;
 // La inclinación y los chorros son fuerzas del mismo tipo: no se multiplican
 // por la masa del aro asentado. Un aro con masa 3x recibe la misma fuerza y,
 // por tanto, acelera menos de forma natural.
 const RING_TILT_FORCE_X = RING_MASS * 4.8;
-const RING_TILT_FORCE_Y = RING_MASS * 9.2;
+const RING_TILT_FORCE_Y = RING_MASS * 5.8;
 const ringFlatQuaternion = new THREE.Quaternion().setFromEuler(new THREE.Euler(Math.PI / 2, 0, 0));
 const GRAVITY = -5.6;
 const NOZZLE_Y = BASE_Y - .02;
 const NOZZLE_Z = PLAY_DEPTH / 2 - .28;
 const JET_FIELD_RADIUS = 1.82;
-const JET_FORCE_X = 9.4;
-const JET_FORCE_Y = 13.2;
+const JET_FORCE_X = 5.4;
+const JET_FORCE_Y = 7.2;
 const JET_X = [-3.35, 0, 3.35];
 const JET_COLORS = [0xff6b6b, 0x3fe2aa, 0x5bc8ff];
 const PALETTES = [
@@ -240,10 +240,19 @@ for (const z of [-(PLAY_DEPTH / 2 + .1), PLAY_DEPTH / 2 + .1]) {
   wall.addShape(new PHYSICS.Box(new PHYSICS.Vec3(6.2, 3.2, .18)));
   wall.position.set(0, -.1, z); physicsWorld.addBody(wall);
 }
-// No hay techo físico: en el juguete el agua superior es abierta y un chorro
-// no debe dejar un aro pegado a una tapa invisible. Rapier usa CCD para evitar
-// atravesar el suelo, las paredes o los palos; el límite superior visual no se
-// convierte en una pared artificial.
+// Guard superior separado del marco visual: deja espacio de carrera por encima
+// del agua, pero conserva una frontera física real. La restitución baja y la
+// fricción nula evitan que el aro se quede pegado o atraviese el tanque.
+const upperGuardMaterial = new PHYSICS.Material('upper-guard');
+upperGuardMaterial.friction = 0;
+upperGuardMaterial.restitution = .22;
+const physicsUpperGuard = new PHYSICS.Body({ mass: 0, material: upperGuardMaterial });
+physicsUpperGuard.collisionFilterGroup = TANK_COLLISION_GROUP;
+physicsUpperGuard.collisionFilterMask = RING_COLLISION_GROUP;
+physicsUpperGuard.addShape(new PHYSICS.Box(new PHYSICS.Vec3(6.2, .16, PLAY_DEPTH / 2 + .18)));
+physicsUpperGuard.position.set(0, WATER_TOP + .55 + .16, 0);
+physicsWorld.addBody(physicsUpperGuard);
+
 const physicsFixedStep = MOBILE_DEVICE ? 1 / 75 : 1 / 90;
 let physicsAccumulator = 0;
 const camera = new THREE.PerspectiveCamera(48, 1, .1, 100);
@@ -942,6 +951,7 @@ function colorRequirementsMet() {
 }
 
 const physicsForce = new PHYSICS.Vec3();
+const physicsTorque = new PHYSICS.Vec3();
 const ringLocalNormal = new PHYSICS.Vec3(0, 1, 0);
 const ringWorldNormal = new PHYSICS.Vec3();
 function submergedFraction(y) {
@@ -972,9 +982,9 @@ function updatePhysicsPoleMotion(dt) {
 }
 
 function applyRingOrientationAssist(ring, body, submerged) {
-  // La asistencia se basa en la caída del cuerpo, no en qué chorro está activo.
-  // Así el agua puede hacerlo girar libremente y solo la gravedad suaviza la
-  // orientación durante el descenso.
+  // Es una ayuda breve durante la caída, no un bloqueo de orientación. El
+  // contacto, el giro sobre Y y las fuerzas de los chorros siguen siendo de
+  // Rapier; aquí solo se aplica un torque pequeño cuando el aro está bajando.
   const previousDrop = Math.max(0, (Number.isFinite(ring.previousY) ? ring.previousY : body.position.y) - body.position.y);
   const speedDescent = clamp((-body.velocity.y - .08) / 2.6, 0, 1);
   const stepDescent = clamp(previousDrop / .045, 0, 1);
@@ -982,14 +992,15 @@ function applyRingOrientationAssist(ring, body, submerged) {
   ring.descentAssist = lerp(ring.descentAssist, descentTarget, .18);
   if (ring.descentAssist < .015) return;
   body.quaternion.vmult(ringLocalNormal, ringWorldNormal);
-  const captureBoost = ring.capturePole ? 1.3 : 1;
+  const captureBoost = ring.capturePole ? 1.15 : 1;
   const strength = RING_ORIENTATION_ASSIST * (.25 + ring.descentAssist * .75) * captureBoost * (.55 + submerged * .45);
-  // n × up: torque that makes the annulus horizontal without freezing its
-  // yaw, spin or collision response.
-  body.torque.x += -ringWorldNormal.z * strength;
-  body.torque.z += ringWorldNormal.x * strength;
-  body.torque.x += -body.angularVelocity.x * (.24 + strength * .22);
-  body.torque.z += -body.angularVelocity.z * (.24 + strength * .22);
+  // n × up: endereza suavemente el aro sin congelar su yaw, giro ni contactos.
+  physicsTorque.set(
+    -ringWorldNormal.z * strength - body.angularVelocity.x * (.06 + strength * .08),
+    0,
+    ringWorldNormal.x * strength - body.angularVelocity.z * (.06 + strength * .08)
+  );
+  body.applyTorque(physicsTorque);
 }
 
 function updateRingCapture(ring, body) {
@@ -1023,32 +1034,33 @@ function updateRingCapture(ring, body) {
   // cambia la masa real y Rapier resuelve el contacto con el palo.
 }
 
-function applyRapierForces(dt) {
+function applyRapierForces() {
   const elapsed = state.elapsed;
   for (const ring of rings) {
     const body = ring.body;
     if (!body) continue;
     const submerged = submergedFraction(body.position.y);
-    body.force.y += submerged * RING_BUOYANCY_FORCE;
+    const mass = body.mass;
     applyRingOrientationAssist(ring, body, submerged);
-    // La asistencia solo actúa durante el descenso; en reposo el aro conserva
-    // su giro libre y no se fuerza una postura horizontal.
     updateRingCapture(ring, body);
-    const currentX = Math.sin(elapsed * .9 + body.position.y * .8) * .22 + Math.cos(elapsed * .55 + body.position.x * .35) * .1;
-    // La masa de la pila se conserva en 3x. La inclinación aplica una
-    // fuerza fija, igual que un chorro, en vez de multiplicarse por la masa:
-    // Rapier deja que el aro asentado acelere menos por su propio peso.
-    body.force.x += (currentX - body.velocity.x) * RING_MASS * .42 * submerged;
-    body.force.x += state.tiltX * RING_TILT_FORCE_X;
-    // La inclinación vertical usa la misma regla física para aros libres y
-    // asentados; ↑ / ↓ solo cambia la fuerza aplicada al agua y al aro.
-    body.force.y += -state.tiltY * RING_TILT_FORCE_Y;
-    // El agua amortigua un poco el giro, pero no lo congela. Durante el
-    // descenso la asistencia de orientación puede frenarlo suavemente; fuera
-    // de esa fase se deja bastante más libertad angular.
-    const waterAngularDamping = ring.descentAssist > .02 ? .42 + submerged * .55 : .12 + submerged * .12;
-    body.torque.x += -body.angularVelocity.x * waterAngularDamping;
-    body.torque.z += -body.angularVelocity.z * waterAngularDamping;
+
+    // Una sola llamada de fuerza reúne flotación, corriente, arrastre del agua
+    // e inclinación. La llamada entra directamente en el RigidBody de Rapier;
+    // no se acumula en un objeto compatible con Cannon ni se reaplica después.
+    const currentX = Math.sin(elapsed * .9 + body.position.y * .8) * .22
+      + Math.cos(elapsed * .55 + body.position.x * .35) * .1;
+    physicsForce.set(
+      (currentX - body.velocity.x) * mass * .42 * submerged + state.tiltX * RING_TILT_FORCE_X,
+      submerged * RING_BUOYANCY_FORCE - body.velocity.y * mass * .12 * submerged - state.tiltY * RING_TILT_FORCE_Y,
+      -body.velocity.z * mass * .24 * submerged
+    );
+    body.applyForce(physicsForce, body.position);
+
+    // Damping angular hidráulico bajo: Rapier conserva el contacto y el giro,
+    // pero el agua no permite que el aro acumule una rotación infinita.
+    const waterAngularDamping = .04 + submerged * .08;
+    physicsTorque.set(-body.angularVelocity.x * waterAngularDamping, 0, -body.angularVelocity.z * waterAngularDamping);
+    body.applyTorque(physicsTorque);
 
     for (let j = 0; j < 3; j++) {
       if (!input.jets[j]) continue;
@@ -1061,17 +1073,16 @@ function applyRapierForces(dt) {
       if (widthFalloff <= 0 || body.position.y < NOZZLE_Y - .2) continue;
       const heightFalloff = clamp(1 - dy / 5.45, .2, 1);
       const falloff = Math.pow(widthFalloff * heightFalloff, .72);
-      const turbulenceX = Math.sin(elapsed * 8.2 + body.position.y * 2.3 + j * 1.7) * 1.35
-        + Math.cos(elapsed * 5.4 + body.position.x * 2.8 - j) * .75;
-      const turbulenceY = Math.sin(elapsed * 6.7 + body.position.x * 1.9 + j * 2.2) * .7;
+      const turbulenceX = Math.sin(elapsed * 8.2 + body.position.y * 2.3 + j * 1.7) * .42
+        + Math.cos(elapsed * 5.4 + body.position.x * 2.8 - j) * .22;
+      const turbulenceY = Math.sin(elapsed * 6.7 + body.position.x * 1.9 + j * 2.2) * .18;
       physicsForce.set(
         (direction.x * JET_FORCE_X + turbulenceX) * falloff,
         (direction.y * JET_FORCE_Y + turbulenceY) * falloff,
         0
       );
-      // El chorro aplica una fuerza física en el centro de masa. No se añade
-      // un brazo artificial que haga que el aro se incline y se enganche al
-      // palo solo por estar debajo del toro.
+      // También el chorro usa la fuerza real del motor en el centro de masa.
+      // No se fabrica un brazo, una guía ni una corrección de posición.
       body.applyForce(physicsForce, body.position);
     }
   }
@@ -1088,8 +1099,6 @@ function rebuildPoleCombo(pole) {
 function launchEscapingRing(ring, pole) {
   const body = ring.body;
   const escapeSide = Math.sign(body.position.x - pole.x) || (Math.random() < .5 ? -1 : 1);
-  body.force.set(0, 0, 0);
-  body.torque.set(0, 0, 0);
   // La salida normal ocurre al cruzar la punta: solo se añade un impulso
   // físico breve; la posición y la trayectoria siguen siendo de Rapier.
   body.applyImpulse(new PHYSICS.Vec3(
@@ -1097,9 +1106,11 @@ function launchEscapingRing(ring, pole) {
     .82 + Math.random() * .24,
     0
   ), body.position);
-  body.angularVelocity.x += (Math.random() - .5) * 2.2;
-  body.angularVelocity.y += (Math.random() - .5) * 2.8;
-  body.angularVelocity.z += (Math.random() - .5) * 2.2;
+  body.applyAngularImpulse(new PHYSICS.Vec3(
+    (Math.random() - .5) * 2.2,
+    (Math.random() - .5) * 2.8,
+    (Math.random() - .5) * 2.2
+  ));
   body.wakeUp();
 }
 
@@ -1231,7 +1242,7 @@ function stepRapierPhysics(dt) {
   let steps = 0;
   while (physicsAccumulator >= physicsFixedStep && steps < 4) {
     updatePhysicsPoleMotion(physicsFixedStep);
-    applyRapierForces(physicsFixedStep);
+    applyRapierForces();
     for (const ring of rings) {
       if (!ring.body) continue;
       ring.previousX = ring.body.position.x;
