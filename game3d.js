@@ -4,7 +4,7 @@ import * as PHYSICS from './vendor/rapier-physics.js';
 const $ = (id) => document.getElementById(id);
 // Referencia visible para distinguir rápidamente el build probado en una captura.
 // Incrementar este identificador en cada iteración funcional publicada.
-const BUILD_VERSION = 'R18';
+const BUILD_VERSION = 'R19';
 const MOBILE_DEVICE = /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent) || window.matchMedia?.('(pointer: coarse)').matches || window.innerWidth < 768;
 const WATER_GRID_X = MOBILE_DEVICE ? 24 : 48;
 const WATER_GRID_Y = MOBILE_DEVICE ? 10 : 18;
@@ -64,8 +64,13 @@ const RING_CAPTURE_RADIUS = RING_OUTER_RADIUS + POLE_TIP_RADIUS;
 // La captura ya no se activa por rozar el diámetro exterior del aro.
 const RING_INNER_CONTACT_RADIUS = RING_ENTRY_RADIUS + .03;
 const RING_CAPTURE_VERTICAL = RING_OUTER_RADIUS + POLE_TIP_RADIUS + .1;
+const RING_SEATED_EXIT_RADIUS = RING_CAPTURE_RADIUS + .08;
 const RING_ENTRY_MAX_TILT = Math.PI / 3;
 const RING_ORIENTATION_ASSIST = .12;
+// Fuerza de agua aplicada en el borde del aro asentado para romper el
+// contacto con el eje/base. Sigue usando la masa real del RigidBody: no es un
+// controlMass ni una recolocación, y solo existe mientras el usuario inclina.
+const RING_SEATED_BREAKAWAY_FORCE = 12;
 // La inclinación y los chorros son fuerzas del mismo tipo: no se multiplican
 // por la masa del aro asentado. Un aro con masa 3x recibe la misma fuerza y,
 // por tanto, acelera menos de forma natural.
@@ -240,9 +245,10 @@ for (const z of [-(PLAY_DEPTH / 2 + .1), PLAY_DEPTH / 2 + .1]) {
   wall.addShape(new PHYSICS.Box(new PHYSICS.Vec3(6.2, 3.2, .18)));
   wall.position.set(0, -.1, z); physicsWorld.addBody(wall);
 }
-// Guard superior separado del marco visual: deja espacio de carrera por encima
-// del agua, pero conserva una frontera física real. La restitución baja y la
-// fricción nula evitan que el aro se quede pegado o atraviese el tanque.
+// Guard superior separado del marco visual: deja solo una tolerancia corta por
+// encima del topRim visible, pero conserva una frontera física real. La
+// restitución baja y la fricción nula evitan que el aro se quede pegado o
+// atraviese el tanque.
 const upperGuardMaterial = new PHYSICS.Material('upper-guard');
 upperGuardMaterial.friction = 0;
 upperGuardMaterial.restitution = .22;
@@ -250,7 +256,7 @@ const physicsUpperGuard = new PHYSICS.Body({ mass: 0, material: upperGuardMateri
 physicsUpperGuard.collisionFilterGroup = TANK_COLLISION_GROUP;
 physicsUpperGuard.collisionFilterMask = RING_COLLISION_GROUP;
 physicsUpperGuard.addShape(new PHYSICS.Box(new PHYSICS.Vec3(6.2, .16, PLAY_DEPTH / 2 + .18)));
-physicsUpperGuard.position.set(0, WATER_TOP + .55 + .16, 0);
+physicsUpperGuard.position.set(0, WATER_TOP + .20 + .16, 0);
 physicsWorld.addBody(physicsUpperGuard);
 
 const physicsFixedStep = MOBILE_DEVICE ? 1 / 75 : 1 / 90;
@@ -952,6 +958,7 @@ function colorRequirementsMet() {
 
 const physicsForce = new PHYSICS.Vec3();
 const physicsTorque = new PHYSICS.Vec3();
+const physicsPoint = new PHYSICS.Vec3();
 const ringLocalNormal = new PHYSICS.Vec3(0, 1, 0);
 const ringWorldNormal = new PHYSICS.Vec3();
 function submergedFraction(y) {
@@ -1034,6 +1041,20 @@ function updateRingCapture(ring, body) {
   // cambia la masa real y Rapier resuelve el contacto con el palo.
 }
 
+function applySeatedBreakawayForce(ring, body) {
+  if (!ring.scored || !ring.pole) return;
+  // La inclinación hace presión sobre un borde, no sobre el centro: así el
+  // contacto con el eje puede romperse por una rotación/levantamiento real.
+  // La magnitud sigue siendo una fuerza fija; la masa asentada reduce su
+  // aceleración de forma natural.
+  const lift = clamp(Math.max(-state.tiltY, Math.abs(state.tiltX)), 0, 1);
+  if (lift < .18) return;
+  const side = state.tiltY < -.05 ? -1 : (state.tiltX < 0 ? -1 : 1);
+  physicsForce.set(0, lift * RING_SEATED_BREAKAWAY_FORCE, 0);
+  physicsPoint.set(body.position.x + side * RING_RADIUS, body.position.y, body.position.z);
+  body.applyForce(physicsForce, physicsPoint);
+}
+
 function applyRapierForces() {
   const elapsed = state.elapsed;
   for (const ring of rings) {
@@ -1055,6 +1076,7 @@ function applyRapierForces() {
       -body.velocity.z * mass * .24 * submerged
     );
     body.applyForce(physicsForce, body.position);
+    applySeatedBreakawayForce(ring, body);
 
     // Damping angular hidráulico bajo: Rapier conserva el contacto y el giro,
     // pero el agua no permite que el aro acumule una rotación infinita.
@@ -1082,8 +1104,21 @@ function applyRapierForces() {
         0
       );
       // También el chorro usa la fuerza real del motor en el centro de masa.
-      // No se fabrica un brazo, una guía ni una corrección de posición.
+      // No se fabrica una guía ni una corrección de posición.
       body.applyForce(physicsForce, body.position);
+      if (ring.scored && direction.y > 0) {
+        // Un aro asentado puede quedar encajado entre el eje y la base. La
+        // presión del mismo chorro alcanza su borde frontal y genera el torque
+        // de contacto necesario para desanclarlo; sigue siendo una fuerza
+        // Rapier y la masa 3x limita su aceleración.
+        physicsForce.set(0, direction.y * RING_SEATED_BREAKAWAY_FORCE * falloff, 0);
+        physicsPoint.set(
+          body.position.x,
+          body.position.y,
+          body.position.z + (Math.sign(NOZZLE_Z - body.position.z) || 1) * RING_RADIUS
+        );
+        body.applyForce(physicsForce, physicsPoint);
+      }
     }
   }
 }
@@ -1194,11 +1229,25 @@ function updateEscapingRingState(ring) {
   return true;
 }
 
+function ringPhysicallyLeftPole(ring, pole) {
+  const body = ring.body;
+  const dx = body.position.x - pole.x;
+  const dz = body.position.z;
+  const radial = Math.hypot(dx, dz);
+  if (radial <= RING_SEATED_EXIT_RADIUS) return false;
+  const previousPoleX = Number.isFinite(pole.previousX) ? pole.previousX : pole.x;
+  const previousRadial = Math.hypot(ring.previousX - previousPoleX, ring.previousZ);
+  const outwardVelocity = dx * body.velocity.x + dz * body.velocity.z;
+  return radial > previousRadial + .0001 || outwardVelocity > .02;
+}
+
 function checkSeatedRingExits() {
   for (const ring of rings) {
     if (!ring.scored || !ring.seatPole || !ring.body) continue;
     const pole = ring.seatPole;
-    if (ringCrossedPoleTipUpward(ring, pole, BASE_Y + pole.h, RING_CAPTURE_RADIUS)) releaseRingOverTip(ring);
+    const crossedTip = ringCrossedPoleTipUpward(ring, pole, BASE_Y + pole.h, RING_CAPTURE_RADIUS);
+    const physicallySeparated = ringPhysicallyLeftPole(ring, pole);
+    if (crossedTip || physicallySeparated) releaseRingOverTip(ring);
   }
 }
 

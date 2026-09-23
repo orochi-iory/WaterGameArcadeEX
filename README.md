@@ -61,8 +61,9 @@ La simulación usa **Rapier 3D 0.20.0**, distribuido localmente en `vendor/rapie
 - El palo usa una envolvente convexa trapezoidal que conserva la conicidad visible, una esfera en la punta y un collider para la base.
 - El suelo conserva la misma cota que la plataforma visible y tiene espesor físico hacia abajo.
 - Las paredes laterales y de profundidad son gruesas para evitar tunneling.
-- Un guard superior físico queda por encima del agua y separado del marco visual: evita que un aro atraviese el tanque sin convertir el borde del visor en una tapa pegajosa. Usa fricción nula y restitución corta.
+- Un guard superior físico queda justo por encima del topRim visible: evita que un aro atraviese el techo sin dejar una franja donde parezca escapar. Usa fricción nula y restitución corta.
 - Rapier usa CCD en las superficies que participan en la jugabilidad; no hay correcciones manuales de posición para rescatar un aro.
+- Al inclinar o activar un chorro sobre un aro ya asentado, la presión se aplica también en el borde del aro. El torque y el levantamiento rompen el contacto eje-base mediante Rapier; si el cuerpo se separa físicamente del palo, la salida se registra sin teletransporte.
 
 ### Masa e inclinación
 
@@ -90,7 +91,7 @@ Solo durante el descenso existe una asistencia angular muy suave para que un aro
 
 ### Chorros
 
-Los chorros son fuerzas físicas aplicadas en el centro de masa del aro. No aplican un brazo artificial desde debajo del toro, por lo que no deberían producir un giro extraño ni agarrar el aro al palo únicamente por la posición de la boquilla.
+Los chorros son fuerzas físicas aplicadas en el centro de masa del aro. Para un aro ya asentado, una segunda componente alcanza su borde desde la posición física del chorro y permite romper el contacto eje-base mediante torque; no recoloca el aro ni crea una guía rígida. Esto evita que el chorro lo mueva sin llegar a sacarlo del palo.
 
 La flotación, la amortiguación, la turbulencia y la resistencia angular pertenecen a la capa de agua. No hay penalización temporizada ni expulsiones rojas ocultas.
 
@@ -173,15 +174,15 @@ El progreso y el ranking local funcionan sin configuración. La integración opc
 
 Para conectar otro proyecto, sustituye `FIREBASE_CONFIG` en `game3d.js` y habilita Authentication anónima y Firestore.
 
-## Validación de la BUILD R18
+## Validación de la BUILD R19
 
 ```text
 node --check game3d.js
 node --check vendor/rapier-physics.js
 git diff --check
 Preview HTTP 200
-Prueba Rapier de fuerza por paso y guard superior CCD
-Prueba aislada de contactos y apilado Rapier
+Prueba Rapier de fuerza por paso, guard superior bajo y breakaway asentado
+Prueba aislada de contactos, apilado y masa 3x Rapier
 ```
 
 ## Licencia
