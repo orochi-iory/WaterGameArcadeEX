@@ -433,15 +433,16 @@ input { -webkit-user-select: text; user-select: text; touch-action: auto; }
 .fs-info { width: 100%; padding: 25px 12px; border: 1px solid rgba(99,218,229,.2); border-radius: 12px; color: #89aabd; font: 10px/1.7 var(--mono); text-align: center; }
 .back-button { width: auto; min-width: 130px; margin-top: auto; }
 
-#tutOv { z-index: 50; align-items: center; justify-content: center; padding: 20px; background: rgba(2, 9, 20, .97); }
-.tutorial-step { display: none; width: min(100%, 340px); flex-direction: column; align-items: center; gap: 9px; text-align: center; }
-.tutorial-step.active { display: flex; }
+#tutOv { z-index: 50; align-items: center; justify-content: center; padding: clamp(12px, 3vw, 24px); overflow-x: hidden; background: rgba(2, 9, 20, .97); }
+#tutOv > .tutorial-step { display: none; width: min(100%, 420px); min-width: 0; flex-direction: column; align-items: center; gap: 9px; text-align: center; }
+#tutOv > .tutorial-step.active { display: flex; }
 .tutorial-icon { font-size: 46px; filter: drop-shadow(0 0 12px rgba(99,239,255,.4)); }
-.tutorial-step h3 { margin: 0; color: var(--cyan); font: 700 15px var(--mono); }
-.tutorial-step p { margin: 0; color: #a9c2cf; font: 10px/1.55 var(--mono); }
-.tutorial-box { width: 100%; padding: 10px; border: 1px solid rgba(99,218,229,.18); border-radius: 10px; color: #bad0da; background: #081c2b; font: 10px/1.6 var(--mono); }
-.tutorial-nav { display: flex; gap: 8px; margin-top: 10px; }
-.tutorial-nav button { width: auto; min-width: 112px; }
+.tutorial-step h3 { max-width: 100%; margin: 0; color: var(--cyan); font: 700 15px var(--mono); overflow-wrap: anywhere; }
+.tutorial-step p { max-width: 100%; margin: 0; color: #a9c2cf; font: 10px/1.55 var(--mono); overflow-wrap: anywhere; }
+.tutorial-box { width: 100%; min-width: 0; padding: 10px; border: 1px solid rgba(99,218,229,.18); border-radius: 10px; color: #bad0da; background: #081c2b; font: 10px/1.6 var(--mono); overflow-wrap: anywhere; }
+#tutOv > .tutorial-dots { width: min(100%, 420px); min-width: 0; }
+#tutOv > .tutorial-nav { display: flex; width: min(100%, 420px); min-width: 0; flex-wrap: wrap; justify-content: center; gap: 8px; margin-top: 10px; }
+#tutOv .tutorial-nav button { width: auto; min-width: 0; max-width: 200px; flex: 1 1 0; }
 .tutorial-dots { display: flex; flex-wrap: wrap; justify-content: center; gap: 5px; margin: 9px 0 0; }
 .tutorial-dot { width: 7px; height: 7px; border-radius: 50%; background: #274154; }
 .tutorial-dot.active { background: var(--cyan); box-shadow: 0 0 8px var(--cyan); }
