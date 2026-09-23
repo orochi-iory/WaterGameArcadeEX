@@ -4,7 +4,7 @@ import * as PHYSICS from './vendor/rapier-physics.js';
 const $ = (id) => document.getElementById(id);
 // Referencia visible para distinguir rápidamente el build probado en una captura.
 // Incrementar este identificador en cada iteración funcional publicada.
-const BUILD_VERSION = 'R19';
+const BUILD_VERSION = 'R20';
 const MOBILE_DEVICE = /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent) || window.matchMedia?.('(pointer: coarse)').matches || window.innerWidth < 768;
 const WATER_GRID_X = MOBILE_DEVICE ? 24 : 48;
 const WATER_GRID_Y = MOBILE_DEVICE ? 10 : 18;
@@ -47,9 +47,10 @@ const RING_OUTER_RADIUS = RING_RADIUS + RING_TUBE;
 const RING_MASS = .72;
 const RING_COLLISION_GROUP = 1;
 const TANK_COLLISION_GROUP = 2;
-// Un aro asentado recupera un poco más de inercia que en la primera prueba:
-// pesa 3x, pero sigue pudiendo salir con un impulso físico Rapier.
-const RING_SEATED_MASS = RING_MASS * 3;
+// Un aro asentado gana una reserva de inercia clara para que la pila no se
+// desarme con cualquier roce. Sigue siendo un RigidBody Rapier y puede salir
+// si el jugador mantiene una inclinación o un chorro suficiente.
+const RING_SEATED_MASS = RING_MASS * 4;
 
 const RING_BUOYANCY_FORCE = 3.5;
 const POLE_SHAFT_TOP_RADIUS = .075;
@@ -70,10 +71,12 @@ const RING_ORIENTATION_ASSIST = .12;
 // Fuerza de agua aplicada en el borde del aro asentado para romper el
 // contacto con el eje/base. Sigue usando la masa real del RigidBody: no es un
 // controlMass ni una recolocación, y solo existe mientras el usuario inclina.
-const RING_SEATED_BREAKAWAY_FORCE = 12;
+const RING_SEATED_BREAKAWAY_FORCE = 13.5;
+const RING_SEATED_JET_BREAKAWAY_FORCE = 18;
 // La inclinación y los chorros son fuerzas del mismo tipo: no se multiplican
-// por la masa del aro asentado. Un aro con masa 3x recibe la misma fuerza y,
-// por tanto, acelera menos de forma natural.
+// por la masa del aro asentado. Un aro con masa 4x recibe la misma fuerza base
+// y, por tanto, acelera menos de forma natural; la fuerza de breakaway se
+// reserva para vencer el contacto cuando el jugador insiste.
 const RING_TILT_FORCE_X = RING_MASS * 4.8;
 const RING_TILT_FORCE_Y = RING_MASS * 5.8;
 const ringFlatQuaternion = new THREE.Quaternion().setFromEuler(new THREE.Euler(Math.PI / 2, 0, 0));
@@ -256,7 +259,7 @@ const physicsUpperGuard = new PHYSICS.Body({ mass: 0, material: upperGuardMateri
 physicsUpperGuard.collisionFilterGroup = TANK_COLLISION_GROUP;
 physicsUpperGuard.collisionFilterMask = RING_COLLISION_GROUP;
 physicsUpperGuard.addShape(new PHYSICS.Box(new PHYSICS.Vec3(6.2, .16, PLAY_DEPTH / 2 + .18)));
-physicsUpperGuard.position.set(0, WATER_TOP + .20 + .16, 0);
+physicsUpperGuard.position.set(0, WATER_TOP + .10 + .16, 0);
 physicsWorld.addBody(physicsUpperGuard);
 
 const physicsFixedStep = MOBILE_DEVICE ? 1 / 75 : 1 / 90;
@@ -1110,8 +1113,8 @@ function applyRapierForces() {
         // Un aro asentado puede quedar encajado entre el eje y la base. La
         // presión del mismo chorro alcanza su borde frontal y genera el torque
         // de contacto necesario para desanclarlo; sigue siendo una fuerza
-        // Rapier y la masa 3x limita su aceleración.
-        physicsForce.set(0, direction.y * RING_SEATED_BREAKAWAY_FORCE * falloff, 0);
+        // Rapier y la masa 4x limita su aceleración.
+        physicsForce.set(0, direction.y * RING_SEATED_JET_BREAKAWAY_FORCE * falloff, 0);
         physicsPoint.set(
           body.position.x,
           body.position.y,

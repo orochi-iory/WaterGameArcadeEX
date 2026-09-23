@@ -69,10 +69,10 @@ La simulación usa **Rapier 3D 0.20.0**, distribuido localmente en `vendor/rapie
 
 ```js
 const RING_MASS = .72;
-const RING_SEATED_MASS = RING_MASS * 3;
+const RING_SEATED_MASS = RING_MASS * 4;
 ```
 
-Cuando un aro entra en el interior de un palo, Rapier recibe una masa e inercia tres veces mayores. La inclinación y los chorros aplican fuerzas fijas; no se multiplican artificialmente por la masa del aro. Por tanto, un aro asentado acelera menos de forma natural, pero sigue pudiendo salir si recibe suficiente fuerza o impulso.
+Cuando un aro entra en el interior de un palo, Rapier recibe una masa e inercia cuatro veces mayores. Es una concesión deliberada para la jugabilidad: la pila no se desarma con cualquier roce, pero sigue pudiendo salir si se mantiene suficiente inclinación o chorro. Las fuerzas no usan `controlMass`; la masa real del RigidBody sigue gobernando la aceleración.
 
 Los aros no se teletransportan ni se recolocan al puntuar. El apilado final se produce por contacto entre colliders, suelo, palo y gravedad.
 
@@ -174,7 +174,7 @@ El progreso y el ranking local funcionan sin configuración. La integración opc
 
 Para conectar otro proyecto, sustituye `FIREBASE_CONFIG` en `game3d.js` y habilita Authentication anónima y Firestore.
 
-## Validación de la BUILD R19
+## Validación de la BUILD R20
 
 ```text
 node --check game3d.js
@@ -182,7 +182,7 @@ node --check vendor/rapier-physics.js
 git diff --check
 Preview HTTP 200
 Prueba Rapier de fuerza por paso, guard superior bajo y breakaway asentado
-Prueba aislada de contactos, apilado y masa 3x Rapier
+Prueba aislada de contactos, apilado y masa 4x Rapier
 ```
 
 ## Licencia
