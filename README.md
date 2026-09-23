@@ -16,7 +16,7 @@
 
 **AQUA-07** mezcla la carcasa colorida de un juguete infantil de agua con la instrumentación de un submarino experimental. El tablero se dibuja con Three.js y los cuerpos rígidos se resuelven con Rapier 3D/WASM local.
 
-La referencia visible actual es **BUILD R23**.
+La referencia visible actual es **BUILD R24**.
 
 - Pantalla de observación con brillo, visor y lectura de instrumentos.
 - Casco oscuro remachado, señalética de laboratorio y panel de control de juguete.
@@ -184,7 +184,7 @@ git diff --check
 Preview HTTP 200
 Prueba Rapier de fuerza por paso, guard superior bajo y breakaway asentado
 Prueba aislada de contactos, apilado y masa 4.5x Rapier
-Prueba de layout responsive del tutorial y panel móvil en escritorio
+Prueba de layout responsive del tutorial, selector de niveles sin scroll y panel móvil en escritorio
 ```
 
 ## Licencia
