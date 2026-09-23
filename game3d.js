@@ -3,6 +3,7 @@ import * as PHYSICS from './vendor/rapier-physics.js';
 
 const $ = (id) => document.getElementById(id);
 let runtimeFailure = null;
+let gameBooted = false;
 function reportRuntimeFailure(error) {
   if (runtimeFailure) return;
   runtimeFailure = error;
@@ -11,13 +12,16 @@ function reportRuntimeFailure(error) {
   const chip = $('buildVersion');
   if (chip) { chip.textContent = `BUILD ${BUILD_VERSION} !`; chip.title = `Error de ejecución: ${message}`; }
   const toast = $('toast');
-  if (toast) { toast.textContent = `3D: ${message}`; toast.classList.add('show'); }
+  if (toast) { toast.textContent = `3D: ${message}`; toast.classList.add('show', 'runtime-error'); }
 }
-window.addEventListener('error', (event) => reportRuntimeFailure(event.error || event.message));
-window.addEventListener('unhandledrejection', (event) => reportRuntimeFailure(event.reason));
+// Solo los errores previos al arranque o los del bucle de juego se muestran
+// como fallo 3D; las promesas opcionales de Firebase no deben bloquear ni
+// ensuciar una partida que sigue funcionando.
+window.addEventListener('error', (event) => { if (!gameBooted) reportRuntimeFailure(event.error || event.message); });
+window.addEventListener('unhandledrejection', (event) => { if (!gameBooted) reportRuntimeFailure(event.reason); });
 // Referencia visible para distinguir rápidamente el build probado en una captura.
 // Incrementar este identificador en cada iteración funcional publicada.
-const BUILD_VERSION = 'R30';
+const BUILD_VERSION = 'R31';
 const MOBILE_DEVICE = /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent) || window.matchMedia?.('(pointer: coarse)').matches || window.innerWidth < 768;
 const WATER_GRID_X = MOBILE_DEVICE ? 24 : 48;
 const WATER_GRID_Y = MOBILE_DEVICE ? 10 : 18;
@@ -1992,4 +1996,4 @@ function renderLoop(timestamp) {
 /* Initial state */
 $('buildVersion').textContent = `BUILD ${BUILD_VERSION}`;
 $('buildVersion').title = `Referencia de versión ${BUILD_VERSION}`;
-buildLevelSelector(); buildGlobalLevelPicker(); buildPaletteGrid(); initGame(currentLevel); setupGyro(); updateOnlineStatus(); resizeRenderer(); connectCloud(); requestAnimationFrame(renderLoop);
+buildLevelSelector(); buildGlobalLevelPicker(); buildPaletteGrid(); initGame(currentLevel); setupGyro(); updateOnlineStatus(); resizeRenderer(); connectCloud(); requestAnimationFrame((timestamp) => { gameBooted = true; renderLoop(timestamp); });
