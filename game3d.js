@@ -17,7 +17,7 @@ window.addEventListener('error', (event) => reportRuntimeFailure(event.error || 
 window.addEventListener('unhandledrejection', (event) => reportRuntimeFailure(event.reason));
 // Referencia visible para distinguir rápidamente el build probado en una captura.
 // Incrementar este identificador en cada iteración funcional publicada.
-const BUILD_VERSION = 'R28';
+const BUILD_VERSION = 'R29';
 const MOBILE_DEVICE = /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent) || window.matchMedia?.('(pointer: coarse)').matches || window.innerWidth < 768;
 const WATER_GRID_X = MOBILE_DEVICE ? 24 : 48;
 const WATER_GRID_Y = MOBILE_DEVICE ? 10 : 18;
@@ -97,8 +97,8 @@ const RING_TILT_FORCE_Y = RING_MASS * 5.8;
 // Reajuste móvil opcional al detectar una sacudida: solo aplica un pequeño
 // impulso horizontal a los aros libres. No cambia posiciones ni toca los
 // aros asentados; Rapier conserva la masa y resuelve el desplazamiento.
-const RING_SHAKE_IMPULSE = .12;
-const RING_SHAKE_DIRECTION_IMPULSE = .035;
+const RING_SHAKE_IMPULSE = .28;
+const RING_SHAKE_DIRECTION_IMPULSE = .065;
 const RING_SHAKE_COOLDOWN = 1.15;
 const RING_SHAKE_ENERGY_THRESHOLD = 15;
 const ringFlatQuaternion = new THREE.Quaternion().setFromEuler(new THREE.Euler(Math.PI / 2, 0, 0));
@@ -1007,7 +1007,7 @@ function triggerShakeAssist(direction = lastShakeDirection) {
   if (!nudged) return;
   shakeCooldown = RING_SHAKE_COOLDOWN;
   shakeEnergy = 0;
-  showToast('↔ REAJUSTE HORIZONTAL');
+  showToast(`↔ ${nudged} AROS RECOLOCADOS`);
   vibrate(10);
 }
 

@@ -16,7 +16,7 @@
 
 **AQUA-07** mezcla la carcasa colorida de un juguete infantil de agua con la instrumentación de un submarino experimental. El tablero se dibuja con Three.js y los cuerpos rígidos se resuelven con Rapier 3D/WASM local.
 
-La referencia visible actual es **BUILD R28**.
+La referencia visible actual es **BUILD R29**.
 
 - Pantalla de observación con brillo, visor y lectura de instrumentos.
 - Casco oscuro remachado, señalética de laboratorio y panel de control de juguete.
@@ -175,7 +175,7 @@ El progreso y el ranking local funcionan sin configuración. La integración opc
 
 Para conectar otro proyecto, sustituye `FIREBASE_CONFIG` en `game3d.js` y habilita Authentication anónima y Firestore.
 
-## Validación de la BUILD R28
+## Validación de la BUILD R29
 
 ```text
 node --check game3d.js
