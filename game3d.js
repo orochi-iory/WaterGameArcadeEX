@@ -17,7 +17,7 @@ window.addEventListener('error', (event) => reportRuntimeFailure(event.error || 
 window.addEventListener('unhandledrejection', (event) => reportRuntimeFailure(event.reason));
 // Referencia visible para distinguir rápidamente el build probado en una captura.
 // Incrementar este identificador en cada iteración funcional publicada.
-const BUILD_VERSION = 'R27';
+const BUILD_VERSION = 'R28';
 const MOBILE_DEVICE = /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent) || window.matchMedia?.('(pointer: coarse)').matches || window.innerWidth < 768;
 const WATER_GRID_X = MOBILE_DEVICE ? 24 : 48;
 const WATER_GRID_Y = MOBILE_DEVICE ? 10 : 18;
@@ -179,7 +179,7 @@ const state = {
   lastUiScore: -1
 };
 const input = {
-  jets: [false, false, false], keys: {}, gyro: false,
+  jets: [false, false, false], keys: {}, gyro: false, motion: false,
   pointerJets: [false, false, false], keyboardJets: [false, false, false], gamepadJets: [false, false, false],
   pointerKeys: {}, keyboardKeys: {}, gamepadKeys: {}
 };
@@ -213,6 +213,10 @@ let globalMode = 'today';
 let globalLevel = 1;
 let gyroOffset = { gamma: 0, beta: 0 };
 let latestOrientation = { gamma: 0, beta: 60 };
+let latestMotionSample = null;
+let shakeEnergy = 0;
+let shakeCooldown = 0;
+let lastShakeDirection = 1;
 
 /* -------------------------------------------------------------------------- */
 /* Three.js scene                                                             */
