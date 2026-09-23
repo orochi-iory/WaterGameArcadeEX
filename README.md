@@ -16,7 +16,7 @@
 
 **AQUA-07** mezcla la carcasa colorida de un juguete infantil de agua con la instrumentación de un submarino experimental. El tablero se dibuja con Three.js y los cuerpos rígidos se resuelven con Rapier 3D/WASM local.
 
-La referencia visible actual es **BUILD R29**.
+La referencia visible actual es **BUILD R30**.
 
 - Pantalla de observación con brillo, visor y lectura de instrumentos.
 - Casco oscuro remachado, señalética de laboratorio y panel de control de juguete.
@@ -38,7 +38,7 @@ Ensarta los **20 aros** en los tres palos. Para completar un nivel hacen falta a
 | Reiniciar | `R` | `↺` | — |
 | Menú | — | `☰` | — |
 
-Mantén pulsado un control para aplicar fuerza. Al soltarlo, la entrada vuelve progresivamente a cero. En móvil se puede activar el giroscopio y calibrarlo desde el indicador `GYRO`; una sacudida breve aplica un pequeño impulso horizontal físico a los aros libres para facilitar el siguiente enceste.
+Mantén pulsado un control para aplicar fuerza. Al soltarlo, la entrada vuelve progresivamente a cero. En móvil se puede activar el giroscopio y calibrarlo desde el indicador `GYRO`; una sacudida breve aplica un pequeño impulso angular físico a los aros libres para aplanarlos ligeramente y facilitar el siguiente enceste.
 
 ## Mecánica física
 
@@ -89,6 +89,8 @@ La captura es estricta:
 7. Una salida por encima de la punta usa un impulso físico; no hay salto por teletransporte.
 
 Solo durante el descenso existe una asistencia angular muy suave para que un aro que llega de canto pueda ladearse y descansar. Cuando deja de descender, conserva libremente su giro y orientación.
+
+La sacudida móvil no recoloca los aros en X: aplica un impulso angular de Rapier hacia la normal vertical del suelo, limitado a una corrección objetivo de 5 grados por sacudida. Solo afecta a aros libres, no asentados ni capturados.
 
 ### Chorros
 
@@ -175,7 +177,7 @@ El progreso y el ranking local funcionan sin configuración. La integración opc
 
 Para conectar otro proyecto, sustituye `FIREBASE_CONFIG` en `game3d.js` y habilita Authentication anónima y Firestore.
 
-## Validación de la BUILD R29
+## Validación de la BUILD R30
 
 ```text
 node --check game3d.js

@@ -17,7 +17,7 @@ window.addEventListener('error', (event) => reportRuntimeFailure(event.error || 
 window.addEventListener('unhandledrejection', (event) => reportRuntimeFailure(event.reason));
 // Referencia visible para distinguir rápidamente el build probado en una captura.
 // Incrementar este identificador en cada iteración funcional publicada.
-const BUILD_VERSION = 'R29';
+const BUILD_VERSION = 'R30';
 const MOBILE_DEVICE = /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent) || window.matchMedia?.('(pointer: coarse)').matches || window.innerWidth < 768;
 const WATER_GRID_X = MOBILE_DEVICE ? 24 : 48;
 const WATER_GRID_Y = MOBILE_DEVICE ? 10 : 18;
@@ -94,11 +94,11 @@ const RING_SEATED_BREAKAWAY_FORCE = 15;
 // reserva para vencer el contacto cuando el jugador insiste.
 const RING_TILT_FORCE_X = RING_MASS * 4.8;
 const RING_TILT_FORCE_Y = RING_MASS * 5.8;
-// Reajuste móvil opcional al detectar una sacudida: solo aplica un pequeño
-// impulso horizontal a los aros libres. No cambia posiciones ni toca los
-// aros asentados; Rapier conserva la masa y resuelve el desplazamiento.
-const RING_SHAKE_IMPULSE = .28;
-const RING_SHAKE_DIRECTION_IMPULSE = .065;
+// Ayuda móvil opcional al detectar una sacudida: aplica un impulso angular
+// corto para aplanar ligeramente los aros libres. No cambia posiciones ni
+// bloquea quaternions; Rapier conserva la masa y resuelve el giro real.
+const RING_SHAKE_FLATTEN_MAX_ANGLE = Math.PI / 36; // 5 grados como máximo
+const RING_SHAKE_FLATTEN_ANGULAR_IMPULSE = .011;
 const RING_SHAKE_COOLDOWN = 1.15;
 const RING_SHAKE_ENERGY_THRESHOLD = 15;
 const ringFlatQuaternion = new THREE.Quaternion().setFromEuler(new THREE.Euler(Math.PI / 2, 0, 0));
@@ -216,7 +216,6 @@ let latestOrientation = { gamma: 0, beta: 60 };
 let latestMotionSample = null;
 let shakeEnergy = 0;
 let shakeCooldown = 0;
-let lastShakeDirection = 1;
 
 /* -------------------------------------------------------------------------- */
 /* Three.js scene                                                             */
@@ -976,38 +975,36 @@ function updateTilt(dt) {
   vFill.style.width = `${hy}px`; vFill.style.left = `${state.tiltY < 0 ? verticalWidth - hy : verticalWidth}px`;
 }
 
-function triggerShakeAssist(direction = lastShakeDirection) {
+function triggerShakeAssist() {
   if (!MOBILE_DEVICE || state.paused || state.gameOver || shakeCooldown > 0) return;
-  const shakeDirection = Math.sign(direction) || lastShakeDirection;
-  lastShakeDirection = shakeDirection;
-  const availablePoles = poles.filter((pole) => pole.rings.length < pole.capacity);
-  let nudged = 0;
+  let flattened = 0;
   for (const ring of rings) {
     const body = ring.body;
     // Un aro asentado o en contacto de captura no debe recibir la ayuda: el
     // jugador sigue teniendo que sacarlo con inclinación o chorros reales.
-    if (!body || ring.scored || ring.capturePole || !availablePoles.length) continue;
-    let nearestPole = availablePoles[0];
-    let nearestDistance = Math.abs(body.position.x - nearestPole.x);
-    for (let index = 1; index < availablePoles.length; index++) {
-      const pole = availablePoles[index];
-      const distance = Math.abs(body.position.x - pole.x);
-      if (distance < nearestDistance) { nearestPole = pole; nearestDistance = distance; }
-    }
-    const towardPole = clamp(nearestPole.x - body.position.x, -1, 1);
-    const directionWeight = .35 + clamp(nearestDistance / 1.5, 0, 1) * .65;
-    const horizontalImpulse = towardPole * RING_SHAKE_IMPULSE
-      + shakeDirection * RING_SHAKE_DIRECTION_IMPULSE * directionWeight;
-    physicsImpulse.set(horizontalImpulse, 0, 0);
-    // Es un impulso único sobre el RigidBody: no hay teletransporte, clamp ni
-    // carril. La masa real del aro determina cuánto cambia su velocidad.
-    body.applyImpulse(physicsImpulse, body.position);
-    nudged++;
+    if (!body || ring.scored || ring.capturePole) continue;
+    body.quaternion.vmult(ringLocalNormal, ringWorldNormal);
+    const tiltAngle = Math.acos(clamp(ringWorldNormal.y, -1, 1));
+    const axisX = -ringWorldNormal.z;
+    const axisZ = ringWorldNormal.x;
+    const axisLength = Math.hypot(axisX, axisZ);
+    if (axisLength < .0001 || tiltAngle < .008) continue;
+    // n × up define el eje de giro que acerca la normal del aro a la vertical.
+    // El ángulo objetivo se limita a cinco grados; la rotación la integra
+    // Rapier mediante un impulso angular real, sin tocar el quaternion.
+    const correctionRatio = Math.min(tiltAngle, RING_SHAKE_FLATTEN_MAX_ANGLE) / RING_SHAKE_FLATTEN_MAX_ANGLE;
+    physicsAngularImpulse.set(
+      axisX / axisLength * RING_SHAKE_FLATTEN_ANGULAR_IMPULSE * correctionRatio,
+      0,
+      axisZ / axisLength * RING_SHAKE_FLATTEN_ANGULAR_IMPULSE * correctionRatio
+    );
+    body.applyAngularImpulse(physicsAngularImpulse);
+    flattened++;
   }
-  if (!nudged) return;
+  if (!flattened) return;
   shakeCooldown = RING_SHAKE_COOLDOWN;
   shakeEnergy = 0;
-  showToast(`↔ ${nudged} AROS RECOLOCADOS`);
+  showToast(`↻ ${flattened} AROS APLANADOS`);
   vibrate(10);
 }
 
@@ -1026,8 +1023,7 @@ function onMotion(event) {
   if (state.paused || state.gameOver || shakeCooldown > 0) { shakeEnergy = 0; return; }
   shakeEnergy = Math.max(0, shakeEnergy * .82 + Math.hypot(deltaX, deltaY, deltaZ));
   if (shakeEnergy < RING_SHAKE_ENERGY_THRESHOLD) return;
-  const direction = Math.abs(deltaX) > .25 ? deltaX : (Math.abs(sample.x) > .25 ? sample.x : lastShakeDirection);
-  triggerShakeAssist(direction);
+  triggerShakeAssist();
 }
 
 function countColorCombos(pole) {
@@ -1042,7 +1038,7 @@ function colorRequirementsMet() {
 }
 
 const physicsForce = new PHYSICS.Vec3();
-const physicsImpulse = new PHYSICS.Vec3();
+const physicsAngularImpulse = new PHYSICS.Vec3();
 const physicsTorque = new PHYSICS.Vec3();
 const physicsPoint = new PHYSICS.Vec3();
 const ringLocalNormal = new PHYSICS.Vec3(0, 1, 0);
