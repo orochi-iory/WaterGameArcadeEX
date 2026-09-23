@@ -16,7 +16,7 @@
 
 **AQUA-07** mezcla la carcasa colorida de un juguete infantil de agua con la instrumentación de un submarino experimental. El tablero se dibuja con Three.js y los cuerpos rígidos se resuelven con Rapier 3D/WASM local.
 
-La referencia visible actual es **BUILD R21**.
+La referencia visible actual es **BUILD R22**.
 
 - Pantalla de observación con brillo, visor y lectura de instrumentos.
 - Casco oscuro remachado, señalética de laboratorio y panel de control de juguete.
@@ -69,10 +69,10 @@ La simulación usa **Rapier 3D 0.20.0**, distribuido localmente en `vendor/rapie
 
 ```js
 const RING_MASS = .72;
-const RING_SEATED_MASS = RING_MASS * 4;
+const RING_SEATED_MASS = RING_MASS * 4.5;
 ```
 
-Cuando un aro entra en el interior de un palo, Rapier recibe una masa e inercia cuatro veces mayores. Es una concesión deliberada para la jugabilidad: la pila no se desarma con cualquier roce, pero sigue pudiendo salir si se mantiene suficiente inclinación o chorro. Las fuerzas no usan `controlMass`; la masa real del RigidBody sigue gobernando la aceleración.
+Cuando un aro entra en el interior de un palo, Rapier recibe una masa e inercia 4.5 veces mayores. Es una concesión deliberada para la jugabilidad: la pila no se desarma con cualquier roce, pero sigue pudiendo salir si se mantiene suficiente inclinación o chorro. La misma masa real gobierna ambas entradas y las fuerzas no usan `controlMass`.
 
 Los aros no se teletransportan ni se recolocan al puntuar. El apilado final se produce por contacto entre colliders, suelo, palo y gravedad.
 
@@ -183,7 +183,7 @@ node --check vendor/rapier-physics.js
 git diff --check
 Preview HTTP 200
 Prueba Rapier de fuerza por paso, guard superior bajo y breakaway asentado
-Prueba aislada de contactos, apilado y masa 4x Rapier
+Prueba aislada de contactos, apilado y masa 4.5x Rapier
 ```
 
 ## Licencia

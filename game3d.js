@@ -4,7 +4,7 @@ import * as PHYSICS from './vendor/rapier-physics.js';
 const $ = (id) => document.getElementById(id);
 // Referencia visible para distinguir rápidamente el build probado en una captura.
 // Incrementar este identificador en cada iteración funcional publicada.
-const BUILD_VERSION = 'R21';
+const BUILD_VERSION = 'R22';
 const MOBILE_DEVICE = /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent) || window.matchMedia?.('(pointer: coarse)').matches || window.innerWidth < 768;
 const WATER_GRID_X = MOBILE_DEVICE ? 24 : 48;
 const WATER_GRID_Y = MOBILE_DEVICE ? 10 : 18;
@@ -48,9 +48,9 @@ const RING_MASS = .72;
 const RING_COLLISION_GROUP = 1;
 const TANK_COLLISION_GROUP = 2;
 // Un aro asentado gana una reserva de inercia clara para que la pila no se
-// desarme con cualquier roce. Sigue siendo un RigidBody Rapier y puede salir
-// si el jugador mantiene una inclinación o un chorro suficiente.
-const RING_SEATED_MASS = RING_MASS * 4;
+// desarme con cualquier roce. El mismo RigidBody y la misma masa gobiernan
+// tanto inclinación como chorros; puede salir si el jugador insiste.
+const RING_SEATED_MASS = RING_MASS * 4.5;
 
 const RING_BUOYANCY_FORCE = 3.5;
 const POLE_SHAFT_TOP_RADIUS = .075;
@@ -72,11 +72,12 @@ const RING_ORIENTATION_ASSIST = .12;
 // Fuerza de agua aplicada en el borde del aro asentado para romper el
 // contacto con el eje/base. Sigue usando la masa real del RigidBody: no es un
 // controlMass ni una recolocación, y solo existe mientras el usuario inclina.
-const RING_SEATED_BREAKAWAY_FORCE = 13.5;
-const RING_SEATED_JET_BREAKAWAY_FORCE = 18;
+// La misma fuerza de contacto se usa para inclinar y para chorro: no hay un
+// segundo peso de control escondido en una de las dos entradas.
+const RING_SEATED_BREAKAWAY_FORCE = 15;
 // La inclinación y los chorros son fuerzas del mismo tipo: no se multiplican
-// por la masa del aro asentado. Un aro con masa 4x recibe la misma fuerza base
-// y, por tanto, acelera menos de forma natural; la fuerza de breakaway se
+// por la masa del aro asentado. Un aro con masa 4.5x recibe la misma fuerza
+// base y, por tanto, acelera menos de forma natural; la fuerza de breakaway se
 // reserva para vencer el contacto cuando el jugador insiste.
 const RING_TILT_FORCE_X = RING_MASS * 4.8;
 const RING_TILT_FORCE_Y = RING_MASS * 5.8;
@@ -1113,8 +1114,8 @@ function applyRapierForces() {
         // Un aro asentado puede quedar encajado entre el eje y la base. La
         // presión del mismo chorro alcanza su borde frontal y genera el torque
         // de contacto necesario para desanclarlo; sigue siendo una fuerza
-        // Rapier y la masa 4x limita su aceleración.
-        physicsForce.set(0, direction.y * RING_SEATED_JET_BREAKAWAY_FORCE * falloff, 0);
+        // Rapier y la masa 4.5x limita su aceleración.
+        physicsForce.set(0, direction.y * RING_SEATED_BREAKAWAY_FORCE * falloff, 0);
         physicsPoint.set(
           body.position.x,
           body.position.y,

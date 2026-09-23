@@ -462,8 +462,30 @@ input { -webkit-user-select: text; user-select: text; touch-action: auto; }
 @media (pointer: coarse) { #gameCanvas { filter: none; } }
 @media (min-width: 720px) {
   .app-shell { padding: 20px 24px 16px; }
+  .toy-case { width: min(100%, 1080px); }
   .control-btn { width: 76px; }
   #waterScreen { min-height: 235px; }
+}
+
+/* En escritorio el visor tiene espacio de sobra: el menú inicial deja de
+   parecer una tarjeta diminuta y utiliza el ancho útil de la escotilla. */
+@media (min-width: 900px) and (min-height: 760px) {
+  #menuOv { padding: 34px 42px; }
+  #menuOv #pMain { width: min(100%, 560px); gap: 13px; }
+  #menuOv .logo-3d { width: 94px; height: 94px; margin-bottom: 4px; }
+  #menuOv .logo-core { font-size: 42px; }
+  #menuOv .title { font-size: clamp(30px, 3.4vw, 44px); }
+  #menuOv .subtitle { font-size: 20px; }
+  #menuOv .menu-sub { font-size: 11px; }
+  #menuOv .level-select { max-height: 124px; gap: 8px; margin: 7px 0 2px; }
+  #menuOv .level-btn { width: 42px; height: 42px; border-radius: 10px; font-size: 12px; }
+  #menuOv .level-btn span { font-size: 9px; }
+  #menuOv .menu-button { width: min(100%, 500px); min-height: 54px; padding: 12px 16px; font-size: 12px; }
+  #menuOv .online-box { width: min(100%, 500px); padding: 13px; }
+  #menuOv .online-actions, #menuOv .menu-actions { width: min(100%, 500px); gap: 10px; }
+  #menuOv .menu-button.small { min-height: 48px; font-size: 11px; }
+  #menuOv .online-head { font-size: 10px; }
+  #menuOv .credits { font-size: 9px; gap: 6px; }
 }
 @media (max-height: 700px) and (orientation: landscape) {
   .app-shell { padding: 8px 13px; gap: 6px; }
