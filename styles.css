@@ -54,9 +54,12 @@ input { -webkit-user-select: text; user-select: text; touch-action: auto; }
   display: flex;
   flex-direction: column;
   gap: 10px;
-  padding: 16px 18px 12px;
+  padding: max(16px, env(safe-area-inset-top)) 18px max(12px, env(safe-area-inset-bottom));
 }
 .site-bar {
+  position: relative;
+  z-index: 50;
+  flex: 0 0 auto;
   min-height: 46px;
   display: flex;
   align-items: center;
@@ -345,6 +348,10 @@ input { -webkit-user-select: text; user-select: text; touch-action: auto; }
 .flatten-btn:active { filter: brightness(1.35); }
 .flatten-btn.empty, .flatten-btn:disabled { color: #91a0aa; opacity: .48; filter: saturate(.35); cursor: not-allowed; }
 .flatten-btn:disabled:hover { transform: none; filter: saturate(.35); }
+/* El giroscopio solo atenúa las cuatro flechas que deja sustituidas. El
+   aplanado sigue siendo una acción independiente y conserva su contraste. */
+#tRow.gyro-active [data-tilt], #tRow.gyro-active .tilt-caption { opacity: .42; filter: saturate(.65); }
+#tRow.gyro-active .flatten-btn { opacity: 1; filter: none; }
 
 .overlay {
   position: absolute;
@@ -473,6 +480,7 @@ input { -webkit-user-select: text; user-select: text; touch-action: auto; }
      rasterización borrosa en el encabezado y en el borde superior del visor. */
   .toy-case { perspective: none; transform-style: flat; }
   #waterScreen, .hud-panel, .controls, .site-bar, .site-status, .build-chip { transform: none; filter: none; backface-visibility: visible; }
+  .site-bar { isolation: isolate; }
 }
 @media (min-width: 720px) {
   .app-shell { padding: 20px 24px 16px; }
@@ -519,25 +527,57 @@ input { -webkit-user-select: text; user-select: text; touch-action: auto; }
   .overlay { border-radius: 16px; }
 }
 @media (max-width: 520px) {
-  .app-shell { padding: 9px 8px 8px; gap: 7px; }
-  .brand-name { font-size: 12px; letter-spacing: .05em; }
-  .brand-tag { font-size: 8px; letter-spacing: .1em; }
+  /* El marco ocupa casi todo el ancho disponible; el encabezado conserva
+     márgenes propios para que título y build no queden bajo el cristal. */
+  .app-shell {
+    padding-top: max(12px, env(safe-area-inset-top));
+    padding-right: max(2px, env(safe-area-inset-right));
+    padding-bottom: max(8px, env(safe-area-inset-bottom));
+    padding-left: max(2px, env(safe-area-inset-left));
+    gap: 6px;
+  }
+  .site-bar {
+    min-height: 43px;
+    margin-inline: 4px;
+    padding: 4px 6px;
+    border: 1px solid rgba(99, 218, 229, .28);
+    border-radius: 12px;
+    background: linear-gradient(120deg, rgba(9, 43, 59, .92), rgba(3, 16, 28, .9));
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.12), 0 3px 10px rgba(0,0,0,.24);
+  }
+  .brand { gap: 8px; }
+  .brand-mark { width: 30px; height: 30px; border-radius: 9px 12px 9px 12px; font-size: 10px; }
+  .brand-mark::after { inset: 5px; }
+  .brand-name { font-size: 10px; letter-spacing: .035em; }
+  .brand-tag { margin-top: 1px; font-size: 7px; letter-spacing: .065em; }
+  .site-status { flex: 0 0 auto; }
   .engine-chip { display: none; }
-  .toy-case { padding: 10px; border-radius: 24px 24px 31px 31px; }
+  .build-chip { padding: 6px 7px; font-size: 8px; letter-spacing: .035em; }
+  .toy-case { width: 100%; padding: 6px; border-radius: 21px 21px 28px 28px; }
+  #waterScreen { border-width: 5px; border-radius: 21px; }
   .hud-panel { gap: 3px; padding: 8px 5px; }
   .hud-label { font-size: 8px; }
   .hud-value { font-size: clamp(15px, 4.2vw, 21px); }
   .controls { padding-inline: 6px; }
-  .jet-row, .tilt-row { gap: 7px; }
-  .control-btn { width: 53px; }
-  .tilt-btn { width: 34px; }
-  .tilt-caption { min-width: 54px; font-size: 7px; }
+  .jet-row, .tilt-row { gap: 9px; }
+  .control-btn { width: clamp(56px, 15vw, 64px); }
+  .jet-btn { height: 59px; }
+  .tilt-btn { width: clamp(38px, 10vw, 44px); }
+  .flatten-btn { width: clamp(48px, 13vw, 56px); }
+  .tilt-caption { min-width: clamp(53px, 15vw, 62px); font-size: 7px; }
   .menu-button, .back-button { font-size: 10px; }
 }
 @media (max-width: 360px) {
-  .brand-mark { width: 32px; height: 32px; }
-  .brand-name { font-size: 10px; }
-  .build-chip { padding: 6px 7px; font-size: 9px; letter-spacing: .05em; }
-  .toy-case { padding: 8px; }
-  .jet-btn { width: 48px; height: 51px; }
+  .site-bar { margin-inline: 2px; padding-inline: 4px; }
+  .brand-mark { width: 28px; height: 28px; }
+  .brand-name { font-size: 9px; }
+  .brand-tag { font-size: 6px; }
+  .build-chip { padding: 5px 6px; font-size: 8px; letter-spacing: .02em; }
+  .toy-case { padding: 4px; }
+  .jet-row, .tilt-row { gap: 5px; }
+  .control-btn { width: 51px; }
+  .jet-btn { height: 53px; }
+  .tilt-btn { width: 34px; }
+  .flatten-btn { width: 46px; }
+  .tilt-caption { min-width: 42px; font-size: 6px; }
 }

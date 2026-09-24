@@ -21,7 +21,7 @@ window.addEventListener('error', (event) => { if (!gameBooted) reportRuntimeFail
 window.addEventListener('unhandledrejection', (event) => { if (!gameBooted) reportRuntimeFailure(event.reason); });
 // Referencia visible para distinguir rápidamente el build probado en una captura.
 // Incrementar este identificador en cada iteración funcional publicada.
-const BUILD_VERSION = 'R33';
+const BUILD_VERSION = 'R34';
 const MOBILE_DEVICE = /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent) || window.matchMedia?.('(pointer: coarse)').matches || window.innerWidth < 768;
 const WATER_GRID_X = MOBILE_DEVICE ? 24 : 48;
 const WATER_GRID_Y = MOBILE_DEVICE ? 10 : 18;
@@ -2016,7 +2016,7 @@ function enableGyro() {
     input.gyro = true;
     window.addEventListener('deviceorientation', onOrientation);
     $('mGyro').textContent = '✅ GIROSCOPIO ACTIVO'; $('mGyro').classList.remove('button-red'); $('mGyro').classList.add('button-green'); $('gyroInd').classList.add('visible'); $('gyroDot').classList.add('on');
-    $('tRow').style.opacity = '.42'; showToast('Giroscopio activado');
+    $('tRow').classList.add('gyro-active'); showToast('Giroscopio activado');
   }
 }
 function setupGyro() {
