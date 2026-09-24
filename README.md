@@ -12,139 +12,166 @@
 
 ---
 
-## Concepto
+## Estado actual
 
-**AQUA-07** mezcla la carcasa colorida de un juguete infantil de agua con la instrumentación de un submarino experimental. El tablero se dibuja con Three.js y los cuerpos rígidos se resuelven con Rapier 3D/WASM local.
+La referencia visible actual es **BUILD R36**.
 
-La referencia visible actual es **BUILD R35**.
+AQUA-07 es una aplicación web estática que combina una carcasa de juguete acuático, una escena Three.js y una simulación física local con Rapier 3D/WASM. El juego funciona sin servidor de aplicación y conserva el progreso localmente; Firebase es opcional para el ranking global.
 
-- Pantalla de observación con brillo, visor y lectura de instrumentos.
-- Casco oscuro remachado, señalética de laboratorio y panel de control de juguete.
-- Tres chorros de colores, botones de presión y controles de inclinación.
-- Aros 3D con colisión, rotación, masa, inercia y contactos reales.
-- Música procedural submarina, caústicas animadas y chorros visuales de burbujas coloreadas generados en el navegador.
+Incluye:
 
-## Cómo jugar
+- visor de observación con agua, profundidad, luces y burbujas;
+- 20 aros 3D con colisión, giro, masa e inercia;
+- tres palos físicos con alturas, requisitos de color y movimiento;
+- chorros que aplican fuerzas y torque reales de Rapier;
+- inclinación horizontal y vertical con teclado, botones táctiles, mando o giroscopio;
+- botón accesible de reajuste angular con cargas limitadas;
+- auditoría física redundante para no perder aros que sí han quedado ensartados;
+- ranking local/global, perfil, paletas de accesibilidad, música y sonido procedural.
 
-Ensarta los **20 aros** en los tres palos. Para completar un nivel hacen falta al menos **5 aros en cada palo**. Los niveles 6–10 también añaden objetivos de color.
+## Objetivo y reglas
+
+Ensarta los **20 aros** en los tres palos. El nivel se completa cuando hay al menos **5 aros en cada palo**; los niveles 6–10 añaden objetivos de color.
+
+Un aro solo debe contar cuando atraviesa el interior del agujero, queda dentro del rango del palo y se estabiliza. Los roces por fuera, los aros en vuelo y los aros que simplemente se detienen junto a la punta no puntúan.
+
+El eje Z no está bloqueado: el aro puede moverse en profundidad dentro del tanque. Las paredes físicas solo delimitan el volumen jugable.
+
+## Controles completos
 
 | Acción | Teclado | Panel táctil | Mando |
 | --- | --- | --- | --- |
-| Chorro izquierdo | `A` | Botón rojo | Botón frontal 1 |
-| Chorro central | `S` | Botón verde | Botón frontal 2 |
-| Chorro derecho | `D` | Botón azul | Botón frontal 3 |
-| Inclinación X | `←` / `→` | Botones laterales | Cruceta / stick izquierdo |
-| Inclinación Y | `↑` / `↓` | Botones dorados | Cruceta / stick izquierdo |
-| Aplanar aros | Activación nativa del botón (Espacio al enfocarlo) | Botón `↻` con 10 cargas | — |
-| Reiniciar | `R` | `↺` | — |
-| Menú | — | `☰` | — |
+| Chorro izquierdo | Mantener `A` | Mantener botón rojo | Botón frontal 1 |
+| Chorro central | Mantener `S` | Mantener botón verde | Botón frontal 2 |
+| Chorro derecho | Mantener `D` | Mantener botón azul | Botón frontal 3 |
+| **Reajuste horizontal del tablero, X** | Mantener `←` / `→` | Flechas laterales | Cruceta / stick izquierdo |
+| **Reajuste vertical del tablero, Y** | Mantener `↑` / `↓` | Flechas doradas | Cruceta / stick izquierdo |
+| **Reajuste angular / aplanado** | `Tab` hasta enfocar `↻`, después `Espacio` o `Enter` | Pulsar botón morado `↻` | — |
+| Reiniciar nivel | `R` | Botón `↺` | — |
+| Abrir menú | — | Botón `☰` | — |
 
-Mantén pulsado un control para aplicar fuerza. Al soltarlo, la entrada vuelve progresivamente a cero. En móvil se puede activar el giroscopio y calibrarlo desde el indicador `GYRO`. El botón `↻` aplica conscientemente un impulso angular físico de hasta 30° a los aros libres, consume una de las 10 cargas de la partida y muestra las restantes; los aros encestados o en captura quedan excluidos. No existe un atajo global ni una activación por agitación.
+### Diferencia entre los dos reajustes
+
+- `← →` es el **reajuste horizontal del tablero**: inclina físicamente el tanque en el eje X y desplaza los aros mediante fuerzas reales.
+- `↑ ↓` es el reajuste vertical del tablero: inclina el tanque en el eje Y.
+- `↻` es el **reajuste angular o aplanado**: no mueve el aro de sitio; aplica un impulso angular de Rapier para que un aro libre se aproxime a una orientación plana.
+
+El botón `↻` muestra las cargas restantes como `10/10`. Cada pulsación consume una carga únicamente si al menos un aro libre recibe el impulso. Hay **10 cargas por partida** y cada uso tiene una corrección máxima aproximada de **30°**.
+
+El aplanado solo afecta aros libres. No afecta aros encestados, asentados, capturados ni a un aro que la auditoría ya reconoce como físicamente estable dentro de un palo. No cambia la posición ni escribe el quaternion del cuerpo.
+
+En teclado no existe un atajo global accidental para el aplanado: hay que enfocar conscientemente el botón `↻` con `Tab` y activarlo con `Espacio` o `Enter`. Cuando el giroscopio está activo, las flechas quedan sustituidas visualmente por la inclinación del teléfono, pero `↻` sigue disponible y conserva su estado independiente.
+
+## Cómo encestar un aro
+
+1. Usa `A`, `S` o `D`, o los botones de chorro, para acercar el aro al palo.
+2. Usa `← →` para centrarlo horizontalmente y `↑ ↓` para ajustar su altura.
+3. Alinea el agujero con la punta; no intentes entrar rozando el lateral.
+4. Desciende con poca velocidad y deja que el contacto físico termine de asentar el aro.
+5. Mantén en cuenta que un aro asentado pesa más: los chorros y la inclinación pueden liberarlo, pero requieren insistencia.
+
+Los niveles 5 y 10 tienen palos móviles separados cerca de los laterales útiles del tanque. El mismo recorrido horizontal se usa en escritorio y móvil; solo cambia el encuadre de la cámara para adaptarse al formato de la pantalla.
+
+## Auditoría redundante de encestes
+
+El contacto inicial de Rapier y el registro de puntuación son rutas separadas. Para cubrir un contacto físico que no haya emitido el evento esperado, el juego realiza una auditoría aproximadamente cada **0,22 segundos después de un paso de Rapier**.
+
+La auditoría exige dos muestras estables y comprueba:
+
+- pertenencia estricta al interior del eje del palo;
+- posición dentro del rango vertical del palo;
+- aro por debajo de la punta, no simplemente junto a ella;
+- orientación suficientemente plana;
+- velocidad lineal y angular bajas;
+- capacidad disponible del palo.
+
+Cuando se cumplen esas condiciones, se utiliza la misma ruta normal de registro. Se actualizan `ring.scored`, `ring.seated`, `ring.pole`, `pole.rings`, marcador, combo, etiquetas y condición de victoria sin recolocar el cuerpo.
+
+También se repara la inconsistencia inversa: si `ring.scored` es verdadero pero el aro falta de `pole.rings`, se reconstruye la membresía sin volver a sumar los puntos. Las membresías de aros libres se eliminan para evitar que un aro no ensartado aparezca contabilizado.
 
 ## Mecánica física
 
-### Motor
+### Motor y paso
 
-La simulación usa **Rapier 3D 0.20.0**, distribuido localmente en `vendor/rapier.mjs`. No depende de un CDN ni de Cannon-es.
+La simulación usa **Rapier 3D 0.20.0** distribuido localmente en `vendor/rapier.mjs`. No se usa Cannon-es ni un motor físico alternativo.
 
 - Gravedad: `-5.6`.
 - Paso fijo: `1/90` en escritorio y `1/75` en móvil.
-- Solver Rapier: 16 iteraciones en escritorio, 10 en móvil y 2 subiteraciones PGS.
-- CCD activado en los aros, con dos subpasos y soft-CCD para evitar atravesar suelo, palos o paredes.
-- Contactos aro-aro activos en todo momento.
+- Solver: 16 iteraciones en escritorio, 10 en móvil y 2 subiteraciones PGS.
+- CCD y soft-CCD en los cuerpos dinámicos.
+- Contactos aro-aro activos.
 - Fricción y restitución bajas para evitar rebotes violentos y enganches.
-- El eje Z está libre: no existe un carril cinemático. Las paredes laterales únicamente delimitan el volumen estrecho del tanque.
+- Ningún aro recibe un carril Z, un lock cinemático o una pared invisible para guiarlo.
 
-### Colliders
+### Colliders y cuerpos
 
-- Cada aro utiliza una corona de esferas distribuidas sobre su toro visible: 16 en escritorio y 12 en móvil.
-- Las esferas tienen una piel de contacto mínima para mantener separados los aros sin corregir su posición visualmente.
-- El palo usa una envolvente convexa trapezoidal que conserva la conicidad visible, una esfera en la punta y un collider para la base.
-- El suelo conserva la misma cota que la plataforma visible y tiene espesor físico hacia abajo.
-- Las paredes laterales y de profundidad son gruesas para evitar tunneling.
-- Un guard superior físico queda justo por encima del topRim visible: evita que un aro atraviese el techo sin dejar una franja donde parezca escapar. Usa fricción nula y restitución corta.
-- Rapier usa CCD en las superficies que participan en la jugabilidad; no hay correcciones manuales de posición para rescatar un aro.
-- Al inclinar o activar un chorro sobre un aro ya asentado, la presión se aplica también en el borde del aro. El torque y el levantamiento rompen el contacto eje-base mediante Rapier; si el cuerpo se separa físicamente del palo, la salida se registra sin teletransporte.
+- Cada aro usa una corona de esferas sobre el toro visual: 16 en escritorio y 12 en móvil.
+- El palo usa una envolvente convexa trapezoidal, una esfera en la punta y un collider para la base.
+- El collider del palo conserva la conicidad y las cotas del modelo visible.
+- El suelo, las paredes laterales, las paredes de profundidad y el guard superior son fixtures fijos de Rapier.
+- Los cuerpos dinámicos no reciben correcciones manuales de posición o quaternion para resolver contactos.
+- Jets, inclinación, breakaway y aplanado utilizan fuerzas, torques o impulsos reales del `RigidBody`.
 
-### Masa e inclinación
+### Masa de los aros asentados
 
 ```js
 const RING_MASS = .72;
 const RING_SEATED_MASS = RING_MASS * 4.5;
 ```
 
-Cuando un aro entra en el interior de un palo, Rapier recibe una masa e inercia 4.5 veces mayores. Es una concesión deliberada para la jugabilidad: la pila no se desarma con cualquier roce, pero sigue pudiendo salir si se mantiene suficiente inclinación o chorro. La misma masa real gobierna ambas entradas y las fuerzas no usan `controlMass`.
+Cuando un aro entra correctamente en un palo, su masa e inercia real pasan a ser 4,5 veces mayores para que la pila no se desarme con cualquier roce. Esa misma masa gobierna jets, inclinación y asistencia angular. No existe `controlMass`.
 
-Los aros no se teletransportan ni se recolocan al puntuar. El apilado final se produce por contacto entre colliders, suelo, palo y gravedad.
+La presión de los chorros y la inclinación pueden aplicar fuerza en el borde de un aro asentado para romper el contacto eje-base. Si el cuerpo se separa físicamente, la salida se registra con un impulso de Rapier; no hay teletransporte.
 
-### Captura y salida
+### Aplanado
 
-La captura es estricta:
+El aplanado se aplica con `RigidBody.applyAngularImpulse`. El juego calcula el sentido hacia la normal vertical y limita el objetivo de cada activación a aproximadamente 30°. Nunca cambia directamente la posición ni el quaternion del cuerpo.
 
-1. El centro del aro debe aproximarse al interior del agujero.
-2. El aro debe descender razonablemente alineado.
-3. La comprobación usa el diámetro interior, nunca el diámetro exterior.
-4. Un roce lateral no puntúa ni cambia la masa.
-5. Si el cruce de plano queda oculto por un subpaso CCD, un contacto interior ya situado bajo la punta puede completar la captura; el radio sigue siendo el interior del agujero.
-6. El contacto físico con el palo permanece activo después de la captura.
-7. Una salida por encima de la punta usa un impulso físico; no hay salto por teletransporte.
-
-Después de cada paso de Rapier, una auditoría redundante se ejecuta aproximadamente cada 0,22 s. Para reparar un evento de contacto perdido exige dos muestras estables: el centro del aro debe estar dentro del eje y del rango vertical del palo, por debajo de la punta, correctamente orientado y con velocidad lineal y angular bajas. El radio auditado deja holgura respecto al eje, por lo que un roce exterior, un aro en vuelo o uno detenido junto a la punta no puntúan. Si cumple, se llama a la misma ruta normal de registro y se actualizan marcador, lista, combo, etiquetas y victoria sin mover el cuerpo. La auditoría también repara la relación inversa cuando `ring.scored` es verdadero pero falta `pole.rings`, y elimina membresías de aros libres.
-
-Solo durante el descenso existe una asistencia angular muy suave para que un aro que llega de canto pueda ladearse y descansar. Cuando deja de descender, conserva libremente su giro y orientación.
-
-El aplanado accesible es una acción consciente del botón `↻`: cada carga aplica a los aros libres un impulso angular de Rapier hacia la normal vertical del suelo, con una corrección máxima de 30°. No cambia posición ni quaternion, no usa un atajo global y no afecta aros encestados, asentados o en captura. Hay 10 cargas por partida; el botón queda deshabilitado al agotarlas.
-
-### Chorros
-
-Los chorros son fuerzas físicas aplicadas en el centro de masa del aro. Para un aro ya asentado, una segunda componente alcanza su borde desde la posición física del chorro y permite romper el contacto eje-base mediante torque; no recoloca el aro ni crea una guía rígida. Esto evita que el chorro lo mueva sin llegar a sacarlo del palo.
-
-La flotación, la amortiguación, la turbulencia y la resistencia angular pertenecen a la capa de agua. No hay penalización temporizada ni expulsiones rojas ocultas.
+La función de agitar el teléfono está eliminada. No se registra ninguna API de movimiento para disparar el aplanado. El giroscopio queda reservado a la inclinación consciente del tablero.
 
 ## Niveles y puntuación
 
 Hay diez niveles:
 
-- **1–5:** niveles clásicos con distintas alturas y movimiento.
-- **6–10:** objetivos de color, palos móviles y combinaciones más exigentes.
-- Los niveles 5 y 10 usan una separación horizontal ampliada y compartida: los palos móviles parten cerca de los laterales del tanque y recorren la misma zona tanto en escritorio como en móvil. La cámara adapta el encuadre, pero no se cambia la geometría del nivel entre dispositivos.
+- **1–3:** alturas y posiciones clásicas.
+- **4 y 9:** movimiento controlado de un palo.
+- **5 y 10:** movimiento múltiple, separación horizontal ampliada y recorrido cercano a los laterales del tanque.
+- **6–10:** requisitos de color y combinaciones más exigentes.
+
+La distribución espacial de los niveles 5 y 10 es compartida entre escritorio y móvil. La cámara adapta el encuadre, pero los palos y sus recorridos físicos usan las mismas coordenadas.
 
 Puntuación:
 
-- Aro base: **100 puntos**.
-- Combo por color: multiplica el siguiente aro consecutivo.
-- Cinco aros del mismo color en un palo: **+500**.
-- Dos combos de color en un palo: **+1500**.
-- Bonus de tiempo al completar el nivel.
-- Bonus adicional por cumplir requisitos de color.
+- aro base: **100 puntos**;
+- combo consecutivo por color: multiplica la puntuación del siguiente aro;
+- cinco aros del mismo color en un palo: **+500**;
+- dos combos de color en un palo: **+1500**;
+- bonus de tiempo al completar el nivel;
+- bonus adicional por cumplir requisitos de color.
 
 ## Interfaz y accesibilidad
 
-La interfaz actual se ha rehecho como un panel de submarino futurista con detalles de juguete:
+La interfaz conserva el formato vertical de juguete tanto en escritorio como en móvil, sin convertir el escritorio en una versión horizontal diferente.
 
-- visor de observación con marco de escotilla;
-- casco oscuro con remaches, telemetría y etiquetas de laboratorio;
-- HUD de profundidad con tiempo, puntos, aros y combo;
-- botones blandos de colores para los chorros;
-- controles dorados para la inclinación;
-- menú, tutorial, ranking local/global, perfil y pantalla completa;
-- paletas Normal, Deuteranopia, Protanopia, Tritanopia y Alto contraste;
-- cada aro conserva una forma visual además del color;
-- controles táctiles con `pointer capture` para que no se queden pulsados accidentalmente;
-- cabecera y build visibles también en móvil, respetando el área segura del dispositivo;
-- visor móvil casi a borde para conservar el mismo espacio lateral de juego que el escritorio;
-- teclado y mando con limpieza de estado al reiniciar.
+- Cabecera con título y build visible, también bajo el área segura de móviles.
+- Visor móvil casi a borde para aprovechar el ancho útil.
+- HUD de nivel, puntos, tiempo, aros y combo.
+- Controles táctiles con `pointer capture` para que no se queden pulsados al sacar el dedo.
+- Botón de aplanado con contador, etiqueta ARIA dinámica y activación nativa de teclado.
+- Al activar el giroscopio, solo se atenúan las flechas que quedan sustituidas; el botón `↻` permanece independiente.
+- Paletas Normal, Deuteranopia, Protanopia, Tritanopia y Alto contraste.
+- Música, sonido, pantalla completa, ranking local/global y perfil.
+- Los mensajes de juego aparecen dentro del visor y no cubren la zona de controles.
 
-## Audio
+## Audio y agua
 
-El audio es procedural y opcional:
+El audio se genera de forma procedural y opcional:
 
-- chorros y burbujas;
-- contactos y salidas físicas;
+- chorros, burbujas, contactos y salidas físicas;
 - combos y victoria;
-- melodía submarina ligera y variable por nivel.
+- melodía submarina variable por nivel.
 
-No se incluyen canciones ni muestras externas. El navegador necesita una interacción del usuario para activar el contexto de audio.
+El agua utiliza materiales y geometría Three.js con caústicas, burbujas y ondas ligeras. La distorsión acuática avanzada queda pospuesta hasta poder sustituir el ondeo actual por un efecto más convincente sin reducir la legibilidad de los aros.
 
 ## Ejecutar localmente
 
@@ -166,8 +193,8 @@ python3 -m http.server 4173 --bind 0.0.0.0
 
 ```text
 index.html                  → carcasa, visor, HUD, controles, menús y tutorial
-styles.css                  → tema de submarino futurista + juguete acuático
-game3d.js                   → Three.js, gameplay, niveles, audio, Firebase y bucle físico
+styles.css                  → tema del submarino, layout responsive y accesibilidad
+game3d.js                   → Three.js, Rapier, gameplay, auditoría, niveles, audio y Firebase
 vendor/three.module.js      → runtime local de Three.js 0.160.0
 vendor/rapier.mjs           → runtime WASM local de Rapier 3D 0.20.0
 vendor/rapier-physics.js    → adaptador ligero de cuerpos y colliders Rapier
@@ -175,7 +202,7 @@ vendor/RAPIER-LICENSE       → licencia Apache-2.0 de Rapier
 vendor/THREE-LICENSE        → licencia MIT de Three.js
 ```
 
-`vendor/rapier-physics.js` expone vectores mutables, colliders compuestos, masas, fuerzas, torques e impulsos directos sobre los `RigidBody` de Rapier. Las fuerzas y torques se reinician explícitamente después de cada integración, porque la API nativa de Rapier los conserva entre pasos. Los cuerpos dinámicos nunca reciben una posición o quaternion manual para resolver contactos; solo los fixtures fijos que se mueven sincronizan su estado.
+El adaptador local expone vectores mutables, colliders compuestos, masas, fuerzas, torques e impulsos directos sobre los `RigidBody` de Rapier. Las fuerzas y torques se reinician explícitamente después de cada integración porque la API nativa los conserva entre pasos.
 
 ## Persistencia y Firebase
 
@@ -183,17 +210,18 @@ El progreso y el ranking local funcionan sin configuración. La integración opc
 
 Para conectar otro proyecto, sustituye `FIREBASE_CONFIG` en `game3d.js` y habilita Authentication anónima y Firestore.
 
-## Validación de la BUILD R35
+## Validación de BUILD R36
 
 ```text
 node --check game3d.js
 node --check vendor/rapier-physics.js
 git diff --check
 Preview HTTP 200
-Prueba Rapier de fuerza por paso, guard superior bajo y breakaway asentado
-Prueba aislada de contactos, apilado, auditoría de asiento y masa 4.5x Rapier
-Prueba de layout responsive del tutorial, selector de niveles sin scroll, panel móvil en escritorio, botón accesible de aplanado con 10 cargas y efectos visuales de agua/chorro
-Comprobación estática de ausencia de la API de movimiento, agitación y atajo global de Espacio
+Auditoría de asiento, reparación de ring.scored/pole.rings y salida física
+Prueba de masa asentada 4.5x, jets, inclinación y aplanado angular
+Prueba de layout responsive, cabecera móvil, contador 10/10 y tutorial interactivo
+Prueba de niveles 5 y 10 con recorrido de palos compartido entre móvil y escritorio
+Comprobación estática de ausencia de agitación y atajo global de Espacio
 ```
 
 ## Licencia

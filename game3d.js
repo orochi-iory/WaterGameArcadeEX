@@ -21,7 +21,7 @@ window.addEventListener('error', (event) => { if (!gameBooted) reportRuntimeFail
 window.addEventListener('unhandledrejection', (event) => { if (!gameBooted) reportRuntimeFailure(event.reason); });
 // Referencia visible para distinguir rápidamente el build probado en una captura.
 // Incrementar este identificador en cada iteración funcional publicada.
-const BUILD_VERSION = 'R35';
+const BUILD_VERSION = 'R36';
 const MOBILE_DEVICE = /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent) || window.matchMedia?.('(pointer: coarse)').matches || window.innerWidth < 768;
 const WATER_GRID_X = MOBILE_DEVICE ? 24 : 48;
 const WATER_GRID_Y = MOBILE_DEVICE ? 10 : 18;
@@ -1039,8 +1039,8 @@ function updateFlattenButton() {
   button.classList.toggle('empty', empty);
   button.disabled = empty;
   button.setAttribute('aria-disabled', String(empty));
-  button.setAttribute('aria-label', `Aplanar ligeramente los aros · ${state.flattenCharges} cargas restantes`);
-  button.title = `Aplanar aros · ${state.flattenCharges} cargas restantes · tecla Espacio`;
+  button.setAttribute('aria-label', `Reajuste angular: aplanar aros · ${state.flattenCharges} cargas restantes`);
+  button.title = `Reajuste angular · aplanar aros · ${state.flattenCharges} cargas restantes · Tab, Espacio o Enter`;
 }
 
 function applyFlattenAssist() {
@@ -1795,8 +1795,14 @@ function openTutorial() { tutorialStep = 0; $('menuOv').classList.remove('show')
 function closeTutorial() { $('tutOv').classList.remove('show'); openMenu(); }
 function updateTutorial() {
   const steps = document.querySelectorAll('.tutorial-step'); const dots = $('tutDots'); dots.innerHTML = '';
+  tutorialStep = clamp(tutorialStep, 0, Math.max(0, steps.length - 1));
   steps.forEach((step, index) => { step.classList.toggle('active', index === tutorialStep); const dot = document.createElement('span'); dot.className = `tutorial-dot${index === tutorialStep ? ' active' : ''}`; dots.appendChild(dot); });
   $('tutNext').textContent = tutorialStep === steps.length - 1 ? '✓ ENTENDIDO' : 'SIGUIENTE →';
+}
+function advanceTutorial() {
+  const steps = document.querySelectorAll('.tutorial-step');
+  if (tutorialStep >= steps.length - 1) closeTutorial();
+  else { tutorialStep++; updateTutorial(); }
 }
 function toggleFullscreen() {
   try {
@@ -1871,7 +1877,7 @@ function updateGamepad() {
 
 document.addEventListener('keydown', (event) => {
   if ($('tutOv').classList.contains('show')) {
-    if (event.key === 'ArrowRight' || event.key === ' ' || event.key === 'Enter') { event.preventDefault(); if (tutorialStep >= 5) closeTutorial(); else { tutorialStep++; updateTutorial(); } }
+    if (event.key === 'ArrowRight' || event.key === ' ' || event.key === 'Enter') { event.preventDefault(); advanceTutorial(); }
     else if (event.key === 'ArrowLeft' && tutorialStep > 0) { event.preventDefault(); tutorialStep--; updateTutorial(); }
     else if (event.key === 'Escape') closeTutorial();
     return;
@@ -1893,7 +1899,7 @@ document.addEventListener('keyup', (event) => {
 
 $('mPlay').addEventListener('click', () => { ensureAudio(); startGame(); });
 $('mTut').addEventListener('click', openTutorial);
-$('tutNext').addEventListener('click', () => { if (tutorialStep >= 5) closeTutorial(); else { tutorialStep++; updateTutorial(); } });
+$('tutNext').addEventListener('click', advanceTutorial);
 $('tutSkip').addEventListener('click', closeTutorial);
 $('mAcc').addEventListener('click', () => { buildPaletteGrid(); setPanel('pAcc'); });
 $('aBack').addEventListener('click', () => setPanel('pMain'));

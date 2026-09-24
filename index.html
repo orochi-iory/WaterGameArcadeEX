@@ -8,7 +8,7 @@
   <meta name="apple-mobile-web-app-title" content="Water Arcade 3D">
   <meta name="description" content="AQUA-07 Water Game Arcade EX — un juguete de aros acuáticos en un submarino futurista, con Three.js y Rapier.">
   <title>AQUA-07 · Water Game Arcade EX</title>
-  <link rel="stylesheet" href="./styles.css?v=R35">
+  <link rel="stylesheet" href="./styles.css?v=R36">
 </head>
 <body>
   <main class="app-shell">
@@ -21,7 +21,7 @@
         </div>
       </div>
       <div class="site-status">
-        <div class="build-chip" id="buildVersion" title="Referencia de versión">BUILD R35</div>
+        <div class="build-chip" id="buildVersion" title="Referencia de versión">BUILD R36</div>
         <div class="engine-chip"><span class="status-dot"></span><b>RAPIER</b> / WASM</div>
       </div>
     </header>
@@ -68,12 +68,12 @@
             <button class="control-btn jet-btn jet-2" data-jet="2" aria-label="Chorro derecho">💨<small>D</small></button>
           </div>
           <div class="tilt-row" id="tRow">
-            <button class="control-btn tilt-btn" data-tilt="left" aria-label="Inclinar izquierda">←</button>
-            <button class="control-btn tilt-btn up" data-tilt="up" aria-label="Inclinar arriba">↑</button>
-            <span class="tilt-caption">INCLINAR</span>
-            <button class="control-btn flatten-btn" id="flattenBtn" aria-label="Aplanar ligeramente los aros · 10 cargas restantes" title="Aplanar aros · 10 cargas restantes"><span aria-hidden="true">↻</span><small><span id="flattenCount">10</span>/10</small></button>
-            <button class="control-btn tilt-btn down" data-tilt="down" aria-label="Inclinar abajo">↓</button>
-            <button class="control-btn tilt-btn" data-tilt="right" aria-label="Inclinar derecha">→</button>
+            <button class="control-btn tilt-btn" data-tilt="left" aria-label="Reajuste horizontal izquierda">←</button>
+            <button class="control-btn tilt-btn up" data-tilt="up" aria-label="Reajuste vertical arriba">↑</button>
+            <span class="tilt-caption">AJUSTAR</span>
+            <button class="control-btn flatten-btn" id="flattenBtn" aria-label="Reajuste angular: aplanar aros · 10 cargas restantes" title="Reajuste angular · aplanar aros · 10 cargas restantes"><span aria-hidden="true">↻</span><small><span id="flattenCount">10</span>/10</small></button>
+            <button class="control-btn tilt-btn down" data-tilt="down" aria-label="Reajuste vertical abajo">↓</button>
+            <button class="control-btn tilt-btn" data-tilt="right" aria-label="Reajuste horizontal derecha">→</button>
           </div>
         </div>
 
@@ -146,12 +146,13 @@
 
         <!-- Tutorial interactivo -->
         <div id="tutOv" class="overlay">
-          <div class="tutorial-step active"><div class="tutorial-icon">🛟</div><h3>Bienvenido al SUB-07</h3><p>El juguete vive dentro de un mini submarino: agua, profundidad, luces, reflejos y aros con volumen en una escena WebGL.</p><div class="tutorial-box">Tu objetivo sigue siendo el mismo: ensartar los 20 aros en los 3 palos.</div></div>
-          <div class="tutorial-step"><div class="tutorial-icon">🚿</div><h3>Apunta con los chorros</h3><p>Los chorros aplican fuerzas físicas al aro. Mantén pulsados A, S o D para impulsarlos desde abajo; si está asentado, la presión también puede romper su contacto con el palo.</p><div class="tutorial-box"><b style="color:#ff7373">A</b> izquierda · <b style="color:#5ce5b1">S</b> centro · <b style="color:#63cfff">D</b> derecha · mando: botones frontales</div></div>
-          <div class="tutorial-step"><div class="tutorial-icon">📐</div><h3>Inclina el tablero</h3><p>Usa las flechas o los controles inferiores. Pulsa el botón ↻ para aplicar un impulso angular físico de hasta 30° a los aros libres; tienes 10 cargas por partida. En móvil puedes activar el giroscopio y tocar GYRO para calibrar el centro.</p><div class="tutorial-box">← → desplazan en X; ↑ ↓ elevan o bajan los aros.</div></div>
-          <div class="tutorial-step"><div class="tutorial-icon">🧭</div><h3>Cruza la punta del palo</h3><p>Rapier resuelve el volumen estrecho en 3D: el eje Z no está bloqueado, solo limitado por las paredes laterales del tanque.</p><div class="tutorial-box">Alinea el agujero con la punta y desciende: la captura solo se arma dentro del diámetro interior y no por un roce exterior.</div></div>
-          <div class="tutorial-step"><div class="tutorial-icon">🌈</div><h3>Combos y color perfecto</h3><p>Encadena el mismo color para subir el multiplicador. Coloca 5 o más aros del mismo color en un palo para conseguir bonus.</p><div class="tutorial-box">Cada nivel de color te pide una combinación distinta.</div></div>
-          <div class="tutorial-step"><div class="tutorial-icon">🎮</div><h3>¡Listo para jugar!</h3><p>Completa el nivel con al menos 5 aros en cada palo. Los niveles 6–10 añaden requisitos de color.</p><div class="tutorial-box" style="color:#5ce5b1">20 aros · 3 palos · Rapier 3D · buena suerte</div></div>
+          <div class="tutorial-step active"><div class="tutorial-icon">🛟</div><h3>OBJETIVO Y HUD</h3><p>AQUA-07 es un juguete físico: ensarta los 20 aros en los 3 palos. El HUD muestra nivel, puntos, tiempo, aros registrados y combo.</p><div class="tutorial-box">Termina con al menos <b>5 aros por palo</b>. En los niveles 6–10 también cuentan los objetivos de color.</div></div>
+          <div class="tutorial-step"><div class="tutorial-icon">🚿</div><h3>IMPULSA CON CHORROS</h3><p>Los chorros aplican fuerzas reales de Rapier. Mantén pulsado un botón para empujar los aros desde abajo; también pueden liberar un aro asentado si mantienes la presión.</p><div class="tutorial-box"><b style="color:#ff7373">A</b> / rojo · <b style="color:#5ce5b1">S</b> / verde · <b style="color:#63cfff">D</b> / azul<br>En táctil, mantén pulsados los tres botones de color.</div></div>
+          <div class="tutorial-step"><div class="tutorial-icon">📐</div><h3>AJUSTE HORIZONTAL Y VERTICAL</h3><p>El reajuste horizontal del tablero es <b>← / →</b>; el vertical es <b>↑ / ↓</b>. Mantén la flecha o el botón correspondiente para inclinar físicamente los aros.</p><div class="tutorial-box"><b>← →</b> mover en X / horizontal · <b>↑ ↓</b> mover en Y / vertical<br>El giroscopio sustituye las flechas; <b>↻</b> sigue funcionando aparte.</div></div>
+          <div class="tutorial-step"><div class="tutorial-icon">↻</div><h3>REAJUSTE ANGULAR ↻</h3><p>El botón morado <b>↻</b> aplana los aros libres con un impulso angular real de Rapier, hasta 30° por uso. No teletransporta ni cambia la posición; excluye aros encestados, asentados o en captura.</p><div class="tutorial-box"><b>10/10</b> cargas por partida · solo gasta una si afecta a un aro<br><b>Teclado:</b> pulsa <b>Tab</b> hasta enfocar ↻ y usa <b>Espacio o Enter</b>. No existe un atajo global.</div></div>
+          <div class="tutorial-step"><div class="tutorial-icon">🧭</div><h3>ENSARTA SIN ROZAR</h3><p>Alinea el agujero con la punta y desciende despacio. Solo cuenta el interior del aro: un roce exterior, un aro en vuelo o uno junto a la punta no puntúan.</p><div class="tutorial-box">La auditoría física confirma dos muestras estables. En los niveles 5 y 10 los palos móviles recorren la misma zona amplia en PC y móvil; el eje Z también está libre.</div></div>
+          <div class="tutorial-step"><div class="tutorial-icon">🌈</div><h3>COMBOS Y COLOR</h3><p>Encadena aros del mismo color para aumentar el combo. Cinco o más del mismo color en un palo dan bonus; los niveles de color muestran sus requisitos bajo cada palo.</p><div class="tutorial-box">Aro base: <b>100 puntos</b> · combo consecutivo · bonus de color y tiempo</div></div>
+          <div class="tutorial-step"><div class="tutorial-icon">🎮</div><h3>LISTO PARA JUGAR</h3><p>Reinicia con <b>R</b> o ↺, abre el menú con ☰ y activa el giroscopio desde GYRO si quieres inclinar el tablero con el teléfono. Puedes cambiar paleta, sonido, música y pantalla completa.</p><div class="tutorial-box" style="color:#5ce5b1">20 aros · 3 palos · física Rapier 3D · buena suerte</div></div>
           <div class="tutorial-dots" id="tutDots"></div>
           <div class="tutorial-nav"><button class="back-button" id="tutSkip">✕ CERRAR</button><button class="menu-button button-green" id="tutNext">SIGUIENTE →</button></div>
         </div>
@@ -169,6 +170,6 @@
       </div>
     </section>
   </main>
-  <script type="module" src="./game3d.js?v=R35"></script>
+  <script type="module" src="./game3d.js?v=R36"></script>
 </body>
 </html>
