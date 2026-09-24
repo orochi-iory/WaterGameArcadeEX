@@ -8,7 +8,7 @@
   <meta name="apple-mobile-web-app-title" content="Water Arcade 3D">
   <meta name="description" content="AQUA-07 Water Game Arcade EX — un juguete de aros acuáticos en un submarino futurista, con Three.js y Rapier.">
   <title>AQUA-07 · Water Game Arcade EX</title>
-  <link rel="stylesheet" href="./styles.css?v=R32">
+  <link rel="stylesheet" href="./styles.css?v=R33">
 </head>
 <body>
   <main class="app-shell">
@@ -21,7 +21,7 @@
         </div>
       </div>
       <div class="site-status">
-        <div class="build-chip" id="buildVersion" title="Referencia de versión">BUILD R32</div>
+        <div class="build-chip" id="buildVersion" title="Referencia de versión">BUILD R33</div>
         <div class="engine-chip"><span class="status-dot"></span><b>RAPIER</b> / WASM</div>
       </div>
     </header>
@@ -71,7 +71,7 @@
             <button class="control-btn tilt-btn" data-tilt="left" aria-label="Inclinar izquierda">←</button>
             <button class="control-btn tilt-btn up" data-tilt="up" aria-label="Inclinar arriba">↑</button>
             <span class="tilt-caption">INCLINAR</span>
-            <button class="control-btn shake-btn" id="shakeBtn" data-shake aria-label="Aplanar ligeramente los aros" aria-keyshortcuts="Space" title="Aplanar aros · tecla Espacio">↻<small>ESPACIO</small></button>
+            <button class="control-btn flatten-btn" id="flattenBtn" aria-label="Aplanar ligeramente los aros · 10 cargas restantes" title="Aplanar aros · 10 cargas restantes"><span aria-hidden="true">↻</span><small><span id="flattenCount">10</span>/10</small></button>
             <button class="control-btn tilt-btn down" data-tilt="down" aria-label="Inclinar abajo">↓</button>
             <button class="control-btn tilt-btn" data-tilt="right" aria-label="Inclinar derecha">→</button>
           </div>
@@ -148,7 +148,7 @@
         <div id="tutOv" class="overlay">
           <div class="tutorial-step active"><div class="tutorial-icon">🛟</div><h3>Bienvenido al SUB-07</h3><p>El juguete vive dentro de un mini submarino: agua, profundidad, luces, reflejos y aros con volumen en una escena WebGL.</p><div class="tutorial-box">Tu objetivo sigue siendo el mismo: ensartar los 20 aros en los 3 palos.</div></div>
           <div class="tutorial-step"><div class="tutorial-icon">🚿</div><h3>Apunta con los chorros</h3><p>Los chorros aplican fuerzas físicas al aro. Mantén pulsados A, S o D para impulsarlos desde abajo; si está asentado, la presión también puede romper su contacto con el palo.</p><div class="tutorial-box"><b style="color:#ff7373">A</b> izquierda · <b style="color:#5ce5b1">S</b> centro · <b style="color:#63cfff">D</b> derecha · mando: botones frontales</div></div>
-          <div class="tutorial-step"><div class="tutorial-icon">📐</div><h3>Inclina el tablero</h3><p>Usa las flechas o los controles inferiores. El botón ↻ o la tecla Espacio aplanan ligeramente los aros; en móvil también puedes activar el giroscopio, tocar GYRO para calibrar el centro y agitar suavemente el teléfono.</p><div class="tutorial-box">← → desplazan en X; ↑ ↓ elevan o bajan los aros.</div></div>
+          <div class="tutorial-step"><div class="tutorial-icon">📐</div><h3>Inclina el tablero</h3><p>Usa las flechas o los controles inferiores. Pulsa el botón ↻ para aplicar un impulso angular físico de hasta 30° a los aros libres; tienes 10 cargas por partida. En móvil puedes activar el giroscopio y tocar GYRO para calibrar el centro.</p><div class="tutorial-box">← → desplazan en X; ↑ ↓ elevan o bajan los aros.</div></div>
           <div class="tutorial-step"><div class="tutorial-icon">🧭</div><h3>Cruza la punta del palo</h3><p>Rapier resuelve el volumen estrecho en 3D: el eje Z no está bloqueado, solo limitado por las paredes laterales del tanque.</p><div class="tutorial-box">Alinea el agujero con la punta y desciende: la captura solo se arma dentro del diámetro interior y no por un roce exterior.</div></div>
           <div class="tutorial-step"><div class="tutorial-icon">🌈</div><h3>Combos y color perfecto</h3><p>Encadena el mismo color para subir el multiplicador. Coloca 5 o más aros del mismo color en un palo para conseguir bonus.</p><div class="tutorial-box">Cada nivel de color te pide una combinación distinta.</div></div>
           <div class="tutorial-step"><div class="tutorial-icon">🎮</div><h3>¡Listo para jugar!</h3><p>Completa el nivel con al menos 5 aros en cada palo. Los niveles 6–10 añaden requisitos de color.</p><div class="tutorial-box" style="color:#5ce5b1">20 aros · 3 palos · Rapier 3D · buena suerte</div></div>
@@ -169,6 +169,6 @@
       </div>
     </section>
   </main>
-  <script type="module" src="./game3d.js?v=R32"></script>
+  <script type="module" src="./game3d.js?v=R33"></script>
 </body>
 </html>

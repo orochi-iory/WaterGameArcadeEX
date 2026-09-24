@@ -21,7 +21,7 @@ window.addEventListener('error', (event) => { if (!gameBooted) reportRuntimeFail
 window.addEventListener('unhandledrejection', (event) => { if (!gameBooted) reportRuntimeFailure(event.reason); });
 // Referencia visible para distinguir rápidamente el build probado en una captura.
 // Incrementar este identificador en cada iteración funcional publicada.
-const BUILD_VERSION = 'R32';
+const BUILD_VERSION = 'R33';
 const MOBILE_DEVICE = /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent) || window.matchMedia?.('(pointer: coarse)').matches || window.innerWidth < 768;
 const WATER_GRID_X = MOBILE_DEVICE ? 24 : 48;
 const WATER_GRID_Y = MOBILE_DEVICE ? 10 : 18;
@@ -98,13 +98,19 @@ const RING_SEATED_BREAKAWAY_FORCE = 15;
 // reserva para vencer el contacto cuando el jugador insiste.
 const RING_TILT_FORCE_X = RING_MASS * 4.8;
 const RING_TILT_FORCE_Y = RING_MASS * 5.8;
-// Ayuda móvil opcional al detectar una sacudida: aplica un impulso angular
-// corto para aplanar ligeramente los aros libres. No cambia posiciones ni
-// bloquea quaternions; Rapier conserva la masa y resuelve el giro real.
-const RING_SHAKE_FLATTEN_MAX_ANGLE = Math.PI / 36; // 5 grados como máximo
-const RING_SHAKE_FLATTEN_ANGULAR_IMPULSE = .011;
-const RING_SHAKE_COOLDOWN = 1.15;
-const RING_SHAKE_ENERGY_THRESHOLD = 15;
+// Ayuda consciente de accesibilidad: cada pulsación aplica un impulso angular
+// real a los aros libres. No cambia posiciones ni bloquea quaternions.
+const FLATTEN_CHARGE_MAX = 10;
+const RING_FLATTEN_MAX_ANGLE = Math.PI / 6; // 30 grados como máximo por carga
+const RING_FLATTEN_ANGULAR_IMPULSE = .065;
+const RING_SEAT_AUDIT_INTERVAL = .22;
+const RING_SEAT_AUDIT_STABLE_TIME = .44;
+const RING_SEAT_AUDIT_MAX_TILT = Math.PI / 6;
+const RING_SEAT_AUDIT_MAX_SPEED = .28;
+const RING_SEAT_AUDIT_MAX_ANGULAR_SPEED = .55;
+const RING_SEAT_AUDIT_RADIAL = Math.max(.01, RING_HOLE_RADIUS - POLE_SHAFT_RADIUS - .012);
+const RING_SEAT_AUDIT_TIP_MARGIN = Math.max(.11, RING_STACK_STEP * .8);
+const RING_SEAT_AUDIT_BASE_MARGIN = .10;
 const ringFlatQuaternion = new THREE.Quaternion().setFromEuler(new THREE.Euler(Math.PI / 2, 0, 0));
 const GRAVITY = -5.6;
 const NOZZLE_Y = BASE_Y - .02;
@@ -180,10 +186,11 @@ const state = {
   paused: true,
   lastFrame: 0,
   currentCombo: 1,
+  flattenCharges: FLATTEN_CHARGE_MAX,
   lastUiScore: -1
 };
 const input = {
-  jets: [false, false, false], keys: {}, gyro: false, motion: false,
+  jets: [false, false, false], keys: {}, gyro: false,
   pointerJets: [false, false, false], keyboardJets: [false, false, false], gamepadJets: [false, false, false],
   pointerKeys: {}, keyboardKeys: {}, gamepadKeys: {}
 };
@@ -217,9 +224,6 @@ let globalMode = 'today';
 let globalLevel = 1;
 let gyroOffset = { gamma: 0, beta: 0 };
 let latestOrientation = { gamma: 0, beta: 60 };
-let latestMotionSample = null;
-let shakeEnergy = 0;
-let shakeCooldown = 0;
 
 /* -------------------------------------------------------------------------- */
 /* Three.js scene                                                             */
@@ -293,6 +297,7 @@ physicsWorld.addBody(physicsUpperGuard);
 
 const physicsFixedStep = MOBILE_DEVICE ? 1 / 75 : 1 / 90;
 let physicsAccumulator = 0;
+let seatAuditTimer = 0;
 const camera = new THREE.PerspectiveCamera(48, 1, .1, 100);
 camera.position.set(0, .05, 14.8);
 // El centro queda equilibrado entre el suelo y las puntas de los palos.
@@ -697,7 +702,7 @@ function createRing(ci, index) {
   ringGroup.add(mesh);
   return {
     mesh, ci, color: info.hex, index, x: 0, y: 0, z: 0, previousX: 0, previousY: 0, previousZ: 0,
-    scored: false, pole: null, capturePole: null, seatPole: null, escapePole: null, descentAssist: 0, points: 0,
+    scored: false, seated: false, pole: null, capturePole: null, seatPole: null, escapePole: null, auditStableTime: 0, descentAssist: 0, points: 0,
     angle: Math.random() * TAU, spin: (Math.random() - .5) * 1.4,
     pitch: (Math.random() - .5) * .12, roll: (Math.random() - .5) * .12
   };
@@ -705,14 +710,14 @@ function createRing(ci, index) {
 
 function clearRingPoleCapture(ring) {
   ring.capturePole = null;
-  if (ring.scored || !ring.body || ring.body.mass === RING_MASS) return;
+  if (ring.scored || ring.seated || !ring.body || ring.body.mass === RING_MASS) return;
   ring.body.mass = RING_MASS;
   ring.body.updateMassProperties();
   ring.body.wakeUp();
 }
 
 function beginRingPoleCapture(ring, pole) {
-  if (ring.scored || pole.rings.length >= pole.capacity) return;
+  if (ring.scored || ring.seated || pole.rings.length >= pole.capacity) return;
   ring.capturePole = pole;
   if (ring.body.mass !== RING_SEATED_MASS) {
     ring.body.mass = RING_SEATED_MASS;
@@ -847,8 +852,8 @@ function applyVisualScale(aspect = 1) {
 function initGame(level = currentLevel) {
   currentLevel = clamp(level, 1, maxLevel);
   storage.set('wrt_current_level', String(currentLevel));
-  state.score = 0; state.elapsed = 0; state.tiltX = 0; state.tiltY = 0; state.gameOver = false; state.winQueued = false; window.clearTimeout(state.winTimer); state.winTimer = 0; state.currentCombo = 1;
-  latestMotionSample = null; shakeEnergy = 0; shakeCooldown = 0;
+  state.score = 0; state.elapsed = 0; state.tiltX = 0; state.tiltY = 0; state.gameOver = false; state.winQueued = false; window.clearTimeout(state.winTimer); state.winTimer = 0; state.currentCombo = 1; state.flattenCharges = FLATTEN_CHARGE_MAX;
+  seatAuditTimer = 0;
   input.jets.fill(false);
   input.pointerJets.fill(false); input.keyboardJets.fill(false); input.gamepadJets.fill(false);
   input.keys = {}; input.pointerKeys = {}; input.keyboardKeys = {}; input.gamepadKeys = {};
@@ -861,6 +866,7 @@ function initGame(level = currentLevel) {
   const screenAspect = waterScreen.clientWidth && waterScreen.clientHeight ? waterScreen.clientWidth / waterScreen.clientHeight : 1;
   applyVisualScale(screenAspect);
   updateUI(true);
+  updateFlattenButton();
   $('endOv').classList.remove('show');
   $('menuLevel').textContent = currentLevel;
 }
@@ -1022,55 +1028,53 @@ function updateTilt(dt) {
   vFill.style.width = `${hy}px`; vFill.style.left = `${state.tiltY < 0 ? verticalWidth - hy : verticalWidth}px`;
 }
 
-function triggerShakeAssist() {
-  if (state.paused || state.gameOver || shakeCooldown > 0) return;
+function updateFlattenButton() {
+  const button = $('flattenBtn');
+  if (!button) return;
+  const count = $('flattenCount');
+  if (count) count.textContent = String(state.flattenCharges);
+  const empty = state.flattenCharges <= 0;
+  button.classList.toggle('empty', empty);
+  button.disabled = empty;
+  button.setAttribute('aria-disabled', String(empty));
+  button.setAttribute('aria-label', `Aplanar ligeramente los aros · ${state.flattenCharges} cargas restantes`);
+  button.title = `Aplanar aros · ${state.flattenCharges} cargas restantes · tecla Espacio`;
+}
+
+function applyFlattenAssist() {
+  if (state.paused || state.gameOver) return;
+  if (state.flattenCharges <= 0) { showToast('SIN CARGAS DE APLANADO'); return; }
+  reconcileRingMemberships();
   let flattened = 0;
   for (const ring of rings) {
     const body = ring.body;
-    // Un aro asentado o en contacto de captura no debe recibir la ayuda: el
-    // jugador sigue teniendo que sacarlo con inclinación o chorros reales.
-    if (!body || ring.scored || ring.capturePole) continue;
+    const auditPole = body ? findSeatAuditPole(ring) : null;
+    // Solo se ayudan aros libres: la contabilidad, la captura y la geometría
+    // de un aro ya estable dentro de un palo se excluyen antes de impulsarlo.
+    if (!body || ring.scored || ring.seated || ring.pole || ring.seatPole || ring.capturePole || auditPole || poles.some((pole) => pole.rings.includes(ring))) continue;
     body.quaternion.vmult(ringLocalNormal, ringWorldNormal);
     const tiltAngle = Math.acos(clamp(ringWorldNormal.y, -1, 1));
     const axisX = -ringWorldNormal.z;
     const axisZ = ringWorldNormal.x;
     const axisLength = Math.hypot(axisX, axisZ);
     if (axisLength < .0001 || tiltAngle < .008) continue;
-    // n × up define el eje de giro que acerca la normal del aro a la vertical.
-    // El ángulo objetivo se limita a cinco grados; la rotación la integra
-    // Rapier mediante un impulso angular real, sin tocar el quaternion.
-    const correctionRatio = Math.min(tiltAngle, RING_SHAKE_FLATTEN_MAX_ANGLE) / RING_SHAKE_FLATTEN_MAX_ANGLE;
+    // n × up define el eje de giro hacia la normal vertical del suelo. La
+    // corrección máxima de cada carga es 30 grados y la integra Rapier con un
+    // impulso angular real; nunca se escribe el quaternion directamente.
+    const correctionRatio = Math.min(tiltAngle, RING_FLATTEN_MAX_ANGLE) / RING_FLATTEN_MAX_ANGLE;
     physicsAngularImpulse.set(
-      axisX / axisLength * RING_SHAKE_FLATTEN_ANGULAR_IMPULSE * correctionRatio,
+      axisX / axisLength * RING_FLATTEN_ANGULAR_IMPULSE * correctionRatio,
       0,
-      axisZ / axisLength * RING_SHAKE_FLATTEN_ANGULAR_IMPULSE * correctionRatio
+      axisZ / axisLength * RING_FLATTEN_ANGULAR_IMPULSE * correctionRatio
     );
     body.applyAngularImpulse(physicsAngularImpulse);
     flattened++;
   }
-  if (!flattened) return;
-  shakeCooldown = RING_SHAKE_COOLDOWN;
-  shakeEnergy = 0;
-  showToast(`↻ ${flattened} AROS APLANADOS`);
+  if (!flattened) { showToast('NO HAY AROS LIBRES QUE APLANAR'); return; }
+  state.flattenCharges--;
+  updateFlattenButton();
+  showToast(`↻ ${flattened} AROS APLANADOS · ${state.flattenCharges} RESTANTES`);
   vibrate(10);
-}
-
-function onMotion(event) {
-  const linear = event.acceleration;
-  const includingGravity = event.accelerationIncludingGravity;
-  const source = linear && Number.isFinite(linear.x) && Number.isFinite(linear.y) && Number.isFinite(linear.z)
-    ? linear : includingGravity;
-  if (!source || !Number.isFinite(source.x) || !Number.isFinite(source.y) || !Number.isFinite(source.z)) return;
-  const sample = { x: source.x, y: source.y, z: source.z };
-  if (!latestMotionSample) { latestMotionSample = sample; return; }
-  const deltaX = sample.x - latestMotionSample.x;
-  const deltaY = sample.y - latestMotionSample.y;
-  const deltaZ = sample.z - latestMotionSample.z;
-  latestMotionSample = sample;
-  if (state.paused || state.gameOver || shakeCooldown > 0) { shakeEnergy = 0; return; }
-  shakeEnergy = Math.max(0, shakeEnergy * .82 + Math.hypot(deltaX, deltaY, deltaZ));
-  if (shakeEnergy < RING_SHAKE_ENERGY_THRESHOLD) return;
-  triggerShakeAssist();
 }
 
 function countColorCombos(pole) {
@@ -1140,7 +1144,7 @@ function applyRingOrientationAssist(ring, body, submerged) {
 }
 
 function updateRingCapture(ring, body) {
-  if (ring.scored) return;
+  if (ring.scored || ring.seated) return;
   // Rapier resuelve el contacto del palo; la captura solo se arma cuando el
   // centro ya está dentro del agujero, nunca por el diámetro exterior.
   if (!ring.capturePole) {
@@ -1170,7 +1174,7 @@ function updateRingCapture(ring, body) {
 }
 
 function applySeatedBreakawayForce(ring, body) {
-  if (!ring.scored || !ring.pole) return;
+  if (!ring.seated || !ring.pole) return;
   // La inclinación hace presión sobre un borde, no sobre el centro: así el
   // contacto con el eje puede romperse por una rotación/levantamiento real.
   // La magnitud sigue siendo una fuerza fija; la masa asentada reduce su
@@ -1234,7 +1238,7 @@ function applyRapierForces() {
       // También el chorro usa la fuerza real del motor en el centro de masa.
       // No se fabrica una guía ni una corrección de posición.
       body.applyForce(physicsForce, body.position);
-      if (ring.scored && direction.y > 0) {
+      if (ring.seated && direction.y > 0) {
         // Un aro asentado puede quedar encajado entre el eje y la base. La
         // presión del mismo chorro alcanza su borde frontal y genera el torque
         // de contacto necesario para desanclarlo; sigue siendo una fuerza
@@ -1277,9 +1281,19 @@ function launchEscapingRing(ring, pole) {
   body.wakeUp();
 }
 
+function queueWinIfComplete() {
+  if (rings.filter((item) => item.scored).length < TOTAL_RINGS
+    || !poles.every((item) => item.rings.length >= MIN_PER_POLE)
+    || !colorRequirementsMet()
+    || state.winQueued) return;
+  state.winQueued = true;
+  state.winTimer = window.setTimeout(() => { state.winTimer = 0; showEnd(); }, 720);
+}
+
 function registerPhysicsScore(ring, pole) {
-  ring.scored = true; ring.pole = pole; ring.capturePole = null;
-  ring.seatPole = pole;
+  if (!ring || !pole || ring.scored || ring.seated || pole.rings.length >= pole.capacity) return false;
+  ring.scored = true; ring.seated = true; ring.pole = pole; ring.capturePole = null;
+  ring.seatPole = pole; ring.auditStableTime = 0;
   ring.body.mass = RING_SEATED_MASS;
   ring.body.updateMassProperties();
   pole.rings.push(ring);
@@ -1290,12 +1304,8 @@ function registerPhysicsScore(ring, pole) {
   sfxScore(combo); vibrate(combo > 1 ? 26 : 12);
   updateUI(true); updatePoleLabel(pole);
   if (ring.points > 100) showToast(`COMBO x${combo}`);
-  if (rings.filter((item) => item.scored).length >= TOTAL_RINGS && poles.every((item) => item.rings.length >= MIN_PER_POLE) && colorRequirementsMet()) {
-    if (!state.winQueued) {
-      state.winQueued = true;
-      state.winTimer = window.setTimeout(() => { state.winTimer = 0; showEnd(); }, 720);
-    }
-  }
+  queueWinIfComplete();
+  return true;
 }
 
 function detachScoredRing(ring, pole, launch = false) {
@@ -1304,7 +1314,7 @@ function detachScoredRing(ring, pole, launch = false) {
   state.score = Math.max(0, state.score - (ring.points || 100));
   ring.body.mass = RING_MASS;
   ring.body.updateMassProperties();
-  ring.scored = false; ring.pole = null; ring.capturePole = null; ring.seatPole = null; ring.escapePole = launch ? pole : null; ring.points = 0;
+  ring.scored = false; ring.seated = false; ring.pole = null; ring.capturePole = null; ring.seatPole = null; ring.auditStableTime = 0; ring.escapePole = launch ? pole : null; ring.points = 0;
   rebuildPoleCombo(pole);
   if (state.winQueued) { state.winQueued = false; window.clearTimeout(state.winTimer); state.winTimer = 0; }
   if (launch) launchEscapingRing(ring, pole);
@@ -1400,6 +1410,110 @@ function ringIsEntryAligned(ring) {
   return Math.abs(ringWorldNormal.y) > Math.cos(RING_ENTRY_MAX_TILT);
 }
 
+function ringMeetsSeatAudit(ring, pole) {
+  const body = ring.body;
+  if (!body || !pole || ring.escapePole) return false;
+  const topY = BASE_Y + pole.h;
+  const radial = Math.hypot(body.position.x - pole.x, body.position.z);
+  const lowerY = BASE_Y + RING_SEAT_AUDIT_BASE_MARGIN;
+  const upperY = topY - RING_SEAT_AUDIT_TIP_MARGIN;
+  if (body.position.y < lowerY || body.position.y > upperY) return false;
+  // El centro debe estar dentro del hueco con holgura respecto al radio del
+  // eje. Así un borde exterior cerca de la punta nunca basta para auditarlo.
+  if (radial > RING_SEAT_AUDIT_RADIAL) return false;
+  body.quaternion.vmult(ringLocalNormal, ringWorldNormal);
+  if (Math.abs(ringWorldNormal.y) < Math.cos(RING_SEAT_AUDIT_MAX_TILT)) return false;
+  const relativeX = body.velocity.x - (pole.vX || 0);
+  if (Math.hypot(relativeX, body.velocity.y, body.velocity.z) > RING_SEAT_AUDIT_MAX_SPEED) return false;
+  if (Math.hypot(body.angularVelocity.x, body.angularVelocity.y, body.angularVelocity.z) > RING_SEAT_AUDIT_MAX_ANGULAR_SPEED) return false;
+  return true;
+}
+
+function findSeatAuditPole(ring) {
+  let best = null;
+  let bestDistance = Infinity;
+  for (const pole of poles) {
+    if (pole.rings.length >= pole.capacity && !ring.scored) continue;
+    if (!ringMeetsSeatAudit(ring, pole)) continue;
+    const distance = Math.hypot(ring.body.position.x - pole.x, ring.body.position.z);
+    if (distance < bestDistance) { best = pole; bestDistance = distance; }
+  }
+  return best;
+}
+
+function reconcileRingMemberships() {
+  const changedPoles = new Set();
+  // Primero recupera el dueño desde cualquiera de las relaciones existentes;
+  // así una lista dañada no convierte un aro ya ensartado en uno libre.
+  for (const ring of rings) {
+    if (!ring.scored) {
+      if (ring.seated || ring.pole || ring.seatPole) {
+        ring.seated = false; ring.pole = null; ring.seatPole = null; ring.auditStableTime = 0;
+        if (ring.body && ring.body.mass !== RING_MASS) {
+          ring.body.mass = RING_MASS; ring.body.updateMassProperties(); ring.body.wakeUp();
+        }
+      }
+      continue;
+    }
+    let owner = poles.includes(ring.pole) ? ring.pole : null;
+    owner ||= poles.includes(ring.seatPole) ? ring.seatPole : null;
+    owner ||= poles.find((pole) => pole.rings.includes(ring)) || null;
+    // Último recurso defensivo: si también se perdió el puntero al dueño,
+    // recupera la relación únicamente si el cuerpo sigue físicamente estable
+    // dentro de un palo; nunca por proximidad a la punta.
+    owner ||= findSeatAuditPole(ring);
+    if (owner) {
+      ring.pole = owner; ring.seatPole = owner; ring.seated = true;
+    }
+  }
+
+  // Un aro libre no puede permanecer en la contabilidad de un palo; un aro
+  // puntuado sí debe estar exactamente en la lista de su dueño, sin duplicados.
+  for (const pole of poles) {
+    const kept = [];
+    for (const ring of pole.rings) {
+      if (!ring.scored || ring.pole !== pole || kept.includes(ring)) { changedPoles.add(pole); continue; }
+      kept.push(ring);
+    }
+    pole.rings = kept;
+  }
+  for (const ring of rings) {
+    if (!ring.scored || !ring.pole) continue;
+    if (!ring.pole.rings.includes(ring)) { ring.pole.rings.push(ring); changedPoles.add(ring.pole); }
+    for (const pole of poles) {
+      if (pole === ring.pole) continue;
+      const before = pole.rings.length;
+      pole.rings = pole.rings.filter((item) => item !== ring);
+      if (pole.rings.length !== before) changedPoles.add(pole);
+    }
+  }
+  if (!changedPoles.size) return false;
+  for (const pole of changedPoles) { rebuildPoleCombo(pole); updatePoleLabel(pole); }
+  updateUI(true);
+  queueWinIfComplete();
+  return true;
+}
+
+function auditPhysicalRingSeats(dt) {
+  // El doble check solo corre después de integrar Rapier. Dos muestras estables
+  // separadas por el intervalo evitan puntuar un aro que aún está en vuelo o
+  // que simplemente ha rozado la punta.
+  reconcileRingMemberships();
+  let newlyScored = false;
+  for (const ring of rings) {
+    if (ring.scored || ring.seated) { ring.auditStableTime = 0; continue; }
+    const pole = findSeatAuditPole(ring);
+    if (!pole) { ring.auditStableTime = 0; continue; }
+    ring.auditStableTime = Math.min(RING_SEAT_AUDIT_STABLE_TIME, ring.auditStableTime + dt);
+    if (ring.auditStableTime < RING_SEAT_AUDIT_STABLE_TIME) continue;
+    if (registerPhysicsScore(ring, pole)) newlyScored = true;
+    ring.auditStableTime = 0;
+  }
+  // La ruta normal puede haber añadido relaciones durante esta misma pasada;
+  // la segunda reconciliación deja las tres fuentes sincronizadas.
+  if (newlyScored) reconcileRingMemberships();
+}
+
 function checkPhysicsPoleEntries() {
   for (const ring of rings) {
     const body = ring.body;
@@ -1445,6 +1559,12 @@ function stepRapierPhysics(dt) {
     physicsWorld.step(physicsFixedStep);
     checkSeatedRingExits();
     checkPhysicsPoleEntries();
+    seatAuditTimer += physicsFixedStep;
+    if (seatAuditTimer >= RING_SEAT_AUDIT_INTERVAL) {
+      const auditDt = seatAuditTimer;
+      seatAuditTimer = 0;
+      auditPhysicalRingSeats(auditDt);
+    }
     physicsAccumulator -= physicsFixedStep; steps++;
   }
   syncPhysicsToScene();
@@ -1462,7 +1582,6 @@ function updateCamera(dt) {
 function updateGame(dt) {
   updateGamepad();
   updateCamera(dt);
-  shakeCooldown = Math.max(0, shakeCooldown - dt);
   if (state.paused || state.gameOver) {
     updateWater(dt);
     updateJetVisuals(dt);
@@ -1713,7 +1832,7 @@ document.querySelectorAll('[data-tilt]').forEach((button) => {
   const map = { left: 'ArrowLeft', right: 'ArrowRight', up: 'ArrowUp', down: 'ArrowDown' }; const key = map[button.dataset.tilt];
   bindHold(button, () => { if (!state.paused && !state.gameOver) { input.pointerKeys[key] = true; refreshTiltInput(key); } }, () => { input.pointerKeys[key] = false; refreshTiltInput(key); });
 });
-$('shakeBtn').addEventListener('click', () => { ensureAudio(); triggerShakeAssist(); });
+$('flattenBtn').addEventListener('click', () => { ensureAudio(); applyFlattenAssist(); });
 
 let activeGamepadIndex = -1;
 function updateGamepad() {
@@ -1750,9 +1869,6 @@ document.addEventListener('keydown', (event) => {
     else if (event.key === 'ArrowLeft' && tutorialStep > 0) { event.preventDefault(); tutorialStep--; updateTutorial(); }
     else if (event.key === 'Escape') closeTutorial();
     return;
-  }
-  if (event.code === 'Space' && !event.repeat && !state.paused && !state.gameOver) {
-    event.preventDefault(); triggerShakeAssist();
   }
   const key = event.key.toLowerCase();
   if (['a', 's', 'd'].includes(key) && !state.paused && !state.gameOver) {
@@ -1884,7 +2000,7 @@ $('bMus').addEventListener('click', () => { ensureAudio(); musicOn = !musicOn; s
 $('bSnd').textContent = soundOn ? '🔊' : '🔇'; $('bMus').textContent = musicOn ? '♫' : '♪';
 
 /* -------------------------------------------------------------------------- */
-/* Gyroscope + motion shake                                                  */
+/* Gyroscope for physical tilt                                                */
 /* -------------------------------------------------------------------------- */
 
 function calibrateGyro() { gyroOffset = { gamma: latestOrientation.gamma, beta: latestOrientation.beta - 60 }; $('gyroInd').classList.add('calibrating'); window.setTimeout(() => $('gyroInd').classList.remove('calibrating'), 500); tone(800, .12, .08); }
@@ -1894,11 +2010,6 @@ function onOrientation(event) {
   if (!input.gyro || state.paused) return;
   state.tiltX = clamp((latestOrientation.gamma - gyroOffset.gamma) / 25, -1, 1);
   state.tiltY = clamp((latestOrientation.beta - 60 - gyroOffset.beta) / 28, -1, 1);
-}
-function enableMotion() {
-  if (!('DeviceMotionEvent' in window) || input.motion) return;
-  input.motion = true;
-  window.addEventListener('devicemotion', onMotion, { passive: true });
 }
 function enableGyro() {
   if (!input.gyro) {
@@ -1910,33 +2021,21 @@ function enableGyro() {
 }
 function setupGyro() {
   const hasOrientation = 'DeviceOrientationEvent' in window;
-  const hasMotion = 'DeviceMotionEvent' in window;
-  if (!hasOrientation && !hasMotion) return;
+  if (!hasOrientation) return;
   const orientationApi = window.DeviceOrientationEvent;
-  const motionApi = window.DeviceMotionEvent;
   const orientationNeedsPermission = typeof orientationApi?.requestPermission === 'function';
-  const motionNeedsPermission = typeof motionApi?.requestPermission === 'function';
-  if (orientationNeedsPermission || motionNeedsPermission) {
+  if (orientationNeedsPermission) {
     $('mGyro').style.display = 'block';
-    $('mGyro').textContent = hasOrientation ? '📐 ACTIVAR GIROSCOPIO' : '📱 ACTIVAR SACUDIDA';
+    $('mGyro').textContent = '📐 ACTIVAR GIROSCOPIO';
     $('mGyro').addEventListener('click', () => {
-      const requests = [];
-      if (orientationNeedsPermission) requests.push(orientationApi.requestPermission().then((result) => ({ type: 'orientation', granted: result === 'granted' })));
-      if (motionNeedsPermission) requests.push(motionApi.requestPermission().then((result) => ({ type: 'motion', granted: result === 'granted' })));
-      Promise.all(requests).then((results) => {
-        const orientationGranted = hasOrientation && (!orientationNeedsPermission || results.some((item) => item.type === 'orientation' && item.granted));
-        const motionGranted = hasMotion && (!motionNeedsPermission || results.some((item) => item.type === 'motion' && item.granted));
-        if (orientationGranted) enableGyro();
-        if (motionGranted) enableMotion();
-        if (!orientationGranted && motionGranted) showToast('Sacudida móvil activada');
-        if (!orientationGranted && !motionGranted) showToast('Permiso de sensores rechazado');
-      }).catch(() => showToast('Permiso de sensores rechazado'));
+      orientationApi.requestPermission()
+        .then((result) => { if (result === 'granted') enableGyro(); else showToast('Permiso de giroscopio rechazado'); })
+        .catch(() => showToast('Permiso de giroscopio rechazado'));
     });
   } else {
-    if (hasMotion) enableMotion();
-    if (hasOrientation) window.addEventListener('deviceorientation', (event) => { if (event.gamma != null || event.beta != null) enableGyro(); }, { once: true });
+    window.addEventListener('deviceorientation', (event) => { if (event.gamma != null || event.beta != null) enableGyro(); }, { once: true });
   }
-  if (hasOrientation) $('gyroInd').addEventListener('click', calibrateGyro);
+  $('gyroInd').addEventListener('click', calibrateGyro);
 }
 
 /* -------------------------------------------------------------------------- */

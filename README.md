@@ -16,7 +16,7 @@
 
 **AQUA-07** mezcla la carcasa colorida de un juguete infantil de agua con la instrumentación de un submarino experimental. El tablero se dibuja con Three.js y los cuerpos rígidos se resuelven con Rapier 3D/WASM local.
 
-La referencia visible actual es **BUILD R32**.
+La referencia visible actual es **BUILD R33**.
 
 - Pantalla de observación con brillo, visor y lectura de instrumentos.
 - Casco oscuro remachado, señalética de laboratorio y panel de control de juguete.
@@ -35,11 +35,11 @@ Ensarta los **20 aros** en los tres palos. Para completar un nivel hacen falta a
 | Chorro derecho | `D` | Botón azul | Botón frontal 3 |
 | Inclinación X | `←` / `→` | Botones laterales | Cruceta / stick izquierdo |
 | Inclinación Y | `↑` / `↓` | Botones dorados | Cruceta / stick izquierdo |
-| Aplanar aros | `Espacio` | Botón `↻` / sacudida | — |
+| Aplanar aros | Activación nativa del botón (Espacio al enfocarlo) | Botón `↻` con 10 cargas | — |
 | Reiniciar | `R` | `↺` | — |
 | Menú | — | `☰` | — |
 
-Mantén pulsado un control para aplicar fuerza. Al soltarlo, la entrada vuelve progresivamente a cero. En móvil se puede activar el giroscopio y calibrarlo desde el indicador `GYRO`; una sacudida breve aplica un pequeño impulso angular físico a los aros libres para aplanarlos ligeramente y facilitar el siguiente enceste.
+Mantén pulsado un control para aplicar fuerza. Al soltarlo, la entrada vuelve progresivamente a cero. En móvil se puede activar el giroscopio y calibrarlo desde el indicador `GYRO`. El botón `↻` aplica conscientemente un impulso angular físico de hasta 30° a los aros libres, consume una de las 10 cargas de la partida y muestra las restantes; los aros encestados o en captura quedan excluidos. No existe un atajo global ni una activación por agitación.
 
 ## Mecánica física
 
@@ -89,9 +89,11 @@ La captura es estricta:
 6. El contacto físico con el palo permanece activo después de la captura.
 7. Una salida por encima de la punta usa un impulso físico; no hay salto por teletransporte.
 
+Después de cada paso de Rapier, una auditoría redundante se ejecuta aproximadamente cada 0,22 s. Para reparar un evento de contacto perdido exige dos muestras estables: el centro del aro debe estar dentro del eje y del rango vertical del palo, por debajo de la punta, correctamente orientado y con velocidad lineal y angular bajas. El radio auditado deja holgura respecto al eje, por lo que un roce exterior, un aro en vuelo o uno detenido junto a la punta no puntúan. Si cumple, se llama a la misma ruta normal de registro y se actualizan marcador, lista, combo, etiquetas y victoria sin mover el cuerpo. La auditoría también repara la relación inversa cuando `ring.scored` es verdadero pero falta `pole.rings`, y elimina membresías de aros libres.
+
 Solo durante el descenso existe una asistencia angular muy suave para que un aro que llega de canto pueda ladearse y descansar. Cuando deja de descender, conserva libremente su giro y orientación.
 
-La sacudida móvil no recoloca los aros en X: aplica un impulso angular de Rapier hacia la normal vertical del suelo, limitado a una corrección objetivo de 5 grados por sacudida. Solo afecta a aros libres, no asentados ni capturados.
+El aplanado accesible es una acción consciente del botón `↻`: cada carga aplica a los aros libres un impulso angular de Rapier hacia la normal vertical del suelo, con una corrección máxima de 30°. No cambia posición ni quaternion, no usa un atajo global y no afecta aros encestados, asentados o en captura. Hay 10 cargas por partida; el botón queda deshabilitado al agotarlas.
 
 ### Chorros
 
@@ -178,7 +180,7 @@ El progreso y el ranking local funcionan sin configuración. La integración opc
 
 Para conectar otro proyecto, sustituye `FIREBASE_CONFIG` en `game3d.js` y habilita Authentication anónima y Firestore.
 
-## Validación de la BUILD R32
+## Validación de la BUILD R33
 
 ```text
 node --check game3d.js
@@ -186,8 +188,9 @@ node --check vendor/rapier-physics.js
 git diff --check
 Preview HTTP 200
 Prueba Rapier de fuerza por paso, guard superior bajo y breakaway asentado
-Prueba aislada de contactos, apilado y masa 4.5x Rapier
-Prueba de layout responsive del tutorial, selector de niveles sin scroll, panel móvil en escritorio, botón accesible de aplanado y efectos visuales de agua/chorro
+Prueba aislada de contactos, apilado, auditoría de asiento y masa 4.5x Rapier
+Prueba de layout responsive del tutorial, selector de niveles sin scroll, panel móvil en escritorio, botón accesible de aplanado con 10 cargas y efectos visuales de agua/chorro
+Comprobación estática de ausencia de la API de movimiento, agitación y atajo global de Espacio
 ```
 
 ## Licencia
