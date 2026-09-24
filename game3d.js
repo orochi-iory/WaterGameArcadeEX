@@ -21,7 +21,7 @@ window.addEventListener('error', (event) => { if (!gameBooted) reportRuntimeFail
 window.addEventListener('unhandledrejection', (event) => { if (!gameBooted) reportRuntimeFailure(event.reason); });
 // Referencia visible para distinguir rápidamente el build probado en una captura.
 // Incrementar este identificador en cada iteración funcional publicada.
-const BUILD_VERSION = 'R34';
+const BUILD_VERSION = 'R35';
 const MOBILE_DEVICE = /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent) || window.matchMedia?.('(pointer: coarse)').matches || window.innerWidth < 768;
 const WATER_GRID_X = MOBILE_DEVICE ? 24 : 48;
 const WATER_GRID_Y = MOBILE_DEVICE ? 10 : 18;
@@ -149,7 +149,7 @@ const LEVELS = [
   { name: 'Alturas', poles: [{ x: -3.2, h: 2.2, spd: 0 }, { x: 0, h: 3.36, spd: 0 }, { x: 3.2, h: 2.2, spd: 0 }] },
   { name: 'Escalera', poles: [{ x: -3.35, h: 3.25, spd: 0 }, { x: 0, h: 2.55, spd: 0 }, { x: 3.35, h: 2.0, spd: 0 }] },
   { name: 'Movimiento', poles: [{ x: -2.9, h: 2.25, spd: 0 }, { x: 0, h: 3.1, spd: .75 }, { x: 2.9, h: 2.25, spd: 0 }] },
-  { name: 'Caos', poles: [{ x: -3.35, mobileX: -4.05, h: 2.35, spd: 1.1 }, { x: 0, h: 3.25, spd: .62 }, { x: 3.35, mobileX: 4.05, h: 2.2, spd: 1.38 }] },
+  { name: 'Caos', poles: [{ x: -4.35, h: 2.35, spd: 1.1, motionRange: .9 }, { x: 0, h: 3.25, spd: .62 }, { x: 4.35, h: 2.2, spd: 1.38, motionRange: .9 }] },
   { name: 'Colores', poles: [
     { x: -2.75, h: 2.55, spd: 0, rc: 0, rn: 3 }, { x: 0, h: 3.28, spd: 0, rc: 1, rn: 3 }, { x: 2.75, h: 2.55, spd: 0, rc: 2, rn: 3 }
   ]},
@@ -163,7 +163,7 @@ const LEVELS = [
     { x: -2.9, h: 2.25, spd: 0, rc: 1, rn: 3 }, { x: 0, h: 3.1, spd: .78, rc: 2, rn: 4 }, { x: 2.9, h: 2.25, spd: 0, rc: 3, rn: 3 }
   ]},
   { name: 'Maestro', poles: [
-    { x: -3.35, mobileX: -4.05, h: 2.35, spd: 1.1, rc: 0, rn: 3 }, { x: 0, h: 3.25, spd: .62, rc: 1, rn: 4 }, { x: 3.35, mobileX: 4.05, h: 2.2, spd: 1.38, rc: 2, rn: 3 }
+    { x: -4.35, h: 2.35, spd: 1.1, motionRange: .9, rc: 0, rn: 3 }, { x: 0, h: 3.25, spd: .62, rc: 1, rn: 4 }, { x: 4.35, h: 2.2, spd: 1.38, motionRange: .9, rc: 2, rn: 3 }
   ]}
 ];
 const TOTAL_LEVELS = LEVELS.length - 1;
@@ -659,7 +659,9 @@ function clearGroup(group) {
 }
 
 function createPole(def) {
-  const baseX = MOBILE_DEVICE && Number.isFinite(def.mobileX) ? def.mobileX : def.x;
+  // El layout horizontal es compartido entre escritorio y móvil. La cámara
+  // adapta el encuadre, pero la geometría y el recorrido de los palos no cambian.
+  const baseX = def.x;
   const group = new THREE.Group();
   group.position.set(baseX, BASE_Y, 0);
   const capacity = Math.max(5, Math.floor((def.h - .18) / RING_STACK_STEP));
@@ -1106,7 +1108,11 @@ function updatePhysicsPoleMotion(dt) {
       pole.phase += pole.spd * dt;
       pole.x = pole.baseX + Math.sin(pole.phase) * pole.motionRange;
       pole.vX = (pole.x - previousX) / Math.max(dt, .001);
-      pole.group.position.x = pole.x - pole.baseX;
+      // El grupo visual es hijo de poleGroup, igual que el collider. Debe
+      // recibir la posición absoluta: usar solo el desplazamiento respecto a
+      // baseX dejaba los palos móviles visualmente apiñados en el centro,
+      // aunque Rapier los moviera por todo el tanque.
+      pole.group.position.x = pole.x;
     } else {
       pole.vX = 0;
     }

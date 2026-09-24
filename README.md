@@ -16,7 +16,7 @@
 
 **AQUA-07** mezcla la carcasa colorida de un juguete infantil de agua con la instrumentación de un submarino experimental. El tablero se dibuja con Three.js y los cuerpos rígidos se resuelven con Rapier 3D/WASM local.
 
-La referencia visible actual es **BUILD R34**.
+La referencia visible actual es **BUILD R35**.
 
 - Pantalla de observación con brillo, visor y lectura de instrumentos.
 - Casco oscuro remachado, señalética de laboratorio y panel de control de juguete.
@@ -106,7 +106,8 @@ La flotación, la amortiguación, la turbulencia y la resistencia angular perten
 Hay diez niveles:
 
 - **1–5:** niveles clásicos con distintas alturas y movimiento.
-- **6–10:** objetivos de color, palos móviles y combinaciones más exigentes; en móvil, los palos de los niveles 5 y 10 conservan una separación horizontal ampliada.
+- **6–10:** objetivos de color, palos móviles y combinaciones más exigentes.
+- Los niveles 5 y 10 usan una separación horizontal ampliada y compartida: los palos móviles parten cerca de los laterales del tanque y recorren la misma zona tanto en escritorio como en móvil. La cámara adapta el encuadre, pero no se cambia la geometría del nivel entre dispositivos.
 
 Puntuación:
 
@@ -182,7 +183,7 @@ El progreso y el ranking local funcionan sin configuración. La integración opc
 
 Para conectar otro proyecto, sustituye `FIREBASE_CONFIG` en `game3d.js` y habilita Authentication anónima y Firestore.
 
-## Validación de la BUILD R34
+## Validación de la BUILD R35
 
 ```text
 node --check game3d.js
