@@ -340,6 +340,9 @@ input { -webkit-user-select: text; user-select: text; touch-action: auto; }
 .tilt-btn { width: 47px; height: 39px; color: #c8fbff; font: 700 22px var(--mono); }
 .tilt-btn.up, .tilt-btn.down { color: var(--yellow); background: linear-gradient(145deg, #9a7028, #4b3214); }
 .tilt-caption { min-width: 72px; color: rgba(231, 255, 250, .7); font: 700 8px var(--mono); letter-spacing: .13em; text-align: center; }
+.shake-btn { width: 47px; height: 39px; color: #d9c4ff; background: linear-gradient(145deg, #7252a3, #392552); font-size: 21px; }
+.shake-btn small { position: absolute; right: 4px; bottom: 4px; color: #f1eaff; font: 700 6px var(--mono); letter-spacing: -.04em; }
+.shake-btn:active { filter: brightness(1.35); }
 
 .overlay {
   position: absolute;

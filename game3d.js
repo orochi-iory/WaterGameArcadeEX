@@ -21,14 +21,14 @@ window.addEventListener('error', (event) => { if (!gameBooted) reportRuntimeFail
 window.addEventListener('unhandledrejection', (event) => { if (!gameBooted) reportRuntimeFailure(event.reason); });
 // Referencia visible para distinguir rápidamente el build probado en una captura.
 // Incrementar este identificador en cada iteración funcional publicada.
-const BUILD_VERSION = 'R31';
+const BUILD_VERSION = 'R32';
 const MOBILE_DEVICE = /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent) || window.matchMedia?.('(pointer: coarse)').matches || window.innerWidth < 768;
 const WATER_GRID_X = MOBILE_DEVICE ? 24 : 48;
 const WATER_GRID_Y = MOBILE_DEVICE ? 10 : 18;
 const BACKDROP_GRID_Y = MOBILE_DEVICE ? 12 : 24;
 const BUBBLE_COUNT = MOBILE_DEVICE ? 12 : 28;
 const PARTICLE_CAPACITY = MOBILE_DEVICE ? 220 : 480;
-const JET_BUBBLE_COUNT = MOBILE_DEVICE ? 6 : 12;
+const JET_BUBBLE_COUNT = MOBILE_DEVICE ? 12 : 18;
 const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
 const storage = {
   get(key, fallback = null) { try { return window.localStorage.getItem(key) ?? fallback; } catch { return fallback; } },
@@ -473,6 +473,45 @@ stageGroup.add(waterBackdrop);
 const waterBackdropBaseZ = new Float32Array(waterBackdrop.geometry.attributes.position.count);
 for (let i = 0; i < waterBackdropBaseZ.length; i++) waterBackdropBaseZ[i] = waterBackdrop.geometry.attributes.position.getZ(i);
 
+// Una capa de caústicas animadas aporta una distorsión acuática ligera sin
+// poner un filtro opaco sobre los aros. Es solo visual: no participa en Rapier.
+const waterDistortionMaterial = new THREE.ShaderMaterial({
+  uniforms: { uTime: { value: 0 } },
+  vertexShader: `
+    uniform float uTime;
+    varying vec2 vUv;
+    void main() {
+      vUv = uv;
+      vec3 transformed = position;
+      transformed.z += sin(position.x * 1.65 + uTime * .8) * .008;
+      transformed.z += cos(position.y * 2.1 - uTime * .55) * .005;
+      gl_Position = projectionMatrix * modelViewMatrix * vec4(transformed, 1.0);
+    }
+  `,
+  fragmentShader: `
+    uniform float uTime;
+    varying vec2 vUv;
+    void main() {
+      float lineA = sin(vUv.y * 64.0 + sin(vUv.x * 15.0 + uTime * .72) * 2.8 - uTime * 3.4);
+      float lineB = sin(vUv.y * 31.0 - vUv.x * 19.0 + uTime * 2.0);
+      float bands = smoothstep(.82, .99, lineA) * .72 + smoothstep(.9, .995, lineB) * .3;
+      float shimmer = sin(vUv.x * 11.0 - uTime * .45) * sin(vUv.y * 17.0 + uTime * .62) * .5 + .5;
+      float edge = smoothstep(.015, .13, vUv.x) * (1.0 - smoothstep(.87, .985, vUv.x));
+      float alpha = (bands * .055 + shimmer * .018) * edge;
+      gl_FragColor = vec4(.38, .92, 1.0, alpha);
+    }
+  `,
+  transparent: true,
+  depthWrite: false,
+  depthTest: true,
+  side: THREE.DoubleSide,
+  blending: THREE.AdditiveBlending
+});
+const waterDistortion = new THREE.Mesh(new THREE.PlaneGeometry(11.7, tankHeight, MOBILE_DEVICE ? 24 : 40, MOBILE_DEVICE ? 10 : 18), waterDistortionMaterial);
+waterDistortion.position.set(0, BASE_Y + tankHeight / 2, -PLAY_DEPTH / 2 - .005);
+waterDistortion.renderOrder = 1;
+stageGroup.add(waterDistortion);
+
 const waterGeometry = new THREE.PlaneGeometry(11.7, PLAY_DEPTH, WATER_GRID_X, WATER_GRID_Y);
 waterGeometry.rotateX(-Math.PI / 2);
 const waterBaseZ = new Float32Array(waterGeometry.attributes.position.count);
@@ -504,6 +543,9 @@ bottomRim.position.set(0, BASE_Y - .03, 0); bottomRim.castShadow = true; stageGr
 const bubbleMaterial = MOBILE_DEVICE
   ? new THREE.MeshBasicMaterial({ color: 0xc8f7ff, transparent: true, opacity: .24, depthWrite: false })
   : new THREE.MeshPhysicalMaterial({ color: 0xc8f7ff, transparent: true, opacity: .33, roughness: .02, metalness: .1 });
+const jetBubbleMaterials = JET_COLORS.map((color) => new THREE.MeshBasicMaterial({
+  color, transparent: true, opacity: MOBILE_DEVICE ? .72 : .78, depthWrite: false, blending: THREE.AdditiveBlending
+}));
 const bubbleGroup = new THREE.Group();
 effectGroup.add(bubbleGroup);
 for (let i = 0; i < BUBBLE_COUNT; i++) {
@@ -557,9 +599,9 @@ for (let j = 0; j < 3; j++) {
 
 // Burbujas pequeñas y desfasadas sustituyen al cono direccional: hacen visible
 // la actividad del chorro sin dibujar una flecha rígida sobre el tablero.
-const jetBubbleGeometry = new THREE.SphereGeometry(.022, MOBILE_DEVICE ? 5 : 7, MOBILE_DEVICE ? 5 : 7);
+const jetBubbleGeometry = new THREE.SphereGeometry(.034, MOBILE_DEVICE ? 5 : 7, MOBILE_DEVICE ? 5 : 7);
 for (let i = 0; i < JET_BUBBLE_COUNT; i++) {
-  const bubble = new THREE.Mesh(jetBubbleGeometry, bubbleMaterial);
+  const bubble = new THREE.Mesh(jetBubbleGeometry, jetBubbleMaterials[i % 3]);
   bubble.visible = false;
   bubble.userData.jet = i % 3;
   bubble.userData.progress = Math.random();
@@ -829,6 +871,7 @@ function initGame(level = currentLevel) {
 
 function updateWater(dt) {
   waveTime += dt;
+  waterDistortionMaterial.uniforms.uTime.value = waveTime;
   waterUpdateFrame++;
   const animateSurface = !MOBILE_DEVICE || waterUpdateFrame % 2 === 0;
   if (animateSurface) {
@@ -980,7 +1023,7 @@ function updateTilt(dt) {
 }
 
 function triggerShakeAssist() {
-  if (!MOBILE_DEVICE || state.paused || state.gameOver || shakeCooldown > 0) return;
+  if (state.paused || state.gameOver || shakeCooldown > 0) return;
   let flattened = 0;
   for (const ring of rings) {
     const body = ring.body;
@@ -1670,6 +1713,7 @@ document.querySelectorAll('[data-tilt]').forEach((button) => {
   const map = { left: 'ArrowLeft', right: 'ArrowRight', up: 'ArrowUp', down: 'ArrowDown' }; const key = map[button.dataset.tilt];
   bindHold(button, () => { if (!state.paused && !state.gameOver) { input.pointerKeys[key] = true; refreshTiltInput(key); } }, () => { input.pointerKeys[key] = false; refreshTiltInput(key); });
 });
+$('shakeBtn').addEventListener('click', () => { ensureAudio(); triggerShakeAssist(); });
 
 let activeGamepadIndex = -1;
 function updateGamepad() {
@@ -1706,6 +1750,9 @@ document.addEventListener('keydown', (event) => {
     else if (event.key === 'ArrowLeft' && tutorialStep > 0) { event.preventDefault(); tutorialStep--; updateTutorial(); }
     else if (event.key === 'Escape') closeTutorial();
     return;
+  }
+  if (event.code === 'Space' && !event.repeat && !state.paused && !state.gameOver) {
+    event.preventDefault(); triggerShakeAssist();
   }
   const key = event.key.toLowerCase();
   if (['a', 's', 'd'].includes(key) && !state.paused && !state.gameOver) {

@@ -16,13 +16,13 @@
 
 **AQUA-07** mezcla la carcasa colorida de un juguete infantil de agua con la instrumentación de un submarino experimental. El tablero se dibuja con Three.js y los cuerpos rígidos se resuelven con Rapier 3D/WASM local.
 
-La referencia visible actual es **BUILD R31**.
+La referencia visible actual es **BUILD R32**.
 
 - Pantalla de observación con brillo, visor y lectura de instrumentos.
 - Casco oscuro remachado, señalética de laboratorio y panel de control de juguete.
 - Tres chorros de colores, botones de presión y controles de inclinación.
 - Aros 3D con colisión, rotación, masa, inercia y contactos reales.
-- Música procedural submarina y efectos de agua generados en el navegador.
+- Música procedural submarina, caústicas animadas y chorros visuales de burbujas coloreadas generados en el navegador.
 
 ## Cómo jugar
 
@@ -35,6 +35,7 @@ Ensarta los **20 aros** en los tres palos. Para completar un nivel hacen falta a
 | Chorro derecho | `D` | Botón azul | Botón frontal 3 |
 | Inclinación X | `←` / `→` | Botones laterales | Cruceta / stick izquierdo |
 | Inclinación Y | `↑` / `↓` | Botones dorados | Cruceta / stick izquierdo |
+| Aplanar aros | `Espacio` | Botón `↻` / sacudida | — |
 | Reiniciar | `R` | `↺` | — |
 | Menú | — | `☰` | — |
 
@@ -177,7 +178,7 @@ El progreso y el ranking local funcionan sin configuración. La integración opc
 
 Para conectar otro proyecto, sustituye `FIREBASE_CONFIG` en `game3d.js` y habilita Authentication anónima y Firestore.
 
-## Validación de la BUILD R31
+## Validación de la BUILD R32
 
 ```text
 node --check game3d.js
@@ -186,7 +187,7 @@ git diff --check
 Preview HTTP 200
 Prueba Rapier de fuerza por paso, guard superior bajo y breakaway asentado
 Prueba aislada de contactos, apilado y masa 4.5x Rapier
-Prueba de layout responsive del tutorial, selector de niveles sin scroll, panel móvil en escritorio y asistencia de sacudida móvil
+Prueba de layout responsive del tutorial, selector de niveles sin scroll, panel móvil en escritorio, botón accesible de aplanado y efectos visuales de agua/chorro
 ```
 
 ## Licencia
